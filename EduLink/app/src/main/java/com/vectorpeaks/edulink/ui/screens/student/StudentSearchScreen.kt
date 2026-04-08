@@ -3,6 +3,7 @@ package com.vectorpeaks.edulink.ui.screens.student
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -83,22 +84,19 @@ fun StudentSearchScreen(modifier: Modifier = Modifier) {
                     // Subject filter
                     Text("Przedmiot:", style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
+                    LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        FilterChip(
-                            selected = selectedSubject == null,
-                            onClick = { selectedSubject = null },
-                            label = { Text("Wszystkie", style = MaterialTheme.typography.labelSmall) },
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        FakeData.offers.map { it.subject }.distinct().take(4).forEach { subject ->
+                        item {
+                            FilterChip(
+                                selected = selectedSubject == null,
+                                onClick = { selectedSubject = null },
+                                label = { Text("Wszystkie", style = MaterialTheme.typography.labelSmall) },
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                        val subjects = FakeData.offers.map { it.subject }.distinct()
+                        items(subjects) { subject ->
                             FilterChip(
                                 selected = selectedSubject == subject,
                                 onClick = {
@@ -120,14 +118,17 @@ fun StudentSearchScreen(modifier: Modifier = Modifier) {
                         Text("Miasto:", style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilterChip(
-                            selected = selectedCity == null,
-                            onClick = { selectedCity = null },
-                            label = { Text("Wszystkie", style = MaterialTheme.typography.labelSmall) },
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        FakeData.offers.map { it.city }.distinct().forEach { city ->
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        item {
+                            FilterChip(
+                                selected = selectedCity == null,
+                                onClick = { selectedCity = null },
+                                label = { Text("Wszystkie", style = MaterialTheme.typography.labelSmall) },
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                        val cities = FakeData.offers.map { it.city }.distinct()
+                        items(cities) { city ->
                             FilterChip(
                                 selected = selectedCity == city,
                                 onClick = {

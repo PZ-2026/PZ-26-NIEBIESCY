@@ -37,35 +37,38 @@ fun StudentMainScreen(
         StudentTab("Profil", Icons.Filled.Person, Icons.Outlined.Person)
     )
     var selectedTab by remember { mutableIntStateOf(0) }
+    var isChatDetailOpen by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = Background,
         bottomBar = {
-            NavigationBar(
-                containerColor = Surface
-            ) {
-                tabs.forEachIndexed { index, tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        icon = {
-                            Icon(
-                                imageVector = if (selectedTab == index) tab.selectedIcon else tab.unselectedIcon,
-                                contentDescription = tab.title
+            if (!isChatDetailOpen) {
+                NavigationBar(
+                    containerColor = Surface
+                ) {
+                    tabs.forEachIndexed { index, tab ->
+                        NavigationBarItem(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            icon = {
+                                Icon(
+                                    imageVector = if (selectedTab == index) tab.selectedIcon else tab.unselectedIcon,
+                                    contentDescription = tab.title
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = tab.title,
+                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Primary,
+                                selectedTextColor = Primary,
+                                indicatorColor = PrimaryContainer
                             )
-                        },
-                        label = {
-                            Text(
-                                text = tab.title,
-                                fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Primary,
-                            selectedTextColor = Primary,
-                            indicatorColor = PrimaryContainer
                         )
-                    )
+                    }
                 }
             }
         }
@@ -73,7 +76,11 @@ fun StudentMainScreen(
         when (selectedTab) {
             0 -> StudentSearchScreen(modifier = Modifier.padding(innerPadding))
             1 -> StudentHistoryScreen(user = user, modifier = Modifier.padding(innerPadding))
-            2 -> StudentChatScreen(user = user, modifier = Modifier.padding(innerPadding))
+            2 -> StudentChatScreen(
+                user = user,
+                modifier = Modifier.padding(innerPadding),
+                onChatOpen = { isOpen -> isChatDetailOpen = isOpen }
+            )
             3 -> StudentProfileScreen(user = user, onLogout = onLogout, modifier = Modifier.padding(innerPadding))
         }
     }

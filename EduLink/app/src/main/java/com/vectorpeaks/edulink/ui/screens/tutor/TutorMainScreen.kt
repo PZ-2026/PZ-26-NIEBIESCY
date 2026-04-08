@@ -31,34 +31,37 @@ fun TutorMainScreen(
         TutorTab("Profil", Icons.Filled.Person, Icons.Outlined.Person)
     )
     var selectedTab by remember { mutableIntStateOf(0) }
+    var isChatDetailOpen by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = Background,
         bottomBar = {
-            NavigationBar(containerColor = Surface) {
-                tabs.forEachIndexed { index, tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        icon = {
-                            Icon(
-                                imageVector = if (selectedTab == index) tab.selectedIcon else tab.unselectedIcon,
-                                contentDescription = tab.title
+            if (!isChatDetailOpen) {
+                NavigationBar(containerColor = Surface) {
+                    tabs.forEachIndexed { index, tab ->
+                        NavigationBarItem(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            icon = {
+                                Icon(
+                                    imageVector = if (selectedTab == index) tab.selectedIcon else tab.unselectedIcon,
+                                    contentDescription = tab.title
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = tab.title,
+                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Primary,
+                                selectedTextColor = Primary,
+                                indicatorColor = PrimaryContainer
                             )
-                        },
-                        label = {
-                            Text(
-                                text = tab.title,
-                                fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Primary,
-                            selectedTextColor = Primary,
-                            indicatorColor = PrimaryContainer
                         )
-                    )
+                    }
                 }
             }
         }
@@ -67,7 +70,11 @@ fun TutorMainScreen(
             0 -> TutorDashboardScreen(user = user, modifier = Modifier.padding(innerPadding))
             1 -> TutorOffersScreen(user = user, modifier = Modifier.padding(innerPadding))
             2 -> TutorReservationsScreen(user = user, modifier = Modifier.padding(innerPadding))
-            3 -> TutorChatScreen(user = user, modifier = Modifier.padding(innerPadding))
+            3 -> TutorChatScreen(
+                user = user,
+                modifier = Modifier.padding(innerPadding),
+                onChatOpen = { isOpen -> isChatDetailOpen = isOpen }
+            )
             4 -> TutorProfileScreen(user = user, onLogout = onLogout, modifier = Modifier.padding(innerPadding))
         }
     }

@@ -23,7 +23,7 @@ import com.vectorpeaks.edulink.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TutorChatScreen(user: User, modifier: Modifier = Modifier) {
+fun TutorChatScreen(user: User, modifier: Modifier = Modifier, onChatOpen: (Boolean) -> Unit = {}) {
     // For tutor, conversations represent chats with students
     val tutorConversations = listOf(
         ChatConversation(
@@ -47,10 +47,16 @@ fun TutorChatScreen(user: User, modifier: Modifier = Modifier) {
     var selectedConversation by remember { mutableStateOf<ChatConversation?>(null) }
 
     if (selectedConversation != null) {
+        LaunchedEffect(selectedConversation) {
+            onChatOpen(true)
+        }
         TutorChatDetailView(
             conversation = selectedConversation!!,
             currentUserId = user.id,
-            onBack = { selectedConversation = null }
+            onBack = {
+                selectedConversation = null
+                onChatOpen(false)
+            }
         )
     } else {
         Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {

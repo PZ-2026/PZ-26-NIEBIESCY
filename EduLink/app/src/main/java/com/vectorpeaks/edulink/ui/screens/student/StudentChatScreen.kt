@@ -22,14 +22,20 @@ import com.vectorpeaks.edulink.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StudentChatScreen(user: User, modifier: Modifier = Modifier) {
+fun StudentChatScreen(user: User, modifier: Modifier = Modifier, onChatOpen: (Boolean) -> Unit = {}) {
     var selectedConversation by remember { mutableStateOf<ChatConversation?>(null) }
 
     if (selectedConversation != null) {
+        LaunchedEffect(selectedConversation) {
+            onChatOpen(true)
+        }
         ChatDetailView(
             conversation = selectedConversation!!,
             currentUserId = user.id,
-            onBack = { selectedConversation = null }
+            onBack = {
+                selectedConversation = null
+                onChatOpen(false)
+            }
         )
     } else {
         Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
