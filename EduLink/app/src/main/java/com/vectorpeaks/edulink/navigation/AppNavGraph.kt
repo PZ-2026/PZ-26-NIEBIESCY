@@ -13,6 +13,7 @@ import com.vectorpeaks.edulink.ui.screens.admin.AdminMainScreen
 import com.vectorpeaks.edulink.ui.screens.login.LoginScreen
 import com.vectorpeaks.edulink.ui.screens.student.StudentMainScreen
 import com.vectorpeaks.edulink.ui.screens.tutor.TutorMainScreen
+import com.vectorpeaks.edulink.data.model.RoleID
 
 @Composable
 fun AppNavGraph() {
@@ -28,9 +29,9 @@ fun AppNavGraph() {
                 onLoginSuccess = { user ->
                     currentUser = user
                     val destination = when (user.role) {
-                        com.vectorpeaks.edulink.data.model.UserRole.STUDENT -> NavRoutes.StudentMain.route
-                        com.vectorpeaks.edulink.data.model.UserRole.TUTOR -> NavRoutes.TutorMain.route
-                        com.vectorpeaks.edulink.data.model.UserRole.ADMIN -> NavRoutes.AdminMain.route
+                        RoleID.STUDENT -> NavRoutes.StudentMain.route
+                        RoleID.TUTOR   -> NavRoutes.TutorMain.route
+                        RoleID.ADMIN   -> NavRoutes.AdminMain.route
                     }
                     navController.navigate(destination) {
                         popUpTo(NavRoutes.Login.route) { inclusive = true }

@@ -24,7 +24,7 @@ fun StudentProfileScreen(
 ) {
     var isEditing by remember { mutableStateOf(false) }
     var editPhone by remember { mutableStateOf(user.phone) }
-    var editCity by remember { mutableStateOf(user.city) }
+    var editCity by remember { mutableStateOf(user.address) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
@@ -96,7 +96,7 @@ fun StudentProfileScreen(
                 } else {
                     ProfileRow(icon = Icons.Default.Phone, label = "Telefon", value = user.phone.ifEmpty { "–" })
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    ProfileRow(icon = Icons.Default.LocationOn, label = "Miasto", value = user.city.ifEmpty { "–" })
+                    ProfileRow(icon = Icons.Default.LocationOn, label = "Miasto", value = user.address.ifEmpty { "–" })
                 }
             }
         }

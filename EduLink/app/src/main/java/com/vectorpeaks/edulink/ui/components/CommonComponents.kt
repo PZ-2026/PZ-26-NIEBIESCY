@@ -387,15 +387,15 @@ fun UserCard(
                 )
                 Text(
                     text = when (user.role) {
-                        UserRole.STUDENT -> "Uczeń"
-                        UserRole.TUTOR -> "Korepetytor"
-                        UserRole.ADMIN -> "Administrator"
+                        RoleID.STUDENT -> "Uczeń"
+                        RoleID.TUTOR -> "Korepetytor"
+                        RoleID.ADMIN -> "Administrator"
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = Primary
                 )
             }
-            if (user.role != UserRole.ADMIN) {
+            if (user.role != RoleID.ADMIN) {
                 Button(
                     onClick = onToggleBlock,
                     colors = ButtonDefaults.buttonColors(

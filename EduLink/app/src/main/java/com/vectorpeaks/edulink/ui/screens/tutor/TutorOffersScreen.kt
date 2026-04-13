@@ -25,7 +25,7 @@ fun TutorOffersScreen(user: User, modifier: Modifier = Modifier) {
     var newSubject by remember { mutableStateOf("") }
     var newDescription by remember { mutableStateOf("") }
     var newPrice by remember { mutableStateOf("") }
-    var newCity by remember { mutableStateOf(user.city) }
+    var newCity by remember { mutableStateOf(user.address) }
     var isOnline by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
