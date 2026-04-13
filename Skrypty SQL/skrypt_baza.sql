@@ -1,0 +1,134 @@
+-- Tabele główne
+CREATE TABLE global_limits (
+    id INTEGER NOT NULL,
+    hourly_price_limit DECIMAL(10, 2) NOT NULL,
+    message TEXT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE statuses (
+    id INTEGER NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT statuses_status_unique UNIQUE (status)
+);
+
+CREATE TABLE roles (
+    id INTEGER NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT roles_name_unique UNIQUE (name)
+);
+
+CREATE TABLE subjects (
+    id INTEGER NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    status_id INTEGER NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (status_id) REFERENCES statuses(id)
+);
+
+CREATE TABLE users (
+    id INTEGER NOT NULL,
+    role_id INTEGER NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    account_status_id INTEGER NOT NULL,
+    address TEXT NULL,
+    phone_number VARCHAR(20) NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT users_email_unique UNIQUE (email),
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (account_status_id) REFERENCES statuses(id)
+);
+
+CREATE TABLE availability_slots (
+    id INTEGER NOT NULL,
+    day_of_week SMALLINT NOT NULL,
+    start_time TIME(0) WITHOUT TIME ZONE NOT NULL,
+    end_time TIME(0) WITHOUT TIME ZONE NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE offers (
+    id INTEGER NOT NULL,
+    tutor_id INTEGER NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    availability_slot_id INTEGER NOT NULL,
+    details TEXT NULL,
+    subject_id INTEGER NOT NULL,
+    status_id INTEGER NOT NULL,
+    global_limit_id INTEGER NOT NULL,
+    offer_type VARCHAR(50) NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (tutor_id) REFERENCES users(id),
+    FOREIGN KEY (availability_slot_id) REFERENCES availability_slots(id),
+    FOREIGN KEY (subject_id) REFERENCES subjects(id),
+    FOREIGN KEY (status_id) REFERENCES statuses(id),
+    FOREIGN KEY (global_limit_id) REFERENCES global_limits(id)
+);
+
+CREATE TABLE bookings (
+    id INTEGER NOT NULL,
+    availability_slot_id INTEGER NOT NULL,
+    status_id INTEGER NOT NULL,
+    offer_id INTEGER NOT NULL,
+    student_id INTEGER NOT NULL,
+    booking_date TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    FOREIGN KEY (availability_slot_id) REFERENCES availability_slots(id),
+    FOREIGN KEY (status_id) REFERENCES statuses(id),
+    FOREIGN KEY (offer_id) REFERENCES offers(id),
+    FOREIGN KEY (student_id) REFERENCES users(id)
+);
+
+CREATE TABLE reviews (
+    id INTEGER NOT NULL,
+    rating SMALLINT NOT NULL,
+    tutor_id INTEGER NOT NULL,
+    comment TEXT NULL,
+    booking_id BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (tutor_id) REFERENCES users(id),
+    FOREIGN KEY (booking_id) REFERENCES bookings(id)
+);
+
+CREATE TABLE chats (
+    id INTEGER NOT NULL,
+    created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE messages (
+    id INTEGER NOT NULL,
+    chat_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    sent_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    user_id INTEGER NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (chat_id) REFERENCES chats(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE chat_participants (
+    chat_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    PRIMARY KEY (chat_id, user_id),
+    FOREIGN KEY (chat_id) REFERENCES chats(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Indeksy (opcjonalne, dla wydajności)
+CREATE INDEX idx_chat_participants_chat_id ON chat_participants(chat_id);
+CREATE INDEX idx_chat_participants_user_id ON chat_participants(user_id);
+CREATE INDEX idx_messages_chat_id ON messages(chat_id);
+CREATE INDEX idx_messages_user_id ON messages(user_id);
+CREATE INDEX idx_bookings_offer_id ON bookings(offer_id);
+CREATE INDEX idx_bookings_student_id ON bookings(student_id);
+CREATE INDEX idx_offers_tutor_id ON offers(tutor_id);
+CREATE INDEX idx_offers_subject_id ON offers(subject_id);
+CREATE INDEX idx_offers_status_id ON offers(status_id);
+CREATE INDEX idx_reviews_tutor_id ON reviews(tutor_id);
+CREATE INDEX idx_reviews_booking_id ON reviews(booking_id);
