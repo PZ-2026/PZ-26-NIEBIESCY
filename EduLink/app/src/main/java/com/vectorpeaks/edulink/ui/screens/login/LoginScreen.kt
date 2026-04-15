@@ -28,16 +28,26 @@ import androidx.compose.ui.unit.dp
 import com.vectorpeaks.edulink.data.FakeData
 import com.vectorpeaks.edulink.data.model.User
 import com.vectorpeaks.edulink.ui.theme.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (User) -> Unit
+    onLoginSuccess: (User) -> Unit,
+    viewModel: LoginViewModel = viewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
+
+    // Obsługa sukcesu
+    LaunchedEffect(uiState) {
+        if (uiState is LoginUiState.Success) {
+            onLoginSuccess((uiState as LoginUiState.Success).user)
+            viewModel.resetState()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -85,7 +95,7 @@ fun LoginScreen(
                 value = email,
                 onValueChange = {
                     email = it
-                    errorMessage = null
+                    if (uiState is LoginUiState.Error) viewModel.resetState()
                 },
                 label = { Text("Adres e-mail") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
@@ -107,7 +117,7 @@ fun LoginScreen(
                 value = password,
                 onValueChange = {
                     password = it
-                    errorMessage = null
+                    if (uiState is LoginUiState.Error) viewModel.resetState()
                 },
                 label = { Text("Hasło") },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
@@ -130,7 +140,7 @@ fun LoginScreen(
                 keyboardActions = KeyboardActions(
                     onDone = {
                         focusManager.clearFocus()
-                        performLogin(email, password, onLoginSuccess) { errorMessage = it }
+                        viewModel.login(email, password)
                     }
                 ),
                 shape = RoundedCornerShape(12.dp),
@@ -139,13 +149,11 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Error message
-            AnimatedVisibility(visible = errorMessage != null) {
+            if (uiState is LoginUiState.Error) {
                 Text(
-                    text = errorMessage ?: "",
+                    text = (uiState as LoginUiState.Error).message,
                     color = Error,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -154,19 +162,16 @@ fun LoginScreen(
             Button(
                 onClick = {
                     focusManager.clearFocus()
-                    performLogin(email, password, onLoginSuccess) { errorMessage = it }
+                    viewModel.login(email, password)
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                enabled = uiState != LoginUiState.Loading,
+                modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
-                Text(
-                    text = "Zaloguj się",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                if (uiState == LoginUiState.Loading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text("Zaloguj się")
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -179,23 +184,5 @@ fun LoginScreen(
                 )
             }
         }
-    }
-}
-
-private fun performLogin(
-    email: String,
-    password: String,
-    onSuccess: (User) -> Unit,
-    onError: (String) -> Unit
-) {
-    if (email.isBlank() || password.isBlank()) {
-        onError("Proszę wypełnić wszystkie pola")
-        return
-    }
-    val user = FakeData.authenticateUser(email.trim(), password)
-    if (user != null) {
-        onSuccess(user)
-    } else {
-        onError("Nieprawidłowy adres e-mail lub hasło")
     }
 }

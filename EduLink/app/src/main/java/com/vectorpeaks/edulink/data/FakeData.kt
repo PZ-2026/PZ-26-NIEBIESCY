@@ -12,9 +12,9 @@ object FakeData {
             lastName = "Kowalski",
             email = "admin@edulink.pl",
             password = "admin123",
-            role = UserRole.ADMIN,
+            role = RoleID.ADMIN,
             phone = "500100200",
-            city = "Rzeszów"
+            address = "Rzeszów"
         ),
         User(
             id = 2,
@@ -22,9 +22,9 @@ object FakeData {
             lastName = "Nowak",
             email = "tutor@edulink.pl",
             password = "tutor123",
-            role = UserRole.TUTOR,
+            role = RoleID.TUTOR,
             phone = "600200300",
-            city = "Rzeszów"
+            address = "Rzeszów"
         ),
         User(
             id = 3,
@@ -32,9 +32,9 @@ object FakeData {
             lastName = "Wiśniewski",
             email = "student@edulink.pl",
             password = "student123",
-            role = UserRole.STUDENT,
+            role = RoleID.STUDENT,
             phone = "700300400",
-            city = "Rzeszów"
+            address = "Rzeszów"
         ),
         User(
             id = 4,
@@ -42,9 +42,9 @@ object FakeData {
             lastName = "Zielińska",
             email = "tutor2@edulink.pl",
             password = "tutor123",
-            role = UserRole.TUTOR,
+            role = RoleID.TUTOR,
             phone = "600400500",
-            city = "Kraków"
+            address = "Kraków"
         ),
         User(
             id = 5,
@@ -52,9 +52,9 @@ object FakeData {
             lastName = "Lewandowski",
             email = "student2@edulink.pl",
             password = "student123",
-            role = UserRole.STUDENT,
+            role = RoleID.STUDENT,
             phone = "700500600",
-            city = "Warszawa"
+            address = "Warszawa"
         )
     )
 
