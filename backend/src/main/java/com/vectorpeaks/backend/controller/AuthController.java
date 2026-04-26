@@ -2,7 +2,7 @@
  * AuthController.java
  *
  * Version: 1.0
- * Date: 2026-04-13
+ * Date: 2026-04-26
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -15,7 +15,6 @@ import com.vectorpeaks.backend.dto.LoginRequest;
 import com.vectorpeaks.backend.dto.LoginResponse;
 import com.vectorpeaks.backend.entity.User;
 import com.vectorpeaks.backend.service.AuthService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,14 +28,21 @@ import java.util.Optional;
  * @version 1.0
  * @author EduLink Team
  */
-
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*") // For development only – restrict in production
 public class AuthController {
 
-    @Autowired
-    private AuthService authService;
+    private final AuthService authService;
+
+    /**
+     * Constructs a new AuthController with the given AuthService.
+     *
+     * @param authService the authentication service
+     */
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     /**
      * Authenticates a user based on email and password.
@@ -47,7 +53,6 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        // Attempt to authenticate using the auth service
         Optional<User> userOpt = authService.authenticate(
                 request.getEmail(),
                 request.getPassword()
@@ -63,11 +68,8 @@ public class AuthController {
             response.setRole(String.valueOf(user.getRoleId()));
             return ResponseEntity.ok(response);
         } else {
-            // Return 401 Unauthorized with a plain text error message
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Nieprawidłowy email lub hasło");
         }
     }
-
 }
-

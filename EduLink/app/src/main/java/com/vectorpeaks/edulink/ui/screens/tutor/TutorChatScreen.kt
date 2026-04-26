@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vectorpeaks.edulink.data.FakeData
 import com.vectorpeaks.edulink.data.model.ChatConversation
-import com.vectorpeaks.edulink.data.model.User
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.components.UserAvatar
 import com.vectorpeaks.edulink.ui.theme.*
 

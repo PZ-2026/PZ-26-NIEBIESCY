@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vectorpeaks.edulink.data.model.User
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.components.UserAvatar
 import com.vectorpeaks.edulink.ui.theme.*
 
@@ -23,7 +23,7 @@ fun TutorProfileScreen(
     modifier: Modifier = Modifier
 ) {
     var isEditing by remember { mutableStateOf(false) }
-    var editPhone by remember { mutableStateOf(user.phone) }
+    var editPhone by remember { mutableStateOf(user.phoneNumber) }
     var editCity by remember { mutableStateOf(user.address) }
     var showAddress by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
@@ -94,7 +94,7 @@ fun TutorProfileScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else {
-                    ProfileInfoRow(icon = Icons.Default.Phone, label = "Telefon", value = user.phone.ifEmpty { "–" })
+                    ProfileInfoRow(icon = Icons.Default.Phone, label = "Telefon", value = user.phoneNumber.ifEmpty { "–" })
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     ProfileInfoRow(icon = Icons.Default.LocationOn, label = "Miasto", value = user.address.ifEmpty { "–" })
                 }

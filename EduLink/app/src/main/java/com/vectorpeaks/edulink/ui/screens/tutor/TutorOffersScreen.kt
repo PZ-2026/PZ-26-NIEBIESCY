@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vectorpeaks.edulink.data.FakeData
-import com.vectorpeaks.edulink.data.model.User
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.components.OfferCard
 import com.vectorpeaks.edulink.ui.theme.*
 

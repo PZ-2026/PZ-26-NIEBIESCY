@@ -8,12 +8,12 @@ import androidx.compose.runtime.setValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.vectorpeaks.edulink.data.model.User
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.screens.admin.AdminMainScreen
 import com.vectorpeaks.edulink.ui.screens.login.LoginScreen
 import com.vectorpeaks.edulink.ui.screens.student.StudentMainScreen
 import com.vectorpeaks.edulink.ui.screens.tutor.TutorMainScreen
-import com.vectorpeaks.edulink.data.model.RoleID
+import com.vectorpeaks.edulink.data.model.user.RoleID
 
 @Composable
 fun AppNavGraph() {
@@ -28,7 +28,7 @@ fun AppNavGraph() {
             LoginScreen(
                 onLoginSuccess = { user ->
                     currentUser = user
-                    val destination = when (user.role) {
+                    val destination = when (user.getRole()) {
                         RoleID.STUDENT -> NavRoutes.StudentMain.route
                         RoleID.TUTOR   -> NavRoutes.TutorMain.route
                         RoleID.ADMIN   -> NavRoutes.AdminMain.route

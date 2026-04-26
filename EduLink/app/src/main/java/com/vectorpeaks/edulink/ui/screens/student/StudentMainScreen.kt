@@ -15,7 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import com.vectorpeaks.edulink.data.model.User
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.theme.*
 
 data class StudentTab(
@@ -81,7 +81,7 @@ fun StudentMainScreen(
                 modifier = Modifier.padding(innerPadding),
                 onChatOpen = { isOpen -> isChatDetailOpen = isOpen }
             )
-            3 -> StudentProfileScreen(user = user, onLogout = onLogout, modifier = Modifier.padding(innerPadding))
+            3 -> StudentProfileScreen(userId = user.id, onLogout = onLogout, modifier = Modifier.padding(innerPadding))
         }
     }
 }
