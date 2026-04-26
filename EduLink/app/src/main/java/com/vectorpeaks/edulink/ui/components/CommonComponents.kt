@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vectorpeaks.edulink.data.model.*
+import com.vectorpeaks.edulink.data.model.user.RoleID
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.theme.*
 
 // ==================== SEARCH BAR ====================
@@ -386,7 +388,7 @@ fun UserCard(
                     color = OnSurfaceVariant
                 )
                 Text(
-                    text = when (user.role) {
+                    text = when (user.getRole()) {
                         RoleID.STUDENT -> "Uczeń"
                         RoleID.TUTOR -> "Korepetytor"
                         RoleID.ADMIN -> "Administrator"
@@ -395,7 +397,7 @@ fun UserCard(
                     color = Primary
                 )
             }
-            if (user.role != RoleID.ADMIN) {
+            if (user.getRole() != RoleID.ADMIN) {
                 Button(
                     onClick = onToggleBlock,
                     colors = ButtonDefaults.buttonColors(

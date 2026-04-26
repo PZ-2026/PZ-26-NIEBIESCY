@@ -4,15 +4,14 @@ package com.vectorpeaks.edulink.ui.screens.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vectorpeaks.edulink.data.model.LoginRequest
-import com.vectorpeaks.edulink.data.model.User
-import com.vectorpeaks.edulink.data.model.UserResponse
+import com.vectorpeaks.edulink.data.model.user.User
+import com.vectorpeaks.edulink.data.model.user.UserResponse
 import com.vectorpeaks.edulink.network.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
-import com.vectorpeaks.edulink.data.model.RoleID
 
 sealed class LoginUiState {
     object Idle : LoginUiState()
@@ -37,23 +36,23 @@ class LoginViewModel : ViewModel() {
                 val request = LoginRequest(email.trim(), password)
                 val response: UserResponse = RetrofitClient.apiService.login(request)
 
-                // Konwersja UserResponse na lokalny model User (jeśli potrzebujesz)
-                val roleEnum = try {
-                    RoleID.valueOf(response.role.uppercase())
-                } catch (e: IllegalArgumentException) {
-                    RoleID.STUDENT   // domyślnie, jeśli rola nieznana
+                // Mapowanie stringa role na Int (zgodnie z bazą: 1-ADMIN, 2-TUTOR, 3-STUDENT)
+                val roleId = when (response.role.uppercase()) {
+                    "ADMIN" -> 1
+                    "TUTOR" -> 2
+                    else -> 3
                 }
 
                 val user = User(
                     id = response.id,
-                    role = roleEnum,
-                    password = "",          // hasła nie przechowujemy po stronie klienta
+                    roleId = roleId,
+                    password = null,
                     firstName = response.firstName,
                     lastName = response.lastName,
                     email = response.email,
-                    accountStatusId = 1,    // lub pobierz z response, jeśli backend zwraca
-                    address = "",
-                    phone = ""
+                    accountStatusId = 1,
+                    address = response.address ?: "",
+                    phoneNumber = response.phoneNumber ?: ""
                 )
                 _uiState.value = LoginUiState.Success(user)
             } catch (e: HttpException) {

@@ -14,8 +14,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vectorpeaks.edulink.data.FakeData
 import com.vectorpeaks.edulink.data.model.ReservationStatus
-import com.vectorpeaks.edulink.data.model.User
-import com.vectorpeaks.edulink.data.model.RoleID
+import com.vectorpeaks.edulink.data.model.user.User
+import com.vectorpeaks.edulink.data.model.user.RoleID
 import com.vectorpeaks.edulink.ui.components.ReservationCard
 import com.vectorpeaks.edulink.ui.components.SectionHeader
 import com.vectorpeaks.edulink.ui.components.StatCard
@@ -27,8 +27,8 @@ fun AdminDashboardScreen(user: User, modifier: Modifier = Modifier) {
     val totalOffers = FakeData.offers.size
     val totalReservations = FakeData.reservations.size
     val pendingReservations = FakeData.reservations.filter { it.status == ReservationStatus.PENDING }
-    val tutorsCount = FakeData.users.count { it.role == RoleID.TUTOR }
-    val studentsCount = FakeData.users.count { it.role == RoleID.STUDENT }
+    val tutorsCount = FakeData.users.count { it.getRole() == RoleID.TUTOR }
+    val studentsCount = FakeData.users.count { it.getRole() == RoleID.STUDENT }
 
     Column(
         modifier = modifier

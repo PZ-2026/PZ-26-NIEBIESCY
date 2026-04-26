@@ -3,14 +3,13 @@ package com.vectorpeaks.edulink.ui.screens.admin
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vectorpeaks.edulink.data.FakeData
-import com.vectorpeaks.edulink.data.model.RoleID
+import com.vectorpeaks.edulink.data.model.user.RoleID
 import com.vectorpeaks.edulink.ui.components.EduSearchBar
 import com.vectorpeaks.edulink.ui.components.UserCard
 import com.vectorpeaks.edulink.ui.theme.*
@@ -26,9 +25,9 @@ fun AdminUsersScreen(modifier: Modifier = Modifier) {
                 user.fullName.contains(searchQuery, ignoreCase = true) ||
                 user.email.contains(searchQuery, ignoreCase = true)
         val matchesRole = when (selectedRoleFilter) {
-            1 -> user.role == RoleID.STUDENT
-            2 -> user.role == RoleID.TUTOR
-            3 -> user.role == RoleID.ADMIN
+            1 -> user.getRole() == RoleID.STUDENT
+            2 -> user.getRole() == RoleID.TUTOR
+            3 -> user.getRole() == RoleID.ADMIN
             else -> true
         }
         matchesSearch && matchesRole

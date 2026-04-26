@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vectorpeaks.edulink.data.model.User
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.components.UserAvatar
 import com.vectorpeaks.edulink.ui.theme.*
 
@@ -71,7 +71,7 @@ fun AdminSettingsScreen(
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsRow(icon = Icons.Default.Email, label = "E-mail", value = user.email)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                SettingsRow(icon = Icons.Default.Phone, label = "Telefon", value = user.phone.ifEmpty { "–" })
+                SettingsRow(icon = Icons.Default.Phone, label = "Telefon", value = user.phoneNumber.ifEmpty { "–" })
             }
         }
         Spacer(modifier = Modifier.height(20.dp))

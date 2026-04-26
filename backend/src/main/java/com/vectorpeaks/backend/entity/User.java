@@ -1,8 +1,8 @@
 /*
  * User.java
  *
- * Version: 1.0
- * Date: 2026-04-13
+ * Version: 1.1
+ * Date: 2026-04-26
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -11,13 +11,14 @@
 
 package com.vectorpeaks.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 /**
  * Represents a user entity mapped to the "users" database table.
  * Contains personal information, authentication credentials, and account status.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 @Entity
@@ -31,6 +32,7 @@ public class User {
     @Column(name = "role_id")
     private Integer roleId;
 
+    @JsonIgnore
     private String password;
     private String firstName;
     private String lastName;
