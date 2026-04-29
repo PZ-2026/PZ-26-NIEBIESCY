@@ -74,8 +74,8 @@ fun StudentMainScreen(
         }
     ) { innerPadding ->
         when (selectedTab) {
-            0 -> StudentSearchScreen(modifier = Modifier.padding(innerPadding))
-            1 -> StudentHistoryScreen(user = user, modifier = Modifier.padding(innerPadding))
+            0 -> StudentSearchScreen(studentId = user.id, modifier = Modifier.padding(innerPadding))
+            1 -> StudentHistoryScreen(studentId = user.id, modifier = Modifier.padding(innerPadding))
             2 -> StudentChatScreen(
                 user = user,
                 modifier = Modifier.padding(innerPadding),

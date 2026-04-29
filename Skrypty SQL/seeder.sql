@@ -93,6 +93,9 @@ INSERT INTO messages (id, chat_id, content, sent_at, user_id) VALUES
 (7, 6, 'Do you have materials for B2?', '2023-09-25 17:05:00', 3),
 (8, 7, 'Yes, check your email.', '2023-09-26 18:05:00', 1);
 
+SELECT pg_get_serial_sequence('bookings', 'id');
+SELECT setval('bookings_id_seq', (SELECT COALESCE(MAX(id), 0) + 1 FROM bookings), false);
+
 -- Hash passwords
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 UPDATE users SET password = crypt(password, gen_salt('bf')) WHERE password NOT LIKE '$2a$%';

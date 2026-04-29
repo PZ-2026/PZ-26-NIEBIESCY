@@ -12,7 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vectorpeaks.edulink.data.model.Offer
+import com.vectorpeaks.edulink.data.model.Slot
 import com.vectorpeaks.edulink.ui.components.RatingBar
 import com.vectorpeaks.edulink.ui.components.UserAvatar
 import com.vectorpeaks.edulink.ui.theme.*
@@ -21,10 +23,12 @@ import com.vectorpeaks.edulink.ui.theme.*
 @Composable
 fun OfferDetailScreen(
     offer: Offer,
-    onBack: () -> Unit
+    studentId: Int,
+    onBack: () -> Unit,
+    bookingViewModel: BookingViewModel = viewModel()
 ) {
     var showBookingDialog by remember { mutableStateOf(false) }
-    var selectedSlot by remember { mutableStateOf<String?>(null) }
+    var selectedSlot by remember { mutableStateOf<Slot?>(null) }
     var bookingConfirmed by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -50,7 +54,7 @@ fun OfferDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Subject & Price
+            // Subject & Price (bez zmian)
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Surface),
@@ -96,7 +100,6 @@ fun OfferDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tutor info
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Surface),
@@ -188,15 +191,19 @@ fun OfferDetailScreen(
                                 Icon(Icons.Default.Schedule, contentDescription = null, tint = Primary, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = slot,
+                                    text = slot.label,   // ✅ ZMIANA
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
-                            TextButton(onClick = {
-                                selectedSlot = slot
-                                showBookingDialog = true
-                            }) {
-                                Text("Rezerwuj", color = Primary)
+                            Button(
+                                onClick = {
+                                    selectedSlot = slot
+                                    showBookingDialog = true
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                            ) {
+                                Text("Rezerwuj", color = MaterialTheme.colorScheme.onPrimary)
                             }
                         }
                         if (slot != offer.availableSlots.last()) {
@@ -208,20 +215,6 @@ fun OfferDetailScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Full-width booking button
-            Button(
-                onClick = { showBookingDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary)
-            ) {
-                Icon(Icons.Default.BookOnline, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Zarezerwuj lekcję", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
@@ -235,7 +228,7 @@ fun OfferDetailScreen(
                     Text("Przedmiot: ${offer.subject}")
                     Text("Korepetytor: ${offer.tutorName}")
                     if (selectedSlot != null) {
-                        Text("Termin: $selectedSlot")
+                        Text("Termin: ${selectedSlot!!.label}")
                     }
                     Text("Cena: ${offer.pricePerHour.toInt()} zł/h")
                 }
@@ -243,8 +236,16 @@ fun OfferDetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        showBookingDialog = false
-                        bookingConfirmed = true
+                        if (selectedSlot != null) {
+                            bookingViewModel.createBooking(
+                                offerId = offer.id,
+                                studentId = studentId,
+                                slotId = selectedSlot!!.id
+                            ) {
+                                showBookingDialog = false
+                                bookingConfirmed = true
+                            }
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Primary)
                 ) {
@@ -259,10 +260,32 @@ fun OfferDetailScreen(
         )
     }
 
-    // Booking success snackbar-like dialog
+    // Obsługa stanu rezerwacji
+    when (val state = bookingViewModel.uiState.value) {
+        is BookingUiState.Loading -> {
+        }
+        is BookingUiState.Success -> {
+            LaunchedEffect(Unit) {
+                if (!bookingConfirmed) {
+                    bookingConfirmed = true
+                }
+            }
+        }
+        is BookingUiState.Error -> {
+            LaunchedEffect(state.message) {
+                bookingConfirmed = false
+            }
+        }
+        else -> {}
+    }
+
+    // Booking success dialog
     if (bookingConfirmed) {
         AlertDialog(
-            onDismissRequest = { bookingConfirmed = false },
+            onDismissRequest = {
+                bookingConfirmed = false
+                onBack()
+            },
             title = { Text("Sukces!", color = Success) },
             text = { Text("Rezerwacja została złożona. Korepetytor otrzyma powiadomienie.") },
             confirmButton = {

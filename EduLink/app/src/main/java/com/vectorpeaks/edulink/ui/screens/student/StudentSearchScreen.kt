@@ -16,15 +16,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vectorpeaks.edulink.data.FakeData
 import com.vectorpeaks.edulink.data.model.Offer
 import com.vectorpeaks.edulink.ui.components.*
 import com.vectorpeaks.edulink.ui.theme.*
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vectorpeaks.edulink.ui.screens.student.OffersViewModel
+import com.vectorpeaks.edulink.data.model.user.DataViewModel
+import com.vectorpeaks.edulink.data.model.user.OffersViewModel
 
 @Composable
-fun StudentSearchScreen(modifier: Modifier = Modifier) {
+fun StudentSearchScreen(studentId: Int, modifier: Modifier = Modifier) {
     val viewModel: OffersViewModel = viewModel()
     val offers by viewModel.offers.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -55,9 +55,13 @@ fun StudentSearchScreen(modifier: Modifier = Modifier) {
         )
     }
 
-    if (selectedOffer != null) {
-        OfferDetailScreen(offer = selectedOffer!!, onBack = { selectedOffer = null })
-    } else {
+    selectedOffer?.let { offer ->
+        OfferDetailScreen(
+            offer = offer,
+            studentId = studentId,
+            onBack = { selectedOffer = null }
+        )
+    } ?: run {
         Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(

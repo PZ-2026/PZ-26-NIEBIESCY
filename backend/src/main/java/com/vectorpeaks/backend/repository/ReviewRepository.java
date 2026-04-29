@@ -16,9 +16,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
+
 /**
  * Repository interface for performing CRUD operations on {@link Review} entities.
- * Provides custom queries to calculate average rating and review count per tutor.
+ * Provides custom queries to calculate average rating and review count per tutor,
+ * and to find a review by booking ID.
  *
  * @version 1.0
  * @author EduLink Team
@@ -42,4 +45,12 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
      */
     @Query("SELECT COUNT(r) FROM Review r WHERE r.tutorId = :tutorId")
     Integer countReviewsByTutorId(@Param("tutorId") Integer tutorId);
+
+    /**
+     * Finds a review by the associated booking ID.
+     *
+     * @param bookingId the ID of the booking
+     * @return an Optional containing the review if found, or empty otherwise
+     */
+    Optional<Review> findByBookingId(Long bookingId);
 }

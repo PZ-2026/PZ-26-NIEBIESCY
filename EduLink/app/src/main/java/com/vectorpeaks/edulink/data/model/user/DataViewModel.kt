@@ -1,4 +1,4 @@
-package com.vectorpeaks.edulink.ui.screens.student
+package com.vectorpeaks.edulink.data.model.user
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
