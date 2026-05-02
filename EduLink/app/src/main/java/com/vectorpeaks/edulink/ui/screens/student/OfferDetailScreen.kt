@@ -31,6 +31,14 @@ fun OfferDetailScreen(
     var selectedSlot by remember { mutableStateOf<Slot?>(null) }
     var bookingConfirmed by remember { mutableStateOf(false) }
 
+    // Reset stanu przy każdej nowej ofercie
+    LaunchedEffect(offer.id, studentId) {
+        showBookingDialog = false
+        selectedSlot = null
+        bookingConfirmed = false
+        bookingViewModel.resetUiState()
+    }
+
     Scaffold(
         containerColor = Background,
         topBar = {
@@ -120,7 +128,12 @@ fun OfferDetailScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = OnSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = offer.city,
@@ -130,7 +143,12 @@ fun OfferDetailScreen(
                         }
                         if (offer.isOnline) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Laptop, contentDescription = null, tint = Tertiary, modifier = Modifier.size(16.dp))
+                                Icon(
+                                    Icons.Default.Laptop,
+                                    contentDescription = null,
+                                    tint = Tertiary,
+                                    modifier = Modifier.size(16.dp)
+                                )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "Dostępne online",
@@ -188,7 +206,12 @@ fun OfferDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Schedule, contentDescription = null, tint = Primary, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = slot.label,   // ✅ ZMIANA
@@ -260,10 +283,8 @@ fun OfferDetailScreen(
         )
     }
 
-    // Obsługa stanu rezerwacji
+    // Obsługa sukcesu z ViewModel
     when (val state = bookingViewModel.uiState.value) {
-        is BookingUiState.Loading -> {
-        }
         is BookingUiState.Success -> {
             LaunchedEffect(Unit) {
                 if (!bookingConfirmed) {
@@ -271,11 +292,14 @@ fun OfferDetailScreen(
                 }
             }
         }
+
         is BookingUiState.Error -> {
             LaunchedEffect(state.message) {
                 bookingConfirmed = false
+                // Opcjonalnie: pokaż Snackbar z błędem
             }
         }
+
         else -> {}
     }
 
@@ -284,6 +308,7 @@ fun OfferDetailScreen(
         AlertDialog(
             onDismissRequest = {
                 bookingConfirmed = false
+                bookingViewModel.resetUiState()
                 onBack()
             },
             title = { Text("Sukces!", color = Success) },
@@ -292,6 +317,7 @@ fun OfferDetailScreen(
                 Button(
                     onClick = {
                         bookingConfirmed = false
+                        bookingViewModel.resetUiState()
                         onBack()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Success)

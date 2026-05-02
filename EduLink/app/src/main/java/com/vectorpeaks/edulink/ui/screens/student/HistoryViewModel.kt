@@ -2,8 +2,8 @@ package com.vectorpeaks.edulink.ui.screens.student
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vectorpeaks.edulink.data.model.BookingResponse
-import com.vectorpeaks.edulink.data.model.ReviewRequest
+import com.vectorpeaks.edulink.data.model.user.BookingResponse
+import com.vectorpeaks.edulink.data.model.user.ReviewRequest
 import com.vectorpeaks.edulink.network.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

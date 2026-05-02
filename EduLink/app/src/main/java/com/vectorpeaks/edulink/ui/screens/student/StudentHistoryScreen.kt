@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vectorpeaks.edulink.data.model.BookingResponse
+import com.vectorpeaks.edulink.data.model.user.BookingResponse
 import com.vectorpeaks.edulink.data.model.Reservation
 import com.vectorpeaks.edulink.data.model.ReservationStatus
 import com.vectorpeaks.edulink.ui.components.ClickableRatingBar

@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun LoginScreen(
     onLoginSuccess: (User) -> Unit,
+    onRegisterClick: () -> Unit,
     viewModel: LoginViewModel = viewModel()
 ) {
     var email by remember { mutableStateOf("") }
@@ -173,8 +174,8 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Registration hint
-            TextButton(onClick = { /* TODO: rejestracja */ }) {
-                Text(
+            TextButton(onClick = onRegisterClick) {
+            Text(
                     text = "Nie masz konta? Zarejestruj się",
                     color = Primary,
                     style = MaterialTheme.typography.bodyMedium
