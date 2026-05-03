@@ -36,12 +36,7 @@ class LoginViewModel : ViewModel() {
                 val request = LoginRequest(email.trim(), password)
                 val response: UserResponse = RetrofitClient.apiService.login(request)
 
-                // Mapowanie stringa role na Int (zgodnie z bazą: 1-ADMIN, 2-TUTOR, 3-STUDENT)
-                val roleId = when (response.role.uppercase()) {
-                    "ADMIN" -> 1
-                    "TUTOR" -> 2
-                    else -> 3
-                }
+                val roleId = response.role.toIntOrNull() ?: 3
 
                 val user = User(
                     id = response.id,
