@@ -8,6 +8,9 @@ import com.vectorpeaks.edulink.data.model.user.UserResponse
 import com.vectorpeaks.edulink.data.model.Offer
 import com.vectorpeaks.edulink.data.model.user.ReviewRequest
 import com.vectorpeaks.edulink.data.model.RegisterRequest
+import com.vectorpeaks.edulink.data.model.user.AdminStatsResponse
+import com.vectorpeaks.edulink.data.model.user.AdminReportsResponse
+import com.vectorpeaks.edulink.data.model.user.GlobalLimitDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -58,6 +61,26 @@ interface ApiService {
 
     @POST("api/users/register")
     suspend fun register(@Body request: RegisterRequest): Response<Unit>
+    @GET("api/admin/reports")
+    suspend fun getAdminReports(): AdminReportsResponse
+
+    @GET("api/admin/stats")
+    suspend fun getAdminStats(): AdminStatsResponse
+
+    @GET("api/admin/bookings/pending")
+    suspend fun getPendingBookings(): List<BookingResponse>
+
+    @GET("api/admin/settings")
+    suspend fun getAdminSettings(): GlobalLimitDto
+
+    @PUT("api/admin/settings")
+    suspend fun updateAdminSettings(@Body settings: GlobalLimitDto): Response<Unit>
+
+    @GET("api/users")
+    suspend fun getAllUsers(): List<User>
+
+    @PUT("api/users/{id}/status")
+    suspend fun updateUserStatus(@Path("id") id: Int, @Body body: Map<String, Int>): Response<Unit>
 
     @GET("api/bookings/tutor/{tutorId}")
     suspend fun getBookingsForTutor(@Path("tutorId") tutorId: Int): List<BookingResponse>

@@ -18,7 +18,7 @@ data class User(
     val fullName: String get() = "$firstName $lastName"
 
     val isBlocked: Boolean
-        get() = accountStatusId == 0
+        get() = accountStatusId == 2
 
     fun getRole(): RoleID = when (roleId) {
         1 -> RoleID.ADMIN

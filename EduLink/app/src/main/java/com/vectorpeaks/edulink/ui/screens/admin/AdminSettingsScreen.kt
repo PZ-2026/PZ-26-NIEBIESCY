@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.components.UserAvatar
 import com.vectorpeaks.edulink.ui.theme.*
@@ -20,12 +21,39 @@ import com.vectorpeaks.edulink.ui.theme.*
 fun AdminSettingsScreen(
     user: User,
     onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: AdminSettingsViewModel = viewModel()
 ) {
+    val settings by viewModel.settings.collectAsState()
+    val subjects by viewModel.subjects.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val saveSuccess by viewModel.saveSuccess.collectAsState()
+
     var maintenanceMode by remember { mutableStateOf(false) }
     var maxPricePerHour by remember { mutableStateOf("200") }
     var globalMessage by remember { mutableStateOf("") }
     var showLogoutDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadSettings()
+        viewModel.loadSubjects()
+    }
+
+    // When settings arrive, populate edit fields
+    LaunchedEffect(settings) {
+        settings?.let {
+            maxPricePerHour = it.maxPricePerHour.toInt().toString()
+            globalMessage = it.globalMessage
+        }
+    }
+
+    // Show snackbar on save success
+    LaunchedEffect(saveSuccess) {
+        if (saveSuccess) {
+            viewModel.resetSaveSuccess()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -76,124 +104,139 @@ fun AdminSettingsScreen(
         }
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Global settings
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Surface),
-            elevation = CardDefaults.cardElevation(2.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Konfiguracja globalna",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Maintenance mode
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        when {
+            isLoading -> {
+                Box(modifier = Modifier.fillMaxWidth().padding(top = 24.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            error != null -> {
+                Text("Błąd: $error", color = Error)
+            }
+            else -> {
+                // Global settings
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Surface),
+                    elevation = CardDefaults.cardElevation(2.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Tryb serwisowy", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            "Blokuje dostęp do aplikacji dla użytkowników",
+                            text = "Konfiguracja globalna",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Maintenance mode
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Tryb serwisowy", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                                Text(
+                                    "Blokuje dostęp do aplikacji dla użytkowników",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = OnSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = maintenanceMode,
+                                onCheckedChange = { maintenanceMode = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedTrackColor = Warning
+
+                                )
+                            )
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                        // Max price
+                        Text("Maks. cena za godzinę (zł)", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = maxPricePerHour,
+                            onValueChange = { maxPricePerHour = it },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                        // Global message
+                        Text("Globalny komunikat", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text(
+                            "Wyświetlany wszystkim użytkownikom",
                             style = MaterialTheme.typography.bodySmall,
                             color = OnSurfaceVariant
                         )
-                    }
-                    Switch(
-                        checked = maintenanceMode,
-                        onCheckedChange = { maintenanceMode = it },
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = Warning
-
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = globalMessage,
+                            onValueChange = { globalMessage = it },
+                            placeholder = { Text("Wpisz komunikat...") },
+                            minLines = 2,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
                         )
-                    )
-                }
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                // Max price
-                Text("Maks. cena za godzinę (zł)", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                Spacer(modifier = Modifier.height(4.dp))
-                OutlinedTextField(
-                    value = maxPricePerHour,
-                    onValueChange = { maxPricePerHour = it },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                // Global message
-                Text("Globalny komunikat", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                Text(
-                    "Wyświetlany wszystkim użytkownikom",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = OnSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                OutlinedTextField(
-                    value = globalMessage,
-                    onValueChange = { globalMessage = it },
-                    placeholder = { Text("Wpisz komunikat...") },
-                    minLines = 2,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = { /* TODO: save settings */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
-                ) {
-                    Icon(Icons.Default.Save, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Zapisz ustawienia")
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Subject management
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Surface),
-            elevation = CardDefaults.cardElevation(2.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Zarządzanie przedmiotami",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                com.vectorpeaks.edulink.data.FakeData.subjects.forEach { subject ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = subject, style = MaterialTheme.typography.bodyMedium)
-                        IconButton(onClick = { /* TODO: remove subject */ }) {
-                            Icon(Icons.Default.Close, contentDescription = "Usuń", tint = Error, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                val price = maxPricePerHour.toDoubleOrNull() ?: 200.0
+                                viewModel.saveSettings(price, globalMessage)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Zapisz ustawienia")
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { /* TODO: add subject */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Subject management
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Surface),
+                    elevation = CardDefaults.cardElevation(2.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Dodaj przedmiot")
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Zarządzanie przedmiotami",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        subjects.forEach { subject ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = subject, style = MaterialTheme.typography.bodyMedium)
+                                IconButton(onClick = { /* TODO: remove subject */ }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Usuń", tint = Error, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { /* TODO: add subject */ },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Dodaj przedmiot")
+                        }
+                    }
                 }
             }
         }

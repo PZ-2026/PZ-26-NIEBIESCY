@@ -146,6 +146,26 @@ public class UserController {
     }
 
     /**
+     * Updates a user's account status (e.g., block/unblock).
+     *
+     * @param id          the user ID
+     * @param body        map containing "accountStatusId" key
+     * @return updated user or error if user not found
+     */
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateUserStatus(@PathVariable Integer id,
+                                               @RequestBody java.util.Map<String, Integer> body) {
+        Integer newStatusId = body.get("accountStatusId");
+        if (newStatusId == null) {
+            return ResponseEntity.badRequest().body("accountStatusId is required");
+        }
+        return userRepository.findById(id).map(user -> {
+            user.setAccountStatusId(newStatusId);
+            return ResponseEntity.ok(userRepository.save(user));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
      * Registers a new user account with validation and password hashing.
      * All fields are required, email must be valid and unique, role must be 2 or 3.
      *
