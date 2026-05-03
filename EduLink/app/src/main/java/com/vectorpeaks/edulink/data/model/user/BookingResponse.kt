@@ -1,4 +1,4 @@
-package com.vectorpeaks.edulink.data.model
+package com.vectorpeaks.edulink.data.model.user
 
 data class BookingResponse(
     val id: Int,

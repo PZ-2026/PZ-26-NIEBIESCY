@@ -1,12 +1,13 @@
 package com.vectorpeaks.edulink.network
 
 import com.vectorpeaks.edulink.data.model.BookingRequest
-import com.vectorpeaks.edulink.data.model.BookingResponse
+import com.vectorpeaks.edulink.data.model.user.BookingResponse
 import com.vectorpeaks.edulink.data.model.LoginRequest
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.data.model.user.UserResponse
 import com.vectorpeaks.edulink.data.model.Offer
-import com.vectorpeaks.edulink.data.model.ReviewRequest
+import com.vectorpeaks.edulink.data.model.user.ReviewRequest
+import com.vectorpeaks.edulink.data.model.RegisterRequest
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -14,6 +15,7 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.Response
+import retrofit2.http.DELETE
 
 interface ApiService {
     @POST("api/auth/login")
@@ -50,4 +52,10 @@ interface ApiService {
 
     @POST("api/bookings")
     suspend fun createBooking(@Body request: BookingRequest): Response<Unit>
+
+    @DELETE("api/users/{id}")
+    suspend fun deleteUser(@Path("id") id: Int): Response<Unit>
+
+    @POST("api/users/register")
+    suspend fun register(@Body request: RegisterRequest): Response<Unit>
 }

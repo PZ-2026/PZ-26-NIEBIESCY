@@ -5,7 +5,7 @@ INSERT INTO roles (id, name) VALUES
 -- 2. Statuses
 INSERT INTO statuses (id, status) VALUES 
 (1, 'Active'), (2, 'Inactive'), (3, 'Pending'), (4, 'Completed'), 
-(5, 'Cancelled'), (6, 'Accepted'), (7, 'Rejected'), (8, 'Suspended');
+(5, 'Cancelled'), (6, 'Accepted'), (7, 'Rejected'), (8, 'Suspended'), (9, 'Deleted');
 
 -- 3. GlobalLimits
 INSERT INTO global_limits (id, hourly_price_limit, message) VALUES 
@@ -95,6 +95,7 @@ INSERT INTO messages (id, chat_id, content, sent_at, user_id) VALUES
 
 SELECT pg_get_serial_sequence('bookings', 'id');
 SELECT setval('bookings_id_seq', (SELECT COALESCE(MAX(id), 0) + 1 FROM bookings), false);
+SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
 
 -- Hash passwords
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

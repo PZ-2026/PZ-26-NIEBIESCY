@@ -143,7 +143,7 @@ fun StudentProfileScreen(
                         } else {
                             ProfileRow(icon = Icons.Default.Phone, label = "Telefon", value = user.phoneNumber ?: "–")
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            ProfileRow(icon = Icons.Default.LocationOn, label = "Miasto", value = user.address.ifEmpty { "–" })
+                            ProfileRow(icon = Icons.Default.LocationOn, label = "Miasto", value = user.address ?: "–")
                         }
                     }
                 }
@@ -247,12 +247,22 @@ fun StudentProfileScreen(
             title = { Text("Usuń konto", color = Error) },
             text = { Text("Czy na pewno chcesz usunąć swoje konto? Ta operacja jest nieodwracalna.") },
             confirmButton = {
-                Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = Error)) {
+                Button(
+                    onClick = {
+                        viewModel.deleteAccount(userId) {
+                            onLogout()
+                        }
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Error)
+                ) {
                     Text("Usuń")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Anuluj") }
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Anuluj")
+                }
             }
         )
     }

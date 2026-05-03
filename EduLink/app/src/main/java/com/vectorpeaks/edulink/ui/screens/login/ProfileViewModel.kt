@@ -52,4 +52,20 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
+    fun deleteAccount(userId: Int, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = ProfileUiState.Loading
+            try {
+                val response = RetrofitClient.apiService.deleteUser(userId)
+                if (response.isSuccessful) {
+                    onSuccess()
+                } else {
+                    _uiState.value = ProfileUiState.Error("Błąd usuwania: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                _uiState.value = ProfileUiState.Error("Błąd: ${e.message}")
+            }
+        }
+    }
+
 }

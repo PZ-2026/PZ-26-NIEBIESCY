@@ -1,4 +1,4 @@
-package com.vectorpeaks.edulink.data.model
+package com.vectorpeaks.edulink.data.model.user
 
 data class ReviewRequest(
     val bookingId: Long,

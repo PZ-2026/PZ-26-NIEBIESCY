@@ -39,4 +39,8 @@ class BookingViewModel : ViewModel() {
             }
         }
     }
+
+    fun resetUiState() {
+        _uiState.value = BookingUiState.Idle
+    }
 }
