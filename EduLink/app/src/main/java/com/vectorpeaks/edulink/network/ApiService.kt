@@ -6,8 +6,11 @@ import com.vectorpeaks.edulink.data.model.LoginRequest
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.data.model.user.UserResponse
 import com.vectorpeaks.edulink.data.model.Offer
+import com.vectorpeaks.edulink.data.model.OfferCreateRequest
 import com.vectorpeaks.edulink.data.model.user.ReviewRequest
 import com.vectorpeaks.edulink.data.model.RegisterRequest
+import com.vectorpeaks.edulink.data.model.Slot
+import com.vectorpeaks.edulink.data.model.SubjectDto
 import com.vectorpeaks.edulink.data.model.user.AdminStatsResponse
 import com.vectorpeaks.edulink.data.model.user.AdminReportsResponse
 import com.vectorpeaks.edulink.data.model.user.GlobalLimitDto
@@ -89,4 +92,16 @@ interface ApiService {
     suspend fun updateBookingStatus(
         @Path("bookingId") bookingId: Int,
         @Query("status") status: String): Response<Unit>
+
+    @GET("api/offers/tutor/{tutorId}")
+    suspend fun getOffersByTutor(@Path("tutorId") tutorId: Int): List<Offer>
+
+    @POST("api/offers")
+    suspend fun createOffer(@Body request: OfferCreateRequest): Response<Unit>
+
+    @GET("api/slots")
+    suspend fun getAvailabilitySlots(): List<Slot>
+
+    @GET("api/data/subjects-with-id")
+    suspend fun getSubjectsWithId(): List<SubjectDto>
 }

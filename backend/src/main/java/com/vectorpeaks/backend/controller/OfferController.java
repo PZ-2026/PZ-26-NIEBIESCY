@@ -1,8 +1,8 @@
 /*
  * OfferController.java
  *
- * Version: 1.1
- * Date: 2026-04-26
+ * Version: 1.2
+ * Date: 2026-05-03
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -11,6 +11,7 @@
 
 package com.vectorpeaks.backend.controller;
 
+import com.vectorpeaks.backend.dto.OfferCreateRequest;
 import com.vectorpeaks.backend.dto.OfferDto;
 import com.vectorpeaks.backend.dto.SlotDto;
 import com.vectorpeaks.backend.entity.AvailabilitySlot;
@@ -33,7 +34,7 @@ import java.util.stream.Collectors;
  * Controller for managing tutoring offers.
  * Provides endpoints to retrieve filtered offers with tutor and subject details.
  *
- * @version 1.1
+ * @version 1.2
  * @author EduLink Team
  */
 @RestController
@@ -203,5 +204,43 @@ public class OfferController {
             case 0: return "Nd";
             default: return "";
         }
+    }
+
+    /**
+     * Retrieves all offers created by a specific tutor.
+     *
+     * @param tutorId the ID of the tutor
+     * @return list of OfferDto objects belonging to the tutor
+     */
+    @GetMapping("/tutor/{tutorId}")
+    public List<OfferDto> getOffersByTutor(@PathVariable Integer tutorId) {
+        List<Offer> offers = offerRepository.findAll().stream()
+                .filter(o -> o.getTutorId().equals(tutorId))
+                .collect(Collectors.toList());
+        return offers.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Creates a new tutoring offer.
+     *
+     * @param request the offer creation data (tutorId, subjectId, details,
+     *                price, offerType, optional availabilitySlotId)
+     * @return ResponseEntity with status 200 OK on success, or error message
+     */
+    @PostMapping
+    public ResponseEntity<?> createOffer(@RequestBody OfferCreateRequest request) {
+        Offer offer = new Offer();
+        offer.setTutorId(request.getTutorId());
+        offer.setSubjectId(request.getSubjectId());
+        offer.setDetails(request.getDetails());
+        offer.setPrice(request.getPrice());
+        offer.setOfferType(request.getOfferType());
+        offer.setAvailabilitySlotId(request.getAvailabilitySlotId());
+        offer.setStatusId(1);
+        offer.setGlobalLimitId(1);
+        offerRepository.save(offer);
+        return ResponseEntity.ok().build();
     }
 }
