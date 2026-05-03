@@ -68,4 +68,11 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
+    private val _showAddress = MutableStateFlow(false)
+    val showAddress: StateFlow<Boolean> = _showAddress
+
+    fun updateShowAddress(value: Boolean) {
+        _showAddress.value = value
+    }
+
 }

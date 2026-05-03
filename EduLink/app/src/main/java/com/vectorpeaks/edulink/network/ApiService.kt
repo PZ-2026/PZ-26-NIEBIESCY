@@ -58,4 +58,12 @@ interface ApiService {
 
     @POST("api/users/register")
     suspend fun register(@Body request: RegisterRequest): Response<Unit>
+
+    @GET("api/bookings/tutor/{tutorId}")
+    suspend fun getBookingsForTutor(@Path("tutorId") tutorId: Int): List<BookingResponse>
+
+    @PUT("api/bookings/{bookingId}/status")
+    suspend fun updateBookingStatus(
+        @Path("bookingId") bookingId: Int,
+        @Query("status") status: String): Response<Unit>
 }

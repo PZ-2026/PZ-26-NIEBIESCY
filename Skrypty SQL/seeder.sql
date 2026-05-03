@@ -96,6 +96,7 @@ INSERT INTO messages (id, chat_id, content, sent_at, user_id) VALUES
 SELECT pg_get_serial_sequence('bookings', 'id');
 SELECT setval('bookings_id_seq', (SELECT COALESCE(MAX(id), 0) + 1 FROM bookings), false);
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
+SELECT setval(pg_get_serial_sequence('offers', 'id'), (SELECT COALESCE(MAX(id), 0) + 1 FROM offers), false);
 
 -- Hash passwords
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

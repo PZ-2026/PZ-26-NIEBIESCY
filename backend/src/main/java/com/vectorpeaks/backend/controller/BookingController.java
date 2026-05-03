@@ -168,4 +168,49 @@ public class BookingController {
         bookingRepository.save(booking);
         return ResponseEntity.ok().build();
     }
+
+    /**
+     * Retrieves all bookings for a given tutor.
+     *
+     * @param tutorId the ID of the tutor
+     * @return list of BookingResponse objects containing booking details
+     */
+    @GetMapping("/tutor/{tutorId}")
+    public List<BookingResponse> getBookingsForTutor(@PathVariable Integer tutorId) {
+        List<Booking> bookings = bookingRepository.findAll().stream()
+                .filter(b -> {
+                    Offer offer = offerRepository.findById(b.getOfferId()).orElse(null);
+                    return offer != null && offer.getTutorId().equals(tutorId);
+                })
+                .collect(Collectors.toList());
+        return bookings.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Updates the status of a booking.
+     *
+     * @param bookingId the ID of the booking
+     * @param status    new status string (ACCEPTED or REJECTED)
+     * @return ResponseEntity with success or error message
+     */
+    @PutMapping("/{bookingId}/status")
+    public ResponseEntity<?> updateBookingStatus(
+            @PathVariable Integer bookingId,
+            @RequestParam String status) {
+        Optional<Booking> bookingOpt = bookingRepository.findById(bookingId);
+        if (bookingOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Booking booking = bookingOpt.get();
+        switch (status) {
+            case "ACCEPTED": booking.setStatusId(6); break;
+            case "REJECTED": booking.setStatusId(7); break;
+            case "COMPLETED": booking.setStatusId(4); break;
+            default: return ResponseEntity.badRequest().body("Unknown status: " + status);
+        }
+        bookingRepository.save(booking);
+        return ResponseEntity.ok().build();
+    }
 }

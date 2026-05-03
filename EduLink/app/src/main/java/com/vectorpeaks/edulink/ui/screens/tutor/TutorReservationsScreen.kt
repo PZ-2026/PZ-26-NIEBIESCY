@@ -5,27 +5,40 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vectorpeaks.edulink.data.FakeData
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vectorpeaks.edulink.data.model.Reservation
 import com.vectorpeaks.edulink.data.model.ReservationStatus
-import com.vectorpeaks.edulink.data.model.user.User
+import com.vectorpeaks.edulink.data.model.user.BookingResponse
 import com.vectorpeaks.edulink.ui.components.ReservationCard
 import com.vectorpeaks.edulink.ui.theme.*
 
 @Composable
-fun TutorReservationsScreen(user: User, modifier: Modifier = Modifier) {
-    val myReservations = FakeData.reservations.filter { it.tutorId == user.id }
-    val statusFilters = listOf("Wszystkie", "Oczekujące", "Zaakceptowane", "Zakończone", "Odrzucone")
+fun TutorReservationsScreen(
+    tutorId: Int,
+    modifier: Modifier = Modifier,
+    viewModel: TutorReservationsViewModel = viewModel()
+) {
+    val bookings by viewModel.bookings.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
     var selectedFilter by remember { mutableIntStateOf(0) }
 
-    val filteredReservations = when (selectedFilter) {
-        1 -> myReservations.filter { it.status == ReservationStatus.PENDING }
-        2 -> myReservations.filter { it.status == ReservationStatus.ACCEPTED }
-        3 -> myReservations.filter { it.status == ReservationStatus.COMPLETED }
-        4 -> myReservations.filter { it.status == ReservationStatus.REJECTED }
-        else -> myReservations
+    LaunchedEffect(tutorId) {
+        viewModel.loadBookings(tutorId)
+    }
+
+    val statusFilters = listOf("Wszystkie", "Oczekujące", "Zaakceptowane", "Zakończone", "Odrzucone")
+    val filteredBookings = when (selectedFilter) {
+        1 -> bookings.filter { it.status == "PENDING" }
+        2 -> bookings.filter { it.status == "ACCEPTED" }
+        3 -> bookings.filter { it.status == "COMPLETED" }
+        4 -> bookings.filter { it.status == "REJECTED" }
+        else -> bookings
     }
 
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -61,24 +74,60 @@ fun TutorReservationsScreen(user: User, modifier: Modifier = Modifier) {
         }
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (filteredReservations.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                Text("Brak rezerwacji", style = MaterialTheme.typography.bodyLarge, color = OnSurfaceVariant)
+        when {
+            isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(filteredReservations) { reservation ->
-                    ReservationCard(
-                        reservation = reservation,
-                        showActions = true,
-                        onAccept = { /* TODO */ },
-                        onReject = { /* TODO */ }
-                    )
+            error != null -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Błąd: $error", color = Error)
+                }
+            }
+            filteredBookings.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Brak rezerwacji", style = MaterialTheme.typography.bodyLarge, color = OnSurfaceVariant)
+                }
+            }
+            else -> {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(filteredBookings) { booking ->
+                        ReservationCard(
+                            reservation = convertToReservation(booking),
+                            showActions = booking.status == "PENDING",
+                            onAccept = { viewModel.updateStatus(booking.id, "ACCEPTED", tutorId) },
+                            onReject = { viewModel.updateStatus(booking.id, "REJECTED", tutorId) }
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+private fun convertToReservation(booking: BookingResponse): Reservation {
+    return Reservation(
+        id = booking.id,
+        offerId = booking.offerId,
+        studentId = 0,
+        studentName = "",
+        tutorId = booking.tutorId,
+        tutorName = booking.tutorName,
+        subject = booking.subject,
+        date = booking.date,
+        time = booking.time,
+        price = booking.price,
+        status = when (booking.status) {
+            "PENDING" -> ReservationStatus.PENDING
+            "ACCEPTED" -> ReservationStatus.ACCEPTED
+            "REJECTED" -> ReservationStatus.REJECTED
+            "COMPLETED" -> ReservationStatus.COMPLETED
+            else -> ReservationStatus.PENDING
+        },
+        rating = booking.rating
+    )
 }
