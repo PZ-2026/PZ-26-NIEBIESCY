@@ -1,8 +1,8 @@
 /*
  * AuthServiceTest.java
  *
- * Version: 1.1
- * Date: 2026-04-20
+ * Version: 1.2
+ * Date: 2026-05-03
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -29,44 +29,44 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests for {@link AuthService}.
  *
- * <p>Weryfikuje logikę uwierzytelniania użytkowników, w tym:
+ * <p>Verifies the user authentication logic, including:
  * <ul>
- *   <li>poprawne logowanie przy prawidłowych danych,</li>
- *   <li>odrzucenie przy błędnym e-mailu lub haśle,</li>
- *   <li>obsługę pustych wartości wejściowych,</li>
- *   <li>poprawność interakcji z {@link UserRepository}.</li>
+ *   <li>successful login with valid credentials,</li>
+ *   <li>rejection on incorrect e-mail or password,</li>
+ *   <li>handling of empty input values,</li>
+ *   <li>correct interaction with {@link UserRepository}.</li>
  * </ul>
  *
- * <p>Używa Mockito ({@code @ExtendWith(MockitoExtension.class)}) –
- * nie uruchamia kontekstu Springa ani bazy danych.
+ * <p>Uses Mockito ({@code @ExtendWith(MockitoExtension.class)}) –
+ * no Spring context or database is started.
  *
- * @version 1.1
+ * @version 1.2
  * @author EduLink Team
  * @see AuthService
  */
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-    /** Mock repozytorium użytkowników – zastępuje warstwę bazodanową. */
+    /** Mock of the user repository – replaces the database layer. */
     @Mock
     private UserRepository userRepository;
 
     /**
-     * Testowany obiekt z automatycznie wstrzykniętym mockiem
-     * {@link UserRepository}.
+     * The object under test with the {@link UserRepository} mock
+     * automatically injected.
      */
     @InjectMocks
     private AuthService authService;
 
-    /** Pomocniczy enkoder używany do tworzenia zahashowanych haseł w testach. */
+    /** Helper encoder used to create hashed passwords in tests. */
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    /** Przykładowy użytkownik inicjalizowany przed każdym testem. */
+    /** Sample user initialised before each test. */
     private User mockUser;
 
     /**
-     * Inicjalizuje przykładowego użytkownika z zahashowanym hasłem
-     * {@code "tajneHaslo123"} przed każdym przypadkiem testowym.
+     * Initialises a sample user with a hashed password ({@code "tajneHaslo123"})
+     * before each test case.
      */
     @BeforeEach
     void setUp() {
@@ -80,15 +80,15 @@ class AuthServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // authenticate() – przypadki sukcesu
+    // authenticate() – success cases
     // -----------------------------------------------------------------------
 
     /**
-     * Weryfikuje, że metoda {@code authenticate} zwraca użytkownika
-     * opakowanego w {@link Optional} gdy podane e-mail i hasło są poprawne.
+     * Verifies that {@code authenticate} returns the user wrapped in an
+     * {@link Optional} when the provided e-mail and password are correct.
      */
     @Test
-    void authenticate_poprawneCredentials_zwracaUsera() {
+    void authenticate_validCredentials_returnsUser() {
         when(userRepository.findByEmail("jan.kowalski@example.com"))
                 .thenReturn(Optional.of(mockUser));
 
@@ -100,45 +100,45 @@ class AuthServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // authenticate() – przypadki błędów
+    // authenticate() – error cases
     // -----------------------------------------------------------------------
 
     /**
-     * Weryfikuje, że metoda {@code authenticate} zwraca pusty {@link Optional}
-     * gdy podany e-mail nie istnieje w bazie danych.
+     * Verifies that {@code authenticate} returns an empty {@link Optional}
+     * when the provided e-mail does not exist in the database.
      */
     @Test
-    void authenticate_zlyEmail_zwracaPuste() {
-        when(userRepository.findByEmail("nieistnieje@example.com"))
+    void authenticate_unknownEmail_returnsEmpty() {
+        when(userRepository.findByEmail("missing@example.com"))
                 .thenReturn(Optional.empty());
 
         Optional<User> result = authService.authenticate(
-                "nieistnieje@example.com", "tajneHaslo123");
+                "missing@example.com", "tajneHaslo123");
 
         assertThat(result).isEmpty();
     }
 
     /**
-     * Weryfikuje, że metoda {@code authenticate} zwraca pusty {@link Optional}
-     * gdy e-mail istnieje, ale podane hasło jest niepoprawne.
+     * Verifies that {@code authenticate} returns an empty {@link Optional}
+     * when the e-mail exists but the provided password is incorrect.
      */
     @Test
-    void authenticate_zleHaslo_zwracaPuste() {
+    void authenticate_wrongPassword_returnsEmpty() {
         when(userRepository.findByEmail("jan.kowalski@example.com"))
                 .thenReturn(Optional.of(mockUser));
 
         Optional<User> result = authService.authenticate(
-                "jan.kowalski@example.com", "zleHaslo");
+                "jan.kowalski@example.com", "wrongPassword");
 
         assertThat(result).isEmpty();
     }
 
     /**
-     * Weryfikuje, że metoda {@code authenticate} zwraca pusty {@link Optional}
-     * gdy przekazany e-mail jest pustym ciągiem znaków.
+     * Verifies that {@code authenticate} returns an empty {@link Optional}
+     * when the provided e-mail is an empty string.
      */
     @Test
-    void authenticate_pustyEmail_zwracaPuste() {
+    void authenticate_emptyEmail_returnsEmpty() {
         when(userRepository.findByEmail(""))
                 .thenReturn(Optional.empty());
 
@@ -148,11 +148,11 @@ class AuthServiceTest {
     }
 
     /**
-     * Weryfikuje, że metoda {@code authenticate} zwraca pusty {@link Optional}
-     * gdy przekazane hasło jest pustym ciągiem znaków.
+     * Verifies that {@code authenticate} returns an empty {@link Optional}
+     * when the provided password is an empty string.
      */
     @Test
-    void authenticate_pusteHaslo_zwracaPuste() {
+    void authenticate_emptyPassword_returnsEmpty() {
         when(userRepository.findByEmail("jan.kowalski@example.com"))
                 .thenReturn(Optional.of(mockUser));
 
@@ -163,22 +163,21 @@ class AuthServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // Weryfikacja interakcji z repozytorium
+    // Repository interaction verification
     // -----------------------------------------------------------------------
 
     /**
-     * Weryfikuje, że metoda {@code authenticate} wywołuje
-     * {@link UserRepository#findByEmail(String)} dokładnie raz
-     * z przekazanym adresem e-mail i nie wykonuje żadnych innych
-     * operacji na repozytorium.
+     * Verifies that {@code authenticate} calls
+     * {@link UserRepository#findByEmail(String)} exactly once with the
+     * provided e-mail address and performs no other operations on the repository.
      */
     @Test
-    void authenticate_zawszeSzukaPoEmailu() {
+    void authenticate_alwaysSearchesByEmail() {
         when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
 
-        authService.authenticate("ktos@example.com", "haslo");
+        authService.authenticate("someone@example.com", "password");
 
-        verify(userRepository, times(1)).findByEmail("ktos@example.com");
+        verify(userRepository, times(1)).findByEmail("someone@example.com");
         verifyNoMoreInteractions(userRepository);
     }
 }
