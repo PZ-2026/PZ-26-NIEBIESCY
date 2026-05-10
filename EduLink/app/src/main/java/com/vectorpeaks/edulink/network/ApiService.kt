@@ -11,6 +11,10 @@ import com.vectorpeaks.edulink.data.model.user.ReviewRequest
 import com.vectorpeaks.edulink.data.model.RegisterRequest
 import com.vectorpeaks.edulink.data.model.Slot
 import com.vectorpeaks.edulink.data.model.SubjectDto
+import com.vectorpeaks.edulink.data.model.chat.ChatResponse
+import com.vectorpeaks.edulink.data.model.chat.CreateChatRequest
+import com.vectorpeaks.edulink.data.model.chat.MessageResponse
+import com.vectorpeaks.edulink.data.model.chat.SendMessageRequest
 import com.vectorpeaks.edulink.data.model.user.AdminStatsResponse
 import com.vectorpeaks.edulink.data.model.user.AdminReportsResponse
 import com.vectorpeaks.edulink.data.model.user.GlobalLimitDto
@@ -104,4 +108,53 @@ interface ApiService {
 
     @GET("api/data/subjects-with-id")
     suspend fun getSubjectsWithId(): List<SubjectDto>
+
+
+
+// --------- CHAT ---------
+
+    /**
+     * Creates a new chat between two users or returns the existing one.
+     * Typically called when a student taps "Message tutor" on the offer screen.
+     *
+     * @param request containing userId1 and userId2
+     * @return ChatResponse with chat thread details and participants
+     */
+    @POST("api/chats")
+    suspend fun createOrGetChat(@Body request: CreateChatRequest): ChatResponse
+
+    /**
+     * Returns all chat threads (conversations) for the given user,
+     * ordered by most recent activity.
+     *
+     * @param userId the ID of the logged-in user
+     * @return list of ChatResponse objects
+     */
+    @GET("api/chats/user/{userId}")
+    suspend fun getChatsForUser(@Path("userId") userId: Int): List<ChatResponse>
+
+    /**
+     * Returns the full message history for the given chat thread
+     * in chronological order (oldest first).
+     *
+     * @param chatId the ID of the chat thread
+     * @return list of MessageResponse objects
+     */
+    @GET("api/chats/{chatId}/messages")
+    suspend fun getMessages(@Path("chatId") chatId: Int): List<MessageResponse>
+
+    /**
+     * Sends a new message in the given chat thread.
+     * May trigger a push notification to the other participant.
+     *
+     * @param chatId the ID of the chat thread
+     * @param request containing senderId and message content
+     * @return Response containing the saved MessageResponse
+     */
+    @POST("api/chats/{chatId}/messages")
+    suspend fun sendMessage(
+        @Path("chatId") chatId: Int,
+        @Body request: SendMessageRequest
+    ): Response<MessageResponse>
+
 }
