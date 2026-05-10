@@ -1,8 +1,8 @@
 /*
  * DataController.java
  *
- * Version: 1.0
- * Date: 2026-04-26
+ * Version: 1.1
+ * Date: 2026-05-03
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -11,17 +11,19 @@
 
 package com.vectorpeaks.backend.controller;
 
+import com.vectorpeaks.backend.dto.SubjectDto;
 import com.vectorpeaks.backend.repository.SubjectRepository;
 import com.vectorpeaks.backend.repository.UserRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Provides endpoints for retrieving reference data used in the frontend,
  * such as distinct subject names and cities.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 @RestController
@@ -61,5 +63,18 @@ public class DataController {
     @GetMapping("/cities")
     public List<String> getCities() {
         return userRepository.findAllDistinctCities();
+    }
+
+    /**
+     * Retrieves a list of all subjects with their IDs and names.
+     * Used for creating offers where the subject ID is required.
+     *
+     * @return list of SubjectDto objects
+     */
+    @GetMapping("/subjects-with-id")
+    public List<SubjectDto> getSubjectsWithId() {
+        return subjectRepository.findAll().stream()
+                .map(s -> new SubjectDto(s.getId(), s.getName()))
+                .collect(Collectors.toList());
     }
 }

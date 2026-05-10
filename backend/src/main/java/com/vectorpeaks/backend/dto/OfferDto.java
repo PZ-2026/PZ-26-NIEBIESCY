@@ -53,13 +53,12 @@ public class OfferDto {
     private Integer reviewCount;
 
     /** List of available time slots (e.g., "Pon 10:00"). */
-    private List<String> availableSlots;
+    private List<SlotDto> availableSlots;
 
     /** Approval status of the offer (default true). */
     private Boolean isApproved = true;
 
     // Getters and setters
-
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -90,8 +89,8 @@ public class OfferDto {
     public Integer getReviewCount() { return reviewCount; }
     public void setReviewCount(Integer reviewCount) { this.reviewCount = reviewCount; }
 
-    public List<String> getAvailableSlots() { return availableSlots; }
-    public void setAvailableSlots(List<String> availableSlots) { this.availableSlots = availableSlots; }
+    public List<SlotDto> getAvailableSlots() { return availableSlots; }
+    public void setAvailableSlots(List<SlotDto> availableSlots) { this.availableSlots = availableSlots; }
 
     public Boolean getIsApproved() { return isApproved; }
     public void setIsApproved(Boolean isApproved) { this.isApproved = isApproved; }

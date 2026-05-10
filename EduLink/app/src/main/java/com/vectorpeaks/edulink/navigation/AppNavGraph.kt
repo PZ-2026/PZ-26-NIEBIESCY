@@ -14,6 +14,7 @@ import com.vectorpeaks.edulink.ui.screens.login.LoginScreen
 import com.vectorpeaks.edulink.ui.screens.student.StudentMainScreen
 import com.vectorpeaks.edulink.ui.screens.tutor.TutorMainScreen
 import com.vectorpeaks.edulink.data.model.user.RoleID
+import com.vectorpeaks.edulink.ui.screens.register.RegisterScreen
 
 @Composable
 fun AppNavGraph() {
@@ -36,7 +37,14 @@ fun AppNavGraph() {
                     navController.navigate(destination) {
                         popUpTo(NavRoutes.Login.route) { inclusive = true }
                     }
-                }
+                },
+                onRegisterClick = { navController.navigate(NavRoutes.Register.route) }
+            )
+        }
+
+        composable(NavRoutes.Register.route) {
+            RegisterScreen(
+                onBackToLogin = { navController.popBackStack() }
             )
         }
 

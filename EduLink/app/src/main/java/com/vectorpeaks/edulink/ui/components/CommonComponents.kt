@@ -252,16 +252,19 @@ fun OfferCard(
 fun ReservationCard(
     reservation: Reservation,
     showActions: Boolean = false,
+    onClick: (() -> Unit)? = null,
     onAccept: (() -> Unit)? = null,
     onReject: (() -> Unit)? = null,
     onRate: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

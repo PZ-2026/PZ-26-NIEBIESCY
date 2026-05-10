@@ -1,8 +1,8 @@
 /*
  * UserController.java
  *
- * Version: 1.0
- * Date: 2026-04-26
+ * Version: 1.1
+ * Date: 2026-05-02
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -11,19 +11,23 @@
 
 package com.vectorpeaks.backend.controller;
 
+import com.vectorpeaks.backend.dto.RegisterRequest;
 import com.vectorpeaks.backend.entity.User;
 import com.vectorpeaks.backend.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * Manages user-related operations.
- * Provides endpoints to retrieve and add users, and to update profile data.
+ * Provides endpoints to retrieve and add users, update profile data,
+ * anonymize accounts (GDPR deletion), and register new users.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 @RestController
@@ -32,6 +36,7 @@ import java.util.Optional;
 public class UserController {
 
     private final UserRepository userRepository;
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
 
     /**
      * Constructs a new UserController with the given UserRepository.
@@ -110,5 +115,99 @@ public class UserController {
             }
             return ResponseEntity.ok(userRepository.save(user));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Anonymizes a user account (GDPR‑style deletion).
+     * All personal data are overwritten, the account becomes unusable.
+     *
+     * @param id the user ID
+     * @return ResponseEntity with success or error message
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUser(@PathVariable Integer id) {
+        Optional<User> userOpt = userRepository.findById(id);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        User user = userOpt.get();
+
+        String anonymizedEmail = "deleted_" + user.getId() + "@deleted.local";
+        user.setFirstName("Deleted");
+        user.setLastName("User");
+        user.setEmail(anonymizedEmail);
+        user.setPassword("");
+        user.setPhoneNumber(null);
+        user.setAddress(null);
+        user.setAccountStatusId(9);
+
+        userRepository.save(user);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Updates a user's account status (e.g., block/unblock).
+     *
+     * @param id          the user ID
+     * @param body        map containing "accountStatusId" key
+     * @return updated user or error if user not found
+     */
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateUserStatus(@PathVariable Integer id,
+                                               @RequestBody java.util.Map<String, Integer> body) {
+        Integer newStatusId = body.get("accountStatusId");
+        if (newStatusId == null) {
+            return ResponseEntity.badRequest().body("accountStatusId is required");
+        }
+        return userRepository.findById(id).map(user -> {
+            user.setAccountStatusId(newStatusId);
+            return ResponseEntity.ok(userRepository.save(user));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Registers a new user account with validation and password hashing.
+     * All fields are required, email must be valid and unique, role must be 2 or 3.
+     *
+     * @param request the registration data
+     * @return ResponseEntity with success or error message
+     */
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+
+        if (request.getFirstName() == null || request.getFirstName().isBlank() ||
+                request.getLastName() == null || request.getLastName().isBlank() ||
+                request.getEmail() == null || request.getEmail().isBlank() ||
+                request.getPassword() == null || request.getPassword().isBlank()) {
+            return ResponseEntity.badRequest().body("Wszystkie pola są wymagane");
+        }
+
+        if (!EMAIL_PATTERN.matcher(request.getEmail()).matches()) {
+            return ResponseEntity.badRequest().body("Nieprawidłowy adres e-mail");
+        }
+
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            return ResponseEntity.badRequest().body("Użytkownik z takim adresem email już istnieje");
+        }
+
+        if (request.getRoleId() == null || (request.getRoleId() != 2 && request.getRoleId() != 3)) {
+            return ResponseEntity.badRequest().body("Nieprawidłowa rola");
+        }
+
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        String hashedPassword = encoder.encode(request.getPassword());
+
+        User user = new User();
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setEmail(request.getEmail());
+        user.setPassword(hashedPassword);
+        user.setRoleId(request.getRoleId());
+        user.setAccountStatusId(1);
+        user.setAddress(request.getCity());
+        user.setPhoneNumber(request.getPhoneNumber());
+
+        userRepository.save(user);
+        return ResponseEntity.ok().build();
     }
 }
