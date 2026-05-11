@@ -2,6 +2,7 @@ package com.vectorpeaks.edulink.ui.screens.admin
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vectorpeaks.edulink.data.model.SubjectDto
 import com.vectorpeaks.edulink.data.model.user.GlobalLimitDto
 import com.vectorpeaks.edulink.network.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,8 +15,8 @@ class AdminSettingsViewModel : ViewModel() {
     private val _settings = MutableStateFlow<GlobalLimitDto?>(null)
     val settings: StateFlow<GlobalLimitDto?> = _settings
 
-    private val _subjects = MutableStateFlow<List<String>>(emptyList())
-    val subjects: StateFlow<List<String>> = _subjects
+    private val _subjects = MutableStateFlow<List<SubjectDto>>(emptyList())
+    val subjects: StateFlow<List<SubjectDto>> = _subjects
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -48,10 +49,10 @@ class AdminSettingsViewModel : ViewModel() {
     fun loadSubjects() {
         viewModelScope.launch {
             try {
-                val result = RetrofitClient.apiService.getSubjects()
+                val result = RetrofitClient.apiService.getSubjectsWithId()
                 _subjects.value = result
             } catch (e: Exception) {
-
+                // Silently ignore – subjects list is non-critical
             }
         }
     }
@@ -67,6 +68,42 @@ class AdminSettingsViewModel : ViewModel() {
                     _settings.value = dto
                 } else {
                     _error.value = "Błąd zapisu: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Błąd: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Adds a new subject with the given name.
+     */
+    fun addSubject(name: String) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.addSubject(mapOf("name" to name))
+                if (response.isSuccessful) {
+                    loadSubjects()
+                } else {
+                    _error.value = "Błąd dodawania: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Błąd: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Deletes a subject by its ID.
+     */
+    fun deleteSubject(id: Int) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.deleteSubject(id)
+                if (response.isSuccessful) {
+                    loadSubjects()
+                } else {
+                    _error.value = "Błąd usuwania: ${response.code()}"
                 }
             } catch (e: Exception) {
                 _error.value = "Błąd: ${e.message}"

@@ -6,5 +6,6 @@ data class AdminStatsResponse(
     val totalBookings: Int,
     val tutorsCount: Int,
     val studentsCount: Int,
-    val pendingCount: Int
+    val pendingCount: Int,
+    val pendingOffersCount: Int = 0
 )

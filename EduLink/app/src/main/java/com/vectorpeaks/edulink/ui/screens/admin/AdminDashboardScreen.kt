@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vectorpeaks.edulink.data.model.Offer
 import com.vectorpeaks.edulink.data.model.Reservation
 import com.vectorpeaks.edulink.data.model.ReservationStatus
 import com.vectorpeaks.edulink.data.model.user.BookingResponse
@@ -30,6 +31,7 @@ fun AdminDashboardScreen(
 ) {
     val stats by viewModel.stats.collectAsState()
     val pendingBookings by viewModel.pendingBookings.collectAsState()
+    val pendingOffers by viewModel.pendingOffers.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
@@ -135,16 +137,31 @@ fun AdminDashboardScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Pending approvals
+                // Pending bookings
                 if (pendingBookings.isNotEmpty()) {
-                    SectionHeader(title = "Oczekujące zgłoszenia")
+                    SectionHeader(title = "Oczekujące rezerwacje")
                     Spacer(modifier = Modifier.height(12.dp))
                     pendingBookings.forEach { booking ->
                         ReservationCard(
                             reservation = convertBookingToReservation(booking),
                             showActions = true,
-                            onAccept = { /* TODO */ },
-                            onReject = { /* TODO */ }
+                            onAccept = { viewModel.approveBooking(booking.id) },
+                            onReject = { viewModel.rejectBooking(booking.id) }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                // Pending offers
+                if (pendingOffers.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SectionHeader(title = "Oczekujące oferty")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    pendingOffers.forEach { offer ->
+                        PendingOfferCard(
+                            offer = offer,
+                            onAccept = { viewModel.approveOffer(offer.id) },
+                            onReject = { viewModel.rejectOffer(offer.id) }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -193,6 +210,97 @@ fun AdminDashboardScreen(
             }
         }
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+// ==================== PENDING OFFER CARD ====================
+
+@Composable
+private fun PendingOfferCard(
+    offer: Offer,
+    onAccept: () -> Unit,
+    onReject: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = offer.subject,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Primary
+                )
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = WarningContainer
+                ) {
+                    Text(
+                        text = "Oczekująca",
+                        color = OnBackground,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Korepetytor: ${offer.tutorName}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = OnSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${offer.pricePerHour.toInt()} zł/h  •  ${if (offer.isOnline) "Online" else "Stacjonarne"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OnSurfaceVariant
+                )
+            }
+            if (offer.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = offer.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OnSurfaceVariant,
+                    maxLines = 2
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                OutlinedButton(
+                    onClick = onReject,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Error),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Odrzuć")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = onAccept,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Success)
+                ) {
+                    Text("Zatwierdź")
+                }
+            }
+        }
     }
 }
 

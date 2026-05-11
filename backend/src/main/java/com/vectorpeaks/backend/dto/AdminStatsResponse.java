@@ -25,4 +25,5 @@ public class AdminStatsResponse {
     private long tutorsCount;
     private long studentsCount;
     private long pendingCount;
+    private long pendingOffersCount;
 }
