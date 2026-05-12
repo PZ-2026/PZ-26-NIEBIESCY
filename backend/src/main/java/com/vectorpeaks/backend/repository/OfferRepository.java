@@ -14,12 +14,15 @@ package com.vectorpeaks.backend.repository;
 import com.vectorpeaks.backend.entity.Offer;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-/**
- * Repository interface for performing CRUD operations on {@link Offer} entities.
- * Extends Spring Data JPA's {@link JpaRepository} to provide standard database access methods.
- *
- * @version 1.0
- * @author EduLink Team
- */
+import java.util.List;
+
 public interface OfferRepository extends JpaRepository<Offer, Integer> {
+
+    /**
+     * Finds all offers with a given status ID.
+     *
+     * @param statusId the status identifier to filter by
+     * @return list of offers matching the given status
+     */
+    List<Offer> findByStatusId(Integer statusId);
 }

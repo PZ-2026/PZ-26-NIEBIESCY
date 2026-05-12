@@ -68,6 +68,7 @@ interface ApiService {
 
     @POST("api/users/register")
     suspend fun register(@Body request: RegisterRequest): Response<Unit>
+
     @GET("api/admin/reports")
     suspend fun getAdminReports(): AdminReportsResponse
 
@@ -169,4 +170,23 @@ interface ApiService {
         @Path("id") userId: Int,
         @Body token: Map<String, String>
     ): Response<Unit>
+  
+    // ==================== Admin: Offers ====================
+
+    @GET("api/admin/offers/pending")
+    suspend fun getPendingOffers(): List<Offer>
+
+    @PUT("api/admin/offers/{id}/status")
+    suspend fun updateOfferStatus(
+        @Path("id") id: Int,
+        @Query("status") status: String
+    ): Response<Unit>
+
+    // ==================== Admin: Subjects ====================
+
+    @POST("api/admin/subjects")
+    suspend fun addSubject(@Body body: Map<String, String>): Response<SubjectDto>
+
+    @DELETE("api/admin/subjects/{id}")
+    suspend fun deleteSubject(@Path("id") id: Int): Response<Unit>
 }

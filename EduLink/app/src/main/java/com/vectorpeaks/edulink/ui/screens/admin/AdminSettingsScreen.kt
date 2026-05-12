@@ -34,6 +34,8 @@ fun AdminSettingsScreen(
     var maxPricePerHour by remember { mutableStateOf("200") }
     var globalMessage by remember { mutableStateOf("") }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showAddSubjectDialog by remember { mutableStateOf(false) }
+    var newSubjectName by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.loadSettings()
@@ -220,15 +222,18 @@ fun AdminSettingsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(text = subject, style = MaterialTheme.typography.bodyMedium)
-                                IconButton(onClick = { /* TODO: remove subject */ }) {
+                                Text(text = subject.name, style = MaterialTheme.typography.bodyMedium)
+                                IconButton(onClick = { viewModel.deleteSubject(subject.id) }) {
                                     Icon(Icons.Default.Close, contentDescription = "Usuń", tint = Error, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(
-                            onClick = { /* TODO: add subject */ },
+                            onClick = {
+                                newSubjectName = ""
+                                showAddSubjectDialog = true
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         ) {
@@ -261,6 +266,7 @@ fun AdminSettingsScreen(
         Spacer(modifier = Modifier.height(32.dp))
     }
 
+    // Logout dialog
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
@@ -270,6 +276,42 @@ fun AdminSettingsScreen(
                 Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = Primary)) { Text("Wyloguj") }
             },
             dismissButton = { TextButton(onClick = { showLogoutDialog = false }) { Text("Anuluj") } }
+        )
+    }
+
+    // Add subject dialog
+    if (showAddSubjectDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddSubjectDialog = false },
+            title = { Text("Dodaj przedmiot") },
+            text = {
+                OutlinedTextField(
+                    value = newSubjectName,
+                    onValueChange = { newSubjectName = it },
+                    label = { Text("Nazwa przedmiotu") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newSubjectName.isNotBlank()) {
+                            viewModel.addSubject(newSubjectName.trim())
+                            showAddSubjectDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
+                    Text("Dodaj")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddSubjectDialog = false }) {
+                    Text("Anuluj")
+                }
+            }
         )
     }
 }
