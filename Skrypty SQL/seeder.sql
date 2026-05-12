@@ -25,17 +25,17 @@ INSERT INTO subjects (id, name, status_id) VALUES
 (7, 'Informatyka', 1), (8, 'Geografia', 1);
 
 -- 6. Users
-INSERT INTO users (id, role_id, password, first_name, last_name, email, account_status_id, address, phone_number) VALUES 
-(1, 1, 'hash1', 'Jan', 'Kowalski', 'admin@edulink.com', 1, 'Warszawa', '111222333'),
-(2, 2, 'hash2', 'Anna', 'Nowak', 'tutor@edulink.com', 1, 'Kraków', '222333444'),
-(3, 3, 'hash3', 'Piotr', 'Zieliński', 'student@edulink.com', 1, 'Gdańsk', '333444555'),
-(4, 3, 'hash4', 'Maria', 'Dąbrowska', 'maria@edulink.com', 1, 'Wrocław', '444555666'),
-(5, 2, 'hash5', 'Robert', 'Lewandowski', 'robert@edulink.com', 1, 'Poznań', '555666777'),
-(6, 3, 'hash6', 'Kasia', 'Wójcik', 'kasia@edulink.com', 1, 'Łódź', '666777888'),
-(7, 3, 'hash7', 'Michał', 'Wiśniewski', 'michal@edulink.com', 2, 'Szczecin', '777888999'),
-(8, 2, 'hash8', 'Ewa', 'Kozłowska', 'ewa@edulink.com', 1, 'Lublin', '888999000'),
-(9, 3, 'hash9', 'Tomasz', 'Jankowski', 'tomek@edulink.com', 1, 'Białystok', '999000111'),
-(10, 3, 'hash10', 'Adam', 'Mickiewicz', 'adam@edulink.com', 1, 'Wilno', '000111222');
+INSERT INTO users (id, role_id, password, first_name, last_name, email, account_status_id, address, phone_number, fcm_token) VALUES 
+(1, 1, 'hash1', 'Jan',    'Kowalski',    'admin@edulink.com',   1, 'Warszawa', '111222333', NULL),
+(2, 2, 'hash2', 'Anna',   'Nowak',       'tutor@edulink.com',   1, 'Kraków',   '222333444', NULL),
+(3, 3, 'hash3', 'Piotr',  'Zieliński',   'student@edulink.com', 1, 'Gdańsk',   '333444555', NULL),
+(4, 3, 'hash4', 'Maria',  'Dąbrowska',   'maria@edulink.com',   1, 'Wrocław',  '444555666', NULL),
+(5, 2, 'hash5', 'Robert', 'Lewandowski', 'robert@edulink.com',  1, 'Poznań',   '555666777', NULL),
+(6, 3, 'hash6', 'Kasia',  'Wójcik',      'kasia@edulink.com',   1, 'Łódź',     '666777888', NULL),
+(7, 3, 'hash7', 'Michał', 'Wiśniewski',  'michal@edulink.com',  2, 'Szczecin', '777888999', NULL),
+(8, 2, 'hash8', 'Ewa',    'Kozłowska',   'ewa@edulink.com',     1, 'Lublin',   '888999000', NULL),
+(9, 3, 'hash9', 'Tomasz', 'Jankowski',   'tomek@edulink.com',   1, 'Białystok','999000111', NULL),
+(10,3, 'hash10','Adam',   'Mickiewicz',  'adam@edulink.com',    1, 'Wilno',    '000111222', NULL);
 
 -- 7. Offers
 INSERT INTO offers (id, tutor_id, price, availability_slot_id, details, subject_id, status_id, global_limit_id, offer_type) VALUES 

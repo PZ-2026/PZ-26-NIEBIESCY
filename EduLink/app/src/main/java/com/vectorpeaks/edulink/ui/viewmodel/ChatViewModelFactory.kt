@@ -4,9 +4,6 @@
  * Version: 1.0
  * Date: 2026-05-10
  *
- * Copyright (c) 2026 EduLink Team. All rights reserved.
- *
- * This software is the confidential and proprietary information of EduLink.
  */
 
 package com.vectorpeaks.edulink.ui.viewmodel

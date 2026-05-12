@@ -1,12 +1,9 @@
 /*
  * ChatViewModel.kt
  *
- * Version: 1.2 - FIXED
+ * Version: 1.2
  * Date: 2026-05-10
  *
- * Copyright (c) 2026 EduLink Team. All rights reserved.
- *
- * This software is the confidential and proprietary information of EduLink.
  */
 
 package com.vectorpeaks.edulink.ui.viewmodel
@@ -87,7 +84,9 @@ class ChatViewModel(private val apiService: ApiService) : ViewModel() {
             _chatsState.value = ChatListState.Loading
             try {
                 val chatList = apiService.getChatsForUser(userId)
-                _chats.value = chatList
+                _chats.value = chatList.sortedByDescending { chat ->
+                    chat.lastMessage?.sentAt ?: chat.createdAt
+                }
                 _chatsState.value = ChatListState.Success
             } catch (e: Exception) {
                 Timber.e(e, "Failed to fetch chats for user $userId")

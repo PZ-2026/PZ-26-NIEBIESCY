@@ -44,6 +44,9 @@ public class User {
     private String address;
     private String phoneNumber;
 
+    @Column(name = "fcm_token")
+    private String fcmToken;
+
     // Getters and setters
 
     public Integer getId() {
@@ -117,4 +120,8 @@ public class User {
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
+
+    public String getFcmToken() { return fcmToken; }
+
+    public void setFcmToken(String fcmToken) { this.fcmToken = fcmToken; }
 }

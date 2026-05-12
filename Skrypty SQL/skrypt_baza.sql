@@ -38,6 +38,7 @@ CREATE TABLE users (
     account_status_id INTEGER NOT NULL,
     address TEXT NULL,
     phone_number VARCHAR(20) NULL,
+    fcm_token VARCHAR(255) NULL,
     PRIMARY KEY (id),
     CONSTRAINT users_email_unique UNIQUE (email),
     FOREIGN KEY (role_id) REFERENCES roles(id),

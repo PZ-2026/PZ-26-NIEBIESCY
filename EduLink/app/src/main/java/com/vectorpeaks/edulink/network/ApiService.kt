@@ -157,4 +157,16 @@ interface ApiService {
         @Body request: SendMessageRequest
     ): Response<MessageResponse>
 
+    /**
+     * Sends the device's FCM registration token to the backend so the server
+     * can deliver push notifications to this specific device.
+     *
+     * @param userId the ID of the logged-in user
+     * @param token  the FCM registration token for this device
+     */
+    @PUT("api/users/{id}/fcm-token")
+    suspend fun updateFcmToken(
+        @Path("id") userId: Int,
+        @Body token: Map<String, String>
+    ): Response<Unit>
 }

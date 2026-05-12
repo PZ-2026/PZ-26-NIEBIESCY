@@ -1,8 +1,8 @@
 /*
  * ChatService.java
  *
- * Version: 1.0
- * Date: 2026-05-09
+ * Version: 1.1
+ * Date: 2026-05-12
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
  *   <li>persisting and broadcasting new messages.</li>
  * </ul>
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 @Service
@@ -53,6 +53,9 @@ public class ChatService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private FcmService fcmService;
 
     // -----------------------------------------------------------------------
     // Chat creation
@@ -160,8 +163,17 @@ public class ChatService {
         message.setContent(request.getContent());
         messageRepository.save(message);
 
-        // TODO: Trigger an FCM push notification to the other chat participants.
-        //       fcmService.notifyParticipants(chat, sender, message);
+        String senderName = sender.getFirstName() + " " + sender.getLastName();
+        chat.getParticipants().stream()
+                .filter(p -> !p.getId().equals(sender.getId()))
+                .filter(p -> p.getFcmToken() != null && !p.getFcmToken().isBlank())
+                .forEach(recipient -> {
+                    fcmService.sendNotification(
+                            recipient.getFcmToken(),
+                            senderName,
+                            message.getContent()
+                    );
+                });
 
         return toMessageResponse(message);
     }

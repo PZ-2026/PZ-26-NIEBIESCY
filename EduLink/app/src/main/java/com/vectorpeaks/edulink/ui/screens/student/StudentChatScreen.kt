@@ -1,6 +1,7 @@
 package com.vectorpeaks.edulink.ui.screens.student
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +26,7 @@ import com.vectorpeaks.edulink.ui.theme.*
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModel
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModelFactory
 import com.vectorpeaks.edulink.utils.DateUtils
+import androidx.activity.compose.BackHandler
 
 /**
  * Student chat screen showing the list of conversations with tutors.
@@ -227,6 +229,7 @@ private fun StudentChatDetailView(
     viewModel: ChatViewModel,
     onBack: () -> Unit
 ) {
+    val listState = rememberLazyListState()
     val messagesState by viewModel.messagesState.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val sendMessageState by viewModel.sendMessageState.collectAsState()
@@ -235,6 +238,23 @@ private fun StudentChatDetailView(
     // Load message history when entering the detail view
     LaunchedEffect(chat.id) {
         viewModel.fetchMessages(chat.id)
+    }
+
+    BackHandler {
+        onBack()
+    }
+
+    LaunchedEffect(messagesState) {
+        if (messagesState is ChatViewModel.MessageListState.Success
+            && messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.lastIndex)
+        }
+    }
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.lastIndex)
+        }
     }
 
     // Clear text after successful send
@@ -274,6 +294,7 @@ private fun StudentChatDetailView(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -324,6 +345,7 @@ private fun StudentChatDetailView(
                 }
                 is ChatViewModel.MessageListState.Success -> {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 16.dp),
