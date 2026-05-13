@@ -1,8 +1,8 @@
 /*
  * UserController.java
  *
- * Version: 1.1
- * Date: 2026-05-02
+ * Version: 1.2
+ * Date: 2026-05-12
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -21,13 +21,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.Map;
 
 /**
  * Manages user-related operations.
  * Provides endpoints to retrieve and add users, update profile data,
  * anonymize accounts (GDPR deletion), and register new users.
  *
- * @version 1.1
+ * @version 1.2
  * @author EduLink Team
  */
 @RestController
@@ -209,5 +210,22 @@ public class UserController {
 
         userRepository.save(user);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Updates the FCM registration token for the specified user.
+     * Called by the mobile app after login to enable push notifications.
+     *
+     * @param id   the ID of the user whose token is being updated
+     * @param body request body containing the {@code fcmToken} field
+     * @return {@code 200 OK} if updated, {@code 404 Not Found} if user does not exist
+     */
+    @PutMapping("/{id}/fcm-token")
+    public ResponseEntity<?> updateFcmToken(@PathVariable Integer id, @RequestBody Map<String, String> body) {
+        return userRepository.findById(id).map(user -> {
+            user.setFcmToken(body.get("fcmToken"));
+            userRepository.save(user);
+            return ResponseEntity.ok().build();
+        }).orElse(ResponseEntity.notFound().build());
     }
 }

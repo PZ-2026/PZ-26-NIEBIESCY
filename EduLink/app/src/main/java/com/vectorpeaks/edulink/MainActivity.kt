@@ -7,8 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.vectorpeaks.edulink.navigation.AppNavGraph
 import com.vectorpeaks.edulink.ui.theme.EduLinkTheme
-import androidx.activity.viewModels
-import android.util.Log
 
 
 class MainActivity : ComponentActivity() {
