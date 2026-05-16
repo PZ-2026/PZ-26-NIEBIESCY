@@ -23,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import com.vectorpeaks.edulink.security.AuthPreferencesManager
 
 /**
  * Handles incoming FCM push notifications and token refresh events.
@@ -46,16 +47,8 @@ import timber.log.Timber
 class EduLinkFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
-        /** SharedPreferences file name used to persist the logged-in user's ID. */
-        const val PREFS_NAME = "edulink_prefs"
 
-        /** Key under which the logged-in user's ID is stored in SharedPreferences. */
-        const val KEY_USER_ID = "user_id"
-
-        /** Notification channel ID for chat messages. */
         private const val CHANNEL_ID = "edulink_chat"
-
-        /** Notification channel display name shown in system settings. */
         private const val CHANNEL_NAME = "Chat Messages"
     }
 
@@ -77,16 +70,14 @@ class EduLinkFirebaseMessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         Timber.d("FCM token refreshed: $token")
 
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val userId = prefs.getInt(KEY_USER_ID, -1)
+        val authPrefs = AuthPreferencesManager(applicationContext)
+        val userId = authPrefs.getUserId()
 
         if (userId == -1) {
-            // No user logged in yet — LoginViewModel will send the token after login
             Timber.d("No logged-in user, skipping token upload")
             return
         }
 
-        // Send the refreshed token to the backend on an IO coroutine
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 RetrofitClient.apiService.updateFcmToken(
@@ -95,7 +86,6 @@ class EduLinkFirebaseMessagingService : FirebaseMessagingService() {
                 )
                 Timber.d("FCM token updated on backend for user $userId")
             } catch (e: Exception) {
-                // Non-critical — the token will be re-sent on the next login
                 Timber.e(e, "Failed to update FCM token on backend - the token will be re-sent on the next login")
             }
         }

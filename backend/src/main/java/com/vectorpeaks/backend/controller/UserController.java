@@ -15,6 +15,7 @@ import com.vectorpeaks.backend.dto.RegisterRequest;
 import com.vectorpeaks.backend.entity.User;
 import com.vectorpeaks.backend.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -221,6 +222,7 @@ public class UserController {
      * @return {@code 200 OK} if updated, {@code 404 Not Found} if user does not exist
      */
     @PutMapping("/{id}/fcm-token")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateFcmToken(@PathVariable Integer id, @RequestBody Map<String, String> body) {
         return userRepository.findById(id).map(user -> {
             user.setFcmToken(body.get("fcmToken"));

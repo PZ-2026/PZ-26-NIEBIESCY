@@ -33,4 +33,7 @@ public class LoginResponse {
 
     /** The role of the user (e.g., "STUDENT", "TUTOR", "ADMIN"). */
     private String role;
+
+    /** The user's token used to authenticate the user's requests. */
+    private String token;
 }

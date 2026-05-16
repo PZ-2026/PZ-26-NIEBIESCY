@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.vectorpeaks.edulink.navigation.AppNavGraph
+import com.vectorpeaks.edulink.network.RetrofitClient
 import com.vectorpeaks.edulink.ui.theme.EduLinkTheme
 
 

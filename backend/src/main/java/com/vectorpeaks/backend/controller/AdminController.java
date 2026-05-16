@@ -15,6 +15,7 @@ import com.vectorpeaks.backend.repository.*;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -84,6 +85,7 @@ public class AdminController {
      * @return AdminStatsResponse with user, offer, booking, and pending counts
      */
     @GetMapping("/stats")
+    @PreAuthorize("hasRole('ADMIN')")
     public AdminStatsResponse getStats() {
         AdminStatsResponse stats = new AdminStatsResponse();
         stats.setTotalUsers(userRepository.count());
@@ -105,6 +107,7 @@ public class AdminController {
      * @return list of BookingResponse objects with status PENDING
      */
     @GetMapping("/bookings/pending")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<BookingResponse> getPendingBookings() {
         List<Booking> pendingBookings = bookingRepository.findAll().stream()
                 .filter(b -> b.getStatusId() != null && b.getStatusId() == 3)
@@ -124,6 +127,7 @@ public class AdminController {
      * @return list of OfferDto objects with status PENDING
      */
     @GetMapping("/offers/pending")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<OfferDto> getPendingOffers() {
         List<Offer> pendingOffers = offerRepository.findByStatusId(3);
         return pendingOffers.stream()
@@ -139,6 +143,7 @@ public class AdminController {
      * @return ResponseEntity with success or error message
      */
     @PutMapping("/offers/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateOfferStatus(@PathVariable Integer id,
                                                 @RequestParam String status) {
         Optional<Offer> offerOpt = offerRepository.findById(id);
@@ -170,6 +175,7 @@ public class AdminController {
      */
     @Transactional
     @PostMapping("/subjects")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> addSubject(@RequestBody Map<String, String> body) {
         String name = body.get("name");
         if (name == null || name.isBlank()) {
@@ -207,6 +213,7 @@ public class AdminController {
      * @return ResponseEntity with success or error
      */
     @DeleteMapping("/subjects/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteSubject(@PathVariable Integer id) {
         if (!subjectRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
@@ -232,6 +239,7 @@ public class AdminController {
      * @return AdminReportsResponse with statistics and popular subjects
      */
     @GetMapping("/reports")
+    @PreAuthorize("hasRole('ADMIN')")
     public AdminReportsResponse getReports() {
         AdminReportsResponse reports = new AdminReportsResponse();
         reports.setTotalBookings(bookingRepository.count());
@@ -270,6 +278,7 @@ public class AdminController {
      * @return GlobalLimitDto with current settings, or defaults if none exist
      */
     @GetMapping("/settings")
+    @PreAuthorize("hasRole('ADMIN')")
     public GlobalLimitDto getSettings() {
         GlobalLimitDto dto = new GlobalLimitDto();
         Optional<GlobalLimit> limitOpt = globalLimitRepository.findById(1);
@@ -292,6 +301,7 @@ public class AdminController {
      * @return ResponseEntity with success status
      */
     @PutMapping("/settings")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateSettings(@RequestBody GlobalLimitDto dto) {
         GlobalLimit limit = globalLimitRepository.findById(1).orElse(new GlobalLimit());
         limit.setId(1);

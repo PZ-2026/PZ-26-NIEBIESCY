@@ -1,15 +1,6 @@
-/*
- * LoginViewModel.kt
- *
- * Version: 1.1
- * Date: 2026-05-11
- *
- */
-
 package com.vectorpeaks.edulink.ui.screens.login
 
 import android.app.Application
-import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.messaging.FirebaseMessaging
@@ -17,7 +8,7 @@ import com.vectorpeaks.edulink.data.model.LoginRequest
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.data.model.user.UserResponse
 import com.vectorpeaks.edulink.network.RetrofitClient
-import com.vectorpeaks.edulink.service.EduLinkFirebaseMessagingService
+import com.vectorpeaks.edulink.security.AuthPreferencesManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -34,27 +25,23 @@ sealed class LoginUiState {
 }
 
 /**
- * ViewModel for the login screen.
+ * ViewModel responsible for handling the user authentication flow.
+ * Uses [AuthPreferencesManager] to securely persist credentials.
  *
- * Extends [AndroidViewModel] (instead of plain [ViewModel]) so it has access
- * to [Application] context — required for writing to SharedPreferences from
- * within the ViewModel without leaking an Activity context.
- *
- * @param application the application context injected automatically by the framework
+ * @version 1.2
+ * @author EduLink Team
  */
 class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState
 
+    // Injecting our secure storage manager
+    private val authPrefs = AuthPreferencesManager(application)
+
     /**
-     * Authenticates the user with the given credentials, registers the device's
-     * FCM token on the backend, and persists the user ID to SharedPreferences
-     * so [EduLinkFirebaseMessagingService] can re-send the token if it is refreshed
-     * while the user is already logged in.
-     *
-     * FCM registration failures are non-fatal — the user is still logged in and
-     * the token will be re-sent on the next successful login.
+     * Authenticates the user, saves the issued JWT token and User ID securely,
+     * and registers the device's FCM token on the backend.
      *
      * @param email    the user's email address
      * @param password the user's plain-text password
@@ -71,6 +58,10 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 val request  = LoginRequest(email.trim(), password)
                 val response: UserResponse = RetrofitClient.apiService.login(request)
 
+                // This allows AuthInterceptor to automatically sign future API requests
+                authPrefs.saveUserId(response.id)
+                authPrefs.saveToken(response.token)
+
                 val roleId = response.role.toIntOrNull() ?: 3
                 val user = User(
                     id              = response.id,
@@ -84,21 +75,14 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     phoneNumber     = response.phoneNumber ?: ""
                 )
 
-                // Save userId so EduLinkFirebaseMessagingService can read it on token refresh
-                getApplication<Application>()
-                    .getSharedPreferences(EduLinkFirebaseMessagingService.PREFS_NAME, Context.MODE_PRIVATE)
-                    .edit()
-                    .putInt(EduLinkFirebaseMessagingService.KEY_USER_ID, user.id)
-                    .apply()
-
-                // Register FCM token — non-fatal if Firebase is unavailable
+                // register fcm token (Non-fatal if Firebase services fail)
                 try {
                     val token = FirebaseMessaging.getInstance().token.await()
                     Timber.d("FCM token obtained: $token")
                     RetrofitClient.apiService.updateFcmToken(user.id, mapOf("fcmToken" to token))
                     Timber.d("FCM token linked to user ${user.id} on backend")
                 } catch (fcmException: Exception) {
-                    Timber.e(fcmException, "FCM registration failed — notifications may not work")
+                    Timber.e(fcmException, "FCM registration failed — background notifications will be disabled")
                 }
 
                 _uiState.value = LoginUiState.Success(user)
@@ -117,8 +101,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * Resets the UI state back to [LoginUiState.Idle].
-     * Call this after navigating away from the login screen to avoid
-     * re-triggering the success/error state on recomposition.
      */
     fun resetState() {
         _uiState.value = LoginUiState.Idle
