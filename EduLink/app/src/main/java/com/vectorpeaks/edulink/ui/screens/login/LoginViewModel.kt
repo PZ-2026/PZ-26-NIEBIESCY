@@ -60,6 +60,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
                 // This allows AuthInterceptor to automatically sign future API requests
                 authPrefs.saveUserId(response.id)
+                authPrefs.saveRefreshToken(response.refreshToken)
                 authPrefs.saveToken(response.token)
 
                 val roleId = response.role.toIntOrNull() ?: 3
@@ -78,6 +79,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 // register fcm token (Non-fatal if Firebase services fail)
                 try {
                     val token = FirebaseMessaging.getInstance().token.await()
+                    authPrefs.saveFcmToken(token)
                     Timber.d("FCM token obtained: $token")
                     RetrofitClient.apiService.updateFcmToken(user.id, mapOf("fcmToken" to token))
                     Timber.d("FCM token linked to user ${user.id} on backend")

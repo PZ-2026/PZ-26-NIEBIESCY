@@ -17,6 +17,7 @@ import com.vectorpeaks.edulink.ui.components.UserAvatar
 import com.vectorpeaks.edulink.ui.screens.login.ProfileViewModel
 import com.vectorpeaks.edulink.ui.screens.login.ProfileUiState
 import com.vectorpeaks.edulink.ui.theme.*
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun TutorProfileScreen(
@@ -26,13 +27,15 @@ fun TutorProfileScreen(
     viewModel: ProfileViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val showAddress by viewModel.showAddress.collectAsState() // ← ZMIANA
+    val showAddress by viewModel.showAddress.collectAsState()
     var isEditing by remember { mutableStateOf(false) }
     var editPhone by remember { mutableStateOf("") }
     var editCity by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var phoneError by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
 
     LaunchedEffect(userId) {
         viewModel.loadUser(userId)
@@ -252,7 +255,15 @@ fun TutorProfileScreen(
             title = { Text("Wyloguj się") },
             text = { Text("Czy na pewno chcesz się wylogować?") },
             confirmButton = {
-                Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
+                Button(
+                    onClick = {
+                        viewModel.logout(context = context) {
+                            showLogoutDialog = false
+                            onLogout()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
                     Text("Wyloguj")
                 }
             },
@@ -268,7 +279,15 @@ fun TutorProfileScreen(
             title = { Text("Usuń konto", color = Error) },
             text = { Text("Czy na pewno chcesz usunąć swoje konto? Ta operacja jest nieodwracalna.") },
             confirmButton = {
-                Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = Error)) {
+                Button(
+                    onClick = {
+                        viewModel.deleteAccount(userId = userId, context = context) {
+                            showDeleteDialog = false
+                            onLogout()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Error)
+                ) {
                     Text("Usuń")
                 }
             },

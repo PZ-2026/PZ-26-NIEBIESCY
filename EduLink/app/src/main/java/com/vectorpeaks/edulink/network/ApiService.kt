@@ -26,6 +26,8 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.Response
 import retrofit2.http.DELETE
+import okhttp3.ResponseBody
+import retrofit2.Call
 
 interface ApiService {
     @POST("api/auth/login")
@@ -165,9 +167,9 @@ interface ApiService {
      * @param userId the ID of the logged-in user
      * @param token  the FCM registration token for this device
      */
-    @PUT("api/users/{id}/fcm-token")
+    @POST("api/users/{userId}/fcm-token")
     suspend fun updateFcmToken(
-        @Path("id") userId: Int,
+        @Path("userId") userId: Int,
         @Body token: Map<String, String>
     ): Response<Unit>
   
@@ -189,4 +191,16 @@ interface ApiService {
 
     @DELETE("api/admin/subjects/{id}")
     suspend fun deleteSubject(@Path("id") id: Int): Response<Unit>
+
+    // Synchronous version for AuthInterceptor (runs outside coroutines)
+    @POST("api/auth/refresh")
+    fun refreshTokenSync(@Body body: Map<String, String>): Call<ResponseBody>
+
+    // Suspend version for ViewModel
+    @POST("api/auth/refresh")
+    suspend fun refreshToken(@Body body: Map<String, String>): Response<ResponseBody>
+
+    @POST("api/auth/logout")
+    suspend fun logout(@Body body: Map<String, String>): Response<Unit>
+
 }

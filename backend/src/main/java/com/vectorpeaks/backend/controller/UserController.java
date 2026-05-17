@@ -1,8 +1,8 @@
 /*
  * UserController.java
  *
- * Version: 1.2
- * Date: 2026-05-12
+ * Version: 1.3
+ * Date: 2026-05-16
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -14,6 +14,8 @@ package com.vectorpeaks.backend.controller;
 import com.vectorpeaks.backend.dto.RegisterRequest;
 import com.vectorpeaks.backend.entity.User;
 import com.vectorpeaks.backend.repository.UserRepository;
+import com.vectorpeaks.backend.service.FcmTokenService;
+import com.vectorpeaks.backend.util.EmailValidator;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -29,7 +31,7 @@ import java.util.Map;
  * Provides endpoints to retrieve and add users, update profile data,
  * anonymize accounts (GDPR deletion), and register new users.
  *
- * @version 1.2
+ * @version 1.3
  * @author EduLink Team
  */
 @RestController
@@ -39,14 +41,16 @@ public class UserController {
 
     private final UserRepository userRepository;
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
+    private final FcmTokenService fcmTokenService;
 
     /**
      * Constructs a new UserController with the given UserRepository.
      *
      * @param userRepository the user repository used for database operations
      */
-    public UserController(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserController(UserRepository userRepository, FcmTokenService fcmTokenService) {
+        this.userRepository   = userRepository;
+        this.fcmTokenService  = fcmTokenService;
     }
 
     /**
@@ -188,6 +192,10 @@ public class UserController {
             return ResponseEntity.badRequest().body("Nieprawidłowy adres e-mail");
         }
 
+        if (!EmailValidator.isValid(request.getEmail())) {
+            throw new IllegalArgumentException("Nieprawidłowy adres email.");
+        }
+
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Użytkownik z takim adresem email już istnieje");
         }
@@ -214,20 +222,26 @@ public class UserController {
     }
 
     /**
-     * Updates the FCM registration token for the specified user.
+     * Registers a device FCM token for the specified user.
+     * Stores in user_fcm_tokens table — supports multiple devices per user.
      * Called by the mobile app after login to enable push notifications.
      *
-     * @param id   the ID of the user whose token is being updated
+     * @param userId   the ID of the user
      * @param body request body containing the {@code fcmToken} field
-     * @return {@code 200 OK} if updated, {@code 404 Not Found} if user does not exist
+     * @return 200 OK if registered, 404 if user not found
      */
-    @PutMapping("/{id}/fcm-token")
+    @PostMapping("/{userId}/fcm-token")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> updateFcmToken(@PathVariable Integer id, @RequestBody Map<String, String> body) {
-        return userRepository.findById(id).map(user -> {
-            user.setFcmToken(body.get("fcmToken"));
-            userRepository.save(user);
-            return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> registerFcmToken(@PathVariable Integer userId,
+                                              @RequestBody Map<String, String> body) {
+        if (!userRepository.existsById(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+        String fcmToken = body.get("fcmToken");
+        if (fcmToken == null || fcmToken.isBlank()) {
+            return ResponseEntity.badRequest().body("fcmToken is required");
+        }
+        fcmTokenService.registerToken(userId, fcmToken);
+        return ResponseEntity.ok().build();
     }
 }

@@ -49,12 +49,13 @@ public class JwtUtil {
     }
 
     /**
-     * Generates a new JWT access token for the given user ID, email, and role.
+     * Generates a new access token from a User entity.
+     * Used by the /refresh endpoint after validating the refresh token.
      *
-     * @param userId the ID of the authenticated user
-     * @param email  the email of the authenticated user
-     * @param role   the role of the authenticated user (ADMIN, TUTOR, STUDENT)
-     * @return JWT token string
+     * @param userId the user's ID
+     * @param email  the user's email
+     * @param role   the user's role name
+     * @return signed JWT access token
      */
     public String generateToken(Integer userId, String email, String role) {
         return Jwts.builder()

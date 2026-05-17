@@ -1,6 +1,7 @@
 package com.vectorpeaks.edulink.ui.screens.student
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +33,8 @@ fun StudentProfileScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var phoneError by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
 
     // Load user when screen starts or userId changes
     LaunchedEffect(userId) {
@@ -230,7 +233,15 @@ fun StudentProfileScreen(
             title = { Text("Wyloguj się") },
             text = { Text("Czy na pewno chcesz się wylogować?") },
             confirmButton = {
-                Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
+                Button(
+                    onClick = {
+                        viewModel.logout(context = context) {
+                            showLogoutDialog = false
+                            onLogout() // navigate to login screen
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
                     Text("Wyloguj")
                 }
             },
@@ -249,10 +260,13 @@ fun StudentProfileScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deleteAccount(userId) {
-                            onLogout()
+                        viewModel.deleteAccount(
+                            userId = userId,
+                            context = context
+                        ) {
+                            showDeleteDialog = false
+                            onLogout() // navigate to login screen
                         }
-                        showDeleteDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Error)
                 ) {

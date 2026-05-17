@@ -38,9 +38,6 @@ public class User {
     private String address;
     private String phoneNumber;
 
-    @Column(name = "fcm_token")
-    private String fcmToken;
-
     // Getters and setters...
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -71,9 +68,6 @@ public class User {
 
     public String getPhoneNumber() { return phoneNumber; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
-
-    public String getFcmToken() { return fcmToken; }
-    public void setFcmToken(String fcmToken) { this.fcmToken = fcmToken; }
 
     @Transient
     public String getRoleName() {
