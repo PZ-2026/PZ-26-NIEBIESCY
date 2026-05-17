@@ -16,13 +16,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vectorpeaks.edulink.data.FakeData
 import com.vectorpeaks.edulink.data.model.Offer
 import com.vectorpeaks.edulink.ui.components.*
 import com.vectorpeaks.edulink.ui.theme.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vectorpeaks.edulink.data.model.user.DataViewModel
+import com.vectorpeaks.edulink.data.model.user.OffersViewModel
 
 @Composable
-fun StudentSearchScreen(modifier: Modifier = Modifier) {
+fun StudentSearchScreen(
+    studentId: Int,
+    modifier: Modifier = Modifier,
+    onNavigateToReviews: (tutorId: Int, tutorName: String) -> Unit  // ← NOWE
+) {
+    val viewModel: OffersViewModel = viewModel()
+    val offers by viewModel.offers.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    val dataViewModel: DataViewModel = viewModel()
+    val subjects by dataViewModel.subjects.collectAsState()
+    val cities by dataViewModel.cities.collectAsState()
+
+    LaunchedEffect(Unit) {
+        dataViewModel.loadSubjects()
+        dataViewModel.loadCities()
+    }
+
     var searchQuery by remember { mutableStateOf("") }
     var showFilters by remember { mutableStateOf(false) }
     var selectedSubject by remember { mutableStateOf<String?>(null) }
@@ -30,22 +50,23 @@ fun StudentSearchScreen(modifier: Modifier = Modifier) {
     var onlineOnly by remember { mutableStateOf(false) }
     var selectedOffer by remember { mutableStateOf<Offer?>(null) }
 
-    val filteredOffers = FakeData.offers.filter { offer ->
-        val matchesSearch = searchQuery.isBlank() ||
-                offer.tutorName.contains(searchQuery, ignoreCase = true) ||
-                offer.subject.contains(searchQuery, ignoreCase = true)
-        val matchesSubject = selectedSubject == null || offer.subject == selectedSubject
-        val matchesCity = selectedCity == null || offer.city == selectedCity
-        val matchesOnline = !onlineOnly || offer.isOnline
-        matchesSearch && matchesSubject && matchesCity && matchesOnline
+    LaunchedEffect(searchQuery, selectedSubject, selectedCity, onlineOnly) {
+        viewModel.loadOffers(
+            subject = selectedSubject,
+            city = selectedCity,
+            onlineOnly = onlineOnly,
+            search = searchQuery.takeIf { it.isNotBlank() }
+        )
     }
 
-    if (selectedOffer != null) {
+    selectedOffer?.let { offer ->
         OfferDetailScreen(
-            offer = selectedOffer!!,
-            onBack = { selectedOffer = null }
+            offer = offer,
+            studentId = studentId,
+            onBack = { selectedOffer = null },
+            onTutorClick = onNavigateToReviews  // ← NOWE
         )
-    } else {
+    } ?: run {
         Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -81,12 +102,9 @@ fun StudentSearchScreen(modifier: Modifier = Modifier) {
 
             AnimatedVisibility(visible = showFilters) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    // Subject filter
                     Text("Przedmiot:", style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         item {
                             FilterChip(
                                 selected = selectedSubject == null,
@@ -95,8 +113,8 @@ fun StudentSearchScreen(modifier: Modifier = Modifier) {
                                 shape = RoundedCornerShape(8.dp)
                             )
                         }
-                        val subjects = FakeData.offers.map { it.subject }.distinct()
-                        items(subjects) { subject ->
+                        val subjectsList = if (subjects.isNotEmpty()) subjects else listOf("Matematyka", "Fizyka")
+                        items(subjectsList) { subject ->
                             FilterChip(
                                 selected = selectedSubject == subject,
                                 onClick = {
@@ -109,7 +127,6 @@ fun StudentSearchScreen(modifier: Modifier = Modifier) {
                     }
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // City filter
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -127,8 +144,8 @@ fun StudentSearchScreen(modifier: Modifier = Modifier) {
                                 shape = RoundedCornerShape(8.dp)
                             )
                         }
-                        val cities = FakeData.offers.map { it.city }.distinct()
-                        items(cities) { city ->
+                        val citiesList = if (cities.isNotEmpty()) cities else listOf("Rzeszów", "Kraków")
+                        items(citiesList) { city ->
                             FilterChip(
                                 selected = selectedCity == city,
                                 onClick = {
@@ -141,7 +158,6 @@ fun StudentSearchScreen(modifier: Modifier = Modifier) {
                     }
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Online filter
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Laptop, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
@@ -155,23 +171,30 @@ fun StudentSearchScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Znaleziono: ${filteredOffers.size}",
-                style = MaterialTheme.typography.labelMedium,
-                color = OnSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(filteredOffers) { offer ->
-                    OfferCard(
-                        offer = offer,
-                        onClick = { selectedOffer = offer }
+            when {
+                isLoading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                error != null -> {
+                    Text("Błąd: $error", color = Error, modifier = Modifier.padding(16.dp))
+                }
+                else -> {
+                    Text(
+                        text = "Znaleziono: ${offers.size}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = OnSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(offers) { offer ->
+                            OfferCard(offer = offer, onClick = { selectedOffer = offer })
+                        }
+                    }
                 }
             }
         }

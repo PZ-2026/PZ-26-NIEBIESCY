@@ -1,5 +1,6 @@
 package com.vectorpeaks.edulink.ui.screens.student
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,7 +13,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vectorpeaks.edulink.data.model.Offer
+import com.vectorpeaks.edulink.data.model.Slot
 import com.vectorpeaks.edulink.ui.components.RatingBar
 import com.vectorpeaks.edulink.ui.components.UserAvatar
 import com.vectorpeaks.edulink.ui.theme.*
@@ -21,11 +24,21 @@ import com.vectorpeaks.edulink.ui.theme.*
 @Composable
 fun OfferDetailScreen(
     offer: Offer,
-    onBack: () -> Unit
+    studentId: Int,
+    onBack: () -> Unit,
+    onTutorClick: (tutorId: Int, tutorName: String) -> Unit,
+    bookingViewModel: BookingViewModel = viewModel()
 ) {
     var showBookingDialog by remember { mutableStateOf(false) }
-    var selectedSlot by remember { mutableStateOf<String?>(null) }
+    var selectedSlot by remember { mutableStateOf<Slot?>(null) }
     var bookingConfirmed by remember { mutableStateOf(false) }
+
+    LaunchedEffect(offer.id, studentId) {
+        showBookingDialog = false
+        selectedSlot = null
+        bookingConfirmed = false
+        bookingViewModel.resetUiState()
+    }
 
     Scaffold(
         containerColor = Background,
@@ -96,11 +109,14 @@ fun OfferDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tutor info
+            // tutors card
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Surface),
-                elevation = CardDefaults.cardElevation(2.dp)
+                elevation = CardDefaults.cardElevation(2.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onTutorClick(offer.tutorId, offer.tutorName) }
             ) {
                 Row(
                     modifier = Modifier
@@ -110,14 +126,19 @@ fun OfferDetailScreen(
                 ) {
                     UserAvatar(name = offer.tutorName, size = 56)
                     Spacer(modifier = Modifier.width(16.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = offer.tutorName,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = OnSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = offer.city,
@@ -127,7 +148,12 @@ fun OfferDetailScreen(
                         }
                         if (offer.isOnline) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Laptop, contentDescription = null, tint = Tertiary, modifier = Modifier.size(16.dp))
+                                Icon(
+                                    Icons.Default.Laptop,
+                                    contentDescription = null,
+                                    tint = Tertiary,
+                                    modifier = Modifier.size(16.dp)
+                                )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "Dostępne online",
@@ -136,7 +162,19 @@ fun OfferDetailScreen(
                                 )
                             }
                         }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Zobacz opinie →",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Primary,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = "Zobacz opinie",
+                        tint = OnSurfaceVariant
+                    )
                 }
             }
 
@@ -185,18 +223,27 @@ fun OfferDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Schedule, contentDescription = null, tint = Primary, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = slot,
+                                    text = slot.label,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
-                            TextButton(onClick = {
-                                selectedSlot = slot
-                                showBookingDialog = true
-                            }) {
-                                Text("Rezerwuj", color = Primary)
+                            Button(
+                                onClick = {
+                                    selectedSlot = slot
+                                    showBookingDialog = true
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                            ) {
+                                Text("Rezerwuj", color = MaterialTheme.colorScheme.onPrimary)
                             }
                         }
                         if (slot != offer.availableSlots.last()) {
@@ -207,21 +254,6 @@ fun OfferDetailScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Full-width booking button
-            Button(
-                onClick = { showBookingDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary)
-            ) {
-                Icon(Icons.Default.BookOnline, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Zarezerwuj lekcję", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
@@ -235,7 +267,7 @@ fun OfferDetailScreen(
                     Text("Przedmiot: ${offer.subject}")
                     Text("Korepetytor: ${offer.tutorName}")
                     if (selectedSlot != null) {
-                        Text("Termin: $selectedSlot")
+                        Text("Termin: ${selectedSlot!!.label}")
                     }
                     Text("Cena: ${offer.pricePerHour.toInt()} zł/h")
                 }
@@ -243,8 +275,16 @@ fun OfferDetailScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        showBookingDialog = false
-                        bookingConfirmed = true
+                        if (selectedSlot != null) {
+                            bookingViewModel.createBooking(
+                                offerId = offer.id,
+                                studentId = studentId,
+                                slotId = selectedSlot!!.id
+                            ) {
+                                showBookingDialog = false
+                                bookingConfirmed = true
+                            }
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Primary)
                 ) {
@@ -259,16 +299,34 @@ fun OfferDetailScreen(
         )
     }
 
-    // Booking success snackbar-like dialog
+    when (val state = bookingViewModel.uiState.value) {
+        is BookingUiState.Success -> {
+            LaunchedEffect(Unit) {
+                if (!bookingConfirmed) bookingConfirmed = true
+            }
+        }
+        is BookingUiState.Error -> {
+            LaunchedEffect(state.message) {
+                bookingConfirmed = false
+            }
+        }
+        else -> {}
+    }
+
     if (bookingConfirmed) {
         AlertDialog(
-            onDismissRequest = { bookingConfirmed = false },
+            onDismissRequest = {
+                bookingConfirmed = false
+                bookingViewModel.resetUiState()
+                onBack()
+            },
             title = { Text("Sukces!", color = Success) },
             text = { Text("Rezerwacja została złożona. Korepetytor otrzyma powiadomienie.") },
             confirmButton = {
                 Button(
                     onClick = {
                         bookingConfirmed = false
+                        bookingViewModel.resetUiState()
                         onBack()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Success)

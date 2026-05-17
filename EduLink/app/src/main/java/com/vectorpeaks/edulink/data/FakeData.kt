@@ -1,6 +1,8 @@
 package com.vectorpeaks.edulink.data
 
 import com.vectorpeaks.edulink.data.model.*
+import com.vectorpeaks.edulink.data.model.user.RoleID
+import com.vectorpeaks.edulink.data.model.user.User
 
 object FakeData {
 
@@ -12,8 +14,8 @@ object FakeData {
             lastName = "Kowalski",
             email = "admin@edulink.pl",
             password = "admin123",
-            role = RoleID.ADMIN,
-            phone = "500100200",
+            roleId = 1,
+            phoneNumber = "500100200",
             address = "Rzeszów"
         ),
         User(
@@ -22,8 +24,8 @@ object FakeData {
             lastName = "Nowak",
             email = "tutor@edulink.pl",
             password = "tutor123",
-            role = RoleID.TUTOR,
-            phone = "600200300",
+            roleId = 2,
+            phoneNumber = "600200300",
             address = "Rzeszów"
         ),
         User(
@@ -32,8 +34,8 @@ object FakeData {
             lastName = "Wiśniewski",
             email = "student@edulink.pl",
             password = "student123",
-            role = RoleID.STUDENT,
-            phone = "700300400",
+            roleId = 3,
+            phoneNumber = "700300400",
             address = "Rzeszów"
         ),
         User(
@@ -42,8 +44,8 @@ object FakeData {
             lastName = "Zielińska",
             email = "tutor2@edulink.pl",
             password = "tutor123",
-            role = RoleID.TUTOR,
-            phone = "600400500",
+            roleId = 2,
+            phoneNumber = "600400500",
             address = "Kraków"
         ),
         User(
@@ -52,8 +54,8 @@ object FakeData {
             lastName = "Lewandowski",
             email = "student2@edulink.pl",
             password = "student123",
-            role = RoleID.STUDENT,
-            phone = "700500600",
+            roleId = 3,
+            phoneNumber = "700500600",
             address = "Warszawa"
         )
     )
@@ -63,6 +65,7 @@ object FakeData {
     }
 
     // ==================== OFERTY ====================
+
     val offers = listOf(
         Offer(
             id = 1,
@@ -75,7 +78,7 @@ object FakeData {
             isOnline = true,
             rating = 4.8f,
             reviewCount = 24,
-            availableSlots = listOf("Pon 10:00", "Śr 14:00", "Pt 16:00")
+            availableSlots = emptyList()
         ),
         Offer(
             id = 2,
@@ -88,7 +91,7 @@ object FakeData {
             isOnline = false,
             rating = 4.6f,
             reviewCount = 12,
-            availableSlots = listOf("Wt 12:00", "Czw 15:00")
+            availableSlots = emptyList()
         ),
         Offer(
             id = 3,
@@ -101,7 +104,7 @@ object FakeData {
             isOnline = true,
             rating = 4.9f,
             reviewCount = 38,
-            availableSlots = listOf("Pon 8:00", "Śr 10:00", "Pt 12:00", "Sob 9:00")
+            availableSlots = emptyList()
         ),
         Offer(
             id = 4,
@@ -114,7 +117,7 @@ object FakeData {
             isOnline = true,
             rating = 4.7f,
             reviewCount = 15,
-            availableSlots = listOf("Wt 14:00", "Czw 16:00")
+            availableSlots = emptyList()
         ),
         Offer(
             id = 5,
@@ -127,7 +130,7 @@ object FakeData {
             isOnline = true,
             rating = 5.0f,
             reviewCount = 8,
-            availableSlots = listOf("Pon 16:00", "Śr 18:00")
+            availableSlots = emptyList()
         ),
         Offer(
             id = 6,
@@ -140,7 +143,7 @@ object FakeData {
             isOnline = false,
             rating = 4.5f,
             reviewCount = 19,
-            availableSlots = listOf("Pon 14:00", "Pt 10:00")
+            availableSlots = emptyList()
         )
     )
 

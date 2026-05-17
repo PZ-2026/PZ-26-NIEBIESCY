@@ -1,8 +1,8 @@
 /*
  * AuthControllerTest.java
  *
- * Version: 1.1
- * Date: 2026-04-20
+ * Version: 1.2
+ * Date: 2026-05-03
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -33,44 +33,43 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Unit tests for {@link AuthController}.
  *
- * <p>Weryfikuje zachowanie endpointu {@code POST /api/auth/login}, w tym:
+ * <p>Verifies the behaviour of the {@code POST /api/auth/login} endpoint, including:
  * <ul>
- *   <li>poprawną odpowiedź {@code 200 OK} z danymi użytkownika przy
- *       prawidłowych danych logowania,</li>
- *   <li>odpowiedź {@code 401 Unauthorized} przy błędnych danych,</li>
- *   <li>poprawny {@code Content-Type} odpowiedzi.</li>
+ *   <li>a {@code 200 OK} response with user data on valid credentials,</li>
+ *   <li>a {@code 401 Unauthorized} response on invalid credentials,</li>
+ *   <li>the correct {@code Content-Type} header in the response.</li>
  * </ul>
  *
- * <p>Używa {@code @WebMvcTest} z {@link MockMvc} – uruchamia tylko
- * warstwę kontrolera bez pełnego kontekstu Springa ani bazy danych.
- * Zależność {@link AuthService} jest zastąpiona mockiem Mockito
+ * <p>Uses {@code @WebMvcTest} with {@link MockMvc} – only the controller layer
+ * is loaded; no full Spring context or database is required.
+ * The {@link AuthService} dependency is replaced by a Mockito mock
  * ({@code @MockitoBean}).
  *
- * @version 1.1
+ * @version 1.2
  * @author EduLink Team
  * @see AuthController
  */
 @WebMvcTest(AuthController.class)
 class AuthControllerTest {
 
-    /** Klient HTTP do wykonywania żądań w testach warstwy web. */
+    /** HTTP client used to perform requests in web-layer tests. */
     @Autowired
     private MockMvc mockMvc;
 
-    /** Mock serwisu uwierzytelniania – zastępuje rzeczywistą implementację. */
+    /** Mock of the authentication service – replaces the real implementation. */
     @MockitoBean
     private AuthService authService;
 
-    /** Mapper JSON używany do serializacji obiektów żądań. */
+    /** JSON mapper used to serialize request objects. */
     @Autowired
     private ObjectMapper objectMapper;
 
-    /** Przykładowy użytkownik inicjalizowany przed każdym testem. */
+    /** Sample user initialised before each test. */
     private User mockUser;
 
     /**
-     * Inicjalizuje przykładowego użytkownika zwracanego przez mock serwisu
-     * przed każdym przypadkiem testowym.
+     * Initialises a sample user returned by the mock service
+     * before each test case.
      */
     @BeforeEach
     void setUp() {
@@ -83,17 +82,17 @@ class AuthControllerTest {
     }
 
     // -----------------------------------------------------------------------
-    // POST /api/auth/login – sukces
+    // POST /api/auth/login – success
     // -----------------------------------------------------------------------
 
     /**
-     * Weryfikuje, że endpoint zwraca status {@code 200 OK} oraz poprawne
-     * dane użytkownika w formacie JSON gdy podane dane logowania są prawidłowe.
+     * Verifies that the endpoint returns {@code 200 OK} and correct user data
+     * in JSON format when valid credentials are provided.
      *
-     * @throws Exception jeśli wykonanie żądania MockMvc się nie powiedzie
+     * @throws Exception if the MockMvc request execution fails
      */
     @Test
-    void login_poprawneCredentials_zwraca200iDaneUsera() throws Exception {
+    void login_validCredentials_returns200AndUserData() throws Exception {
         when(authService.authenticate("anna.nowak@example.com", "tajne123"))
                 .thenReturn(Optional.of(mockUser));
 
@@ -113,23 +112,23 @@ class AuthControllerTest {
     }
 
     // -----------------------------------------------------------------------
-    // POST /api/auth/login – błąd autoryzacji
+    // POST /api/auth/login – authorisation error
     // -----------------------------------------------------------------------
 
     /**
-     * Weryfikuje, że endpoint zwraca status {@code 401 Unauthorized}
-     * oraz komunikat o błędzie gdy podane dane logowania są nieprawidłowe.
+     * Verifies that the endpoint returns {@code 401 Unauthorized} and an error
+     * message when invalid credentials are provided.
      *
-     * @throws Exception jeśli wykonanie żądania MockMvc się nie powiedzie
+     * @throws Exception if the MockMvc request execution fails
      */
     @Test
-    void login_bledneCredentials_zwraca401() throws Exception {
+    void login_invalidCredentials_returns401() throws Exception {
         when(authService.authenticate(anyString(), anyString()))
                 .thenReturn(Optional.empty());
 
         LoginRequest request = new LoginRequest();
-        request.setEmail("brak@example.com");
-        request.setPassword("zleHaslo");
+        request.setEmail("missing@example.com");
+        request.setPassword("wrongPassword");
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -139,13 +138,13 @@ class AuthControllerTest {
     }
 
     /**
-     * Weryfikuje, że endpoint zwraca status {@code 401 Unauthorized}
-     * gdy ciało żądania jest pustym obiektem JSON (brak e-maila i hasła).
+     * Verifies that the endpoint returns {@code 401 Unauthorized}
+     * when the request body is an empty JSON object (no email or password).
      *
-     * @throws Exception jeśli wykonanie żądania MockMvc się nie powiedzie
+     * @throws Exception if the MockMvc request execution fails
      */
     @Test
-    void login_pustyCialoRequest_zwraca401() throws Exception {
+    void login_emptyRequestBody_returns401() throws Exception {
         when(authService.authenticate(anyString(), anyString()))
                 .thenReturn(Optional.empty());
 
@@ -156,17 +155,17 @@ class AuthControllerTest {
     }
 
     // -----------------------------------------------------------------------
-    // Content-Type odpowiedzi
+    // Response Content-Type
     // -----------------------------------------------------------------------
 
     /**
-     * Weryfikuje, że odpowiedź przy udanym logowaniu ma nagłówek
-     * {@code Content-Type} zgodny z {@code application/json}.
+     * Verifies that a successful login response carries a
+     * {@code Content-Type} header compatible with {@code application/json}.
      *
-     * @throws Exception jeśli wykonanie żądania MockMvc się nie powiedzie
+     * @throws Exception if the MockMvc request execution fails
      */
     @Test
-    void login_sukces_odpowiedzJestJson() throws Exception {
+    void login_success_responseIsJson() throws Exception {
         when(authService.authenticate(anyString(), anyString()))
                 .thenReturn(Optional.of(mockUser));
 

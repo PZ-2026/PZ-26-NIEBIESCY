@@ -1,14 +1,13 @@
-plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
-}
+    plugins {
+        alias(libs.plugins.android.application)
+        alias(libs.plugins.kotlin.android)
+        alias(libs.plugins.kotlin.compose)
+        id ("com.google.gms.google-services")
+    }
 
 android {
     namespace = "com.vectorpeaks.edulink"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.vectorpeaks.edulink"
@@ -60,17 +59,25 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
+    // Retrofit + Gson
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
 
-    // Retrofit + Gson
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+    // Timber - logging library
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
+    //firebase
+    implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
+    implementation ("com.google.firebase:firebase-messaging")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 }

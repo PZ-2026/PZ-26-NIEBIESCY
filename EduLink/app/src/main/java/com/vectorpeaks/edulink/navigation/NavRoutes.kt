@@ -2,6 +2,7 @@ package com.vectorpeaks.edulink.navigation
 
 sealed class NavRoutes(val route: String) {
     object Login : NavRoutes("login")
+    object Register : NavRoutes("register")
 
     // Student
     object StudentMain : NavRoutes("student_main")
@@ -11,6 +12,10 @@ sealed class NavRoutes(val route: String) {
     object StudentProfile : NavRoutes("student_profile")
     object OfferDetail : NavRoutes("offer_detail/{offerId}") {
         fun createRoute(offerId: Int) = "offer_detail/$offerId"
+    }
+    object TutorReviews : NavRoutes("tutor_reviews/{tutorId}/{tutorName}") {
+        fun createRoute(tutorId: Int, tutorName: String) =
+            "tutor_reviews/$tutorId/${tutorName.replace("/", " ")}"
     }
 
     // Tutor

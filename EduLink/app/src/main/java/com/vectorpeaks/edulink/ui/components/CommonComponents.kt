@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vectorpeaks.edulink.data.model.*
+import com.vectorpeaks.edulink.data.model.user.RoleID
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.theme.*
 
 // ==================== SEARCH BAR ====================
@@ -250,16 +252,19 @@ fun OfferCard(
 fun ReservationCard(
     reservation: Reservation,
     showActions: Boolean = false,
+    onClick: (() -> Unit)? = null,
     onAccept: (() -> Unit)? = null,
     onReject: (() -> Unit)? = null,
     onRate: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(enabled = onClick != null) { onClick?.invoke() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -386,7 +391,7 @@ fun UserCard(
                     color = OnSurfaceVariant
                 )
                 Text(
-                    text = when (user.role) {
+                    text = when (user.getRole()) {
                         RoleID.STUDENT -> "Uczeń"
                         RoleID.TUTOR -> "Korepetytor"
                         RoleID.ADMIN -> "Administrator"
@@ -395,7 +400,7 @@ fun UserCard(
                     color = Primary
                 )
             }
-            if (user.role != RoleID.ADMIN) {
+            if (user.getRole() != RoleID.ADMIN) {
                 Button(
                     onClick = onToggleBlock,
                     colors = ButtonDefaults.buttonColors(

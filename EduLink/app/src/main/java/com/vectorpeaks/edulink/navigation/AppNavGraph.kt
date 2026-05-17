@@ -5,15 +5,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.vectorpeaks.edulink.data.model.User
+import androidx.navigation.navArgument
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.screens.admin.AdminMainScreen
 import com.vectorpeaks.edulink.ui.screens.login.LoginScreen
+import com.vectorpeaks.edulink.ui.screens.student.ReviewsScreen
 import com.vectorpeaks.edulink.ui.screens.student.StudentMainScreen
 import com.vectorpeaks.edulink.ui.screens.tutor.TutorMainScreen
-import com.vectorpeaks.edulink.data.model.RoleID
+import com.vectorpeaks.edulink.data.model.user.RoleID
+import com.vectorpeaks.edulink.ui.screens.register.RegisterScreen
 
 @Composable
 fun AppNavGraph() {
@@ -28,7 +32,7 @@ fun AppNavGraph() {
             LoginScreen(
                 onLoginSuccess = { user ->
                     currentUser = user
-                    val destination = when (user.role) {
+                    val destination = when (user.getRole()) {
                         RoleID.STUDENT -> NavRoutes.StudentMain.route
                         RoleID.TUTOR   -> NavRoutes.TutorMain.route
                         RoleID.ADMIN   -> NavRoutes.AdminMain.route
@@ -36,7 +40,14 @@ fun AppNavGraph() {
                     navController.navigate(destination) {
                         popUpTo(NavRoutes.Login.route) { inclusive = true }
                     }
-                }
+                },
+                onRegisterClick = { navController.navigate(NavRoutes.Register.route) }
+            )
+        }
+
+        composable(NavRoutes.Register.route) {
+            RegisterScreen(
+                onBackToLogin = { navController.popBackStack() }
             )
         }
 
@@ -49,6 +60,11 @@ fun AppNavGraph() {
                         navController.navigate(NavRoutes.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }
+                    },
+                    onNavigateToReviews = { tutorId, tutorName ->
+                        navController.navigate(
+                            NavRoutes.TutorReviews.createRoute(tutorId, tutorName)
+                        )
                     }
                 )
             }
@@ -80,6 +96,22 @@ fun AppNavGraph() {
                     }
                 )
             }
+        }
+
+        composable(
+            route = NavRoutes.TutorReviews.route,
+            arguments = listOf(
+                navArgument("tutorId") { type = NavType.IntType },
+                navArgument("tutorName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val tutorId = backStackEntry.arguments?.getInt("tutorId") ?: return@composable
+            val tutorName = backStackEntry.arguments?.getString("tutorName") ?: ""
+            ReviewsScreen(
+                tutorName = tutorName,
+                tutorId = tutorId,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

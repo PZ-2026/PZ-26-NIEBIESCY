@@ -1,6 +1,5 @@
 package com.vectorpeaks.edulink.ui.screens.login
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,16 +22,15 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vectorpeaks.edulink.data.FakeData
-import com.vectorpeaks.edulink.data.model.User
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.theme.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: (User) -> Unit,
+    onRegisterClick: () -> Unit,
     viewModel: LoginViewModel = viewModel()
 ) {
     var email by remember { mutableStateOf("") }
@@ -41,7 +39,7 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
 
-    // Obsługa sukcesu
+    // Success
     LaunchedEffect(uiState) {
         if (uiState is LoginUiState.Success) {
             onLoginSuccess((uiState as LoginUiState.Success).user)
@@ -176,8 +174,8 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Registration hint
-            TextButton(onClick = { /* TODO: rejestracja */ }) {
-                Text(
+            TextButton(onClick = onRegisterClick) {
+            Text(
                     text = "Nie masz konta? Zarejestruj się",
                     color = Primary,
                     style = MaterialTheme.typography.bodyMedium

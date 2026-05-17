@@ -9,7 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import com.vectorpeaks.edulink.data.model.User
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.theme.*
 
 data class TutorTab(
@@ -69,13 +69,13 @@ fun TutorMainScreen(
         when (selectedTab) {
             0 -> TutorDashboardScreen(user = user, modifier = Modifier.padding(innerPadding))
             1 -> TutorOffersScreen(user = user, modifier = Modifier.padding(innerPadding))
-            2 -> TutorReservationsScreen(user = user, modifier = Modifier.padding(innerPadding))
+            2 -> TutorReservationsScreen(tutorId = user.id, modifier = Modifier.padding(innerPadding))
             3 -> TutorChatScreen(
                 user = user,
                 modifier = Modifier.padding(innerPadding),
                 onChatOpen = { isOpen -> isChatDetailOpen = isOpen }
             )
-            4 -> TutorProfileScreen(user = user, onLogout = onLogout, modifier = Modifier.padding(innerPadding))
+            4 -> TutorProfileScreen(userId = user.id, onLogout = onLogout, modifier = Modifier.padding(innerPadding))
         }
     }
 }

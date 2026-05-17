@@ -15,7 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import com.vectorpeaks.edulink.data.model.User
+import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.theme.*
 
 data class StudentTab(
@@ -28,7 +28,8 @@ data class StudentTab(
 @Composable
 fun StudentMainScreen(
     user: User,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToReviews: (tutorId: Int, tutorName: String) -> Unit  // ← NOWE
 ) {
     val tabs = listOf(
         StudentTab("Szukaj", Icons.Filled.Search, Icons.Outlined.Search),
@@ -43,23 +44,23 @@ fun StudentMainScreen(
         containerColor = Background,
         bottomBar = {
             if (!isChatDetailOpen) {
-                NavigationBar(
-                    containerColor = Surface
-                ) {
+                NavigationBar(containerColor = Surface) {
                     tabs.forEachIndexed { index, tab ->
                         NavigationBarItem(
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
                             icon = {
                                 Icon(
-                                    imageVector = if (selectedTab == index) tab.selectedIcon else tab.unselectedIcon,
+                                    imageVector = if (selectedTab == index) tab.selectedIcon
+                                    else tab.unselectedIcon,
                                     contentDescription = tab.title
                                 )
                             },
                             label = {
                                 Text(
                                     text = tab.title,
-                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
+                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold
+                                    else FontWeight.Normal
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
@@ -74,14 +75,25 @@ fun StudentMainScreen(
         }
     ) { innerPadding ->
         when (selectedTab) {
-            0 -> StudentSearchScreen(modifier = Modifier.padding(innerPadding))
-            1 -> StudentHistoryScreen(user = user, modifier = Modifier.padding(innerPadding))
+            0 -> StudentSearchScreen(
+                studentId = user.id,
+                modifier = Modifier.padding(innerPadding),
+                onNavigateToReviews = onNavigateToReviews
+            )
+            1 -> StudentHistoryScreen(
+                studentId = user.id,
+                modifier = Modifier.padding(innerPadding)
+            )
             2 -> StudentChatScreen(
                 user = user,
                 modifier = Modifier.padding(innerPadding),
                 onChatOpen = { isOpen -> isChatDetailOpen = isOpen }
             )
-            3 -> StudentProfileScreen(user = user, onLogout = onLogout, modifier = Modifier.padding(innerPadding))
+            3 -> StudentProfileScreen(
+                userId = user.id,
+                onLogout = onLogout,
+                modifier = Modifier.padding(innerPadding)
+            )
         }
     }
 }
