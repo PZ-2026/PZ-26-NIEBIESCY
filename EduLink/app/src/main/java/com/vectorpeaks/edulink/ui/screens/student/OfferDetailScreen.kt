@@ -1,5 +1,6 @@
 package com.vectorpeaks.edulink.ui.screens.student
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,13 +26,13 @@ fun OfferDetailScreen(
     offer: Offer,
     studentId: Int,
     onBack: () -> Unit,
+    onTutorClick: (tutorId: Int, tutorName: String) -> Unit,
     bookingViewModel: BookingViewModel = viewModel()
 ) {
     var showBookingDialog by remember { mutableStateOf(false) }
     var selectedSlot by remember { mutableStateOf<Slot?>(null) }
     var bookingConfirmed by remember { mutableStateOf(false) }
 
-    // Reset stanu przy każdej nowej ofercie
     LaunchedEffect(offer.id, studentId) {
         showBookingDialog = false
         selectedSlot = null
@@ -62,7 +63,7 @@ fun OfferDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Subject & Price (bez zmian)
+            // Subject & Price
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Surface),
@@ -108,10 +109,14 @@ fun OfferDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // tutors card
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Surface),
-                elevation = CardDefaults.cardElevation(2.dp)
+                elevation = CardDefaults.cardElevation(2.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onTutorClick(offer.tutorId, offer.tutorName) }
             ) {
                 Row(
                     modifier = Modifier
@@ -121,7 +126,7 @@ fun OfferDetailScreen(
                 ) {
                     UserAvatar(name = offer.tutorName, size = 56)
                     Spacer(modifier = Modifier.width(16.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = offer.tutorName,
                             style = MaterialTheme.typography.titleMedium,
@@ -157,7 +162,19 @@ fun OfferDetailScreen(
                                 )
                             }
                         }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Zobacz opinie →",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Primary,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = "Zobacz opinie",
+                        tint = OnSurfaceVariant
+                    )
                 }
             }
 
@@ -214,7 +231,7 @@ fun OfferDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = slot.label,   // ✅ ZMIANA
+                                    text = slot.label,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -237,7 +254,6 @@ fun OfferDetailScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
         }
     }
 
@@ -283,27 +299,20 @@ fun OfferDetailScreen(
         )
     }
 
-    // Obsługa sukcesu z ViewModel
     when (val state = bookingViewModel.uiState.value) {
         is BookingUiState.Success -> {
             LaunchedEffect(Unit) {
-                if (!bookingConfirmed) {
-                    bookingConfirmed = true
-                }
+                if (!bookingConfirmed) bookingConfirmed = true
             }
         }
-
         is BookingUiState.Error -> {
             LaunchedEffect(state.message) {
                 bookingConfirmed = false
-                // Opcjonalnie: pokaż Snackbar z błędem
             }
         }
-
         else -> {}
     }
 
-    // Booking success dialog
     if (bookingConfirmed) {
         AlertDialog(
             onDismissRequest = {

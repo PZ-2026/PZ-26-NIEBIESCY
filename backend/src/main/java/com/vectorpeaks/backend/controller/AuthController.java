@@ -1,8 +1,8 @@
 /*
  * AuthController.java
  *
- * Version: 1.0
- * Date: 2026-04-26
+ * Version: 1.1
+ * Date: 2026-05-17
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -15,6 +15,8 @@ import com.vectorpeaks.backend.dto.LoginRequest;
 import com.vectorpeaks.backend.dto.LoginResponse;
 import com.vectorpeaks.backend.entity.User;
 import com.vectorpeaks.backend.service.AuthService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,13 +27,15 @@ import java.util.Optional;
  * Handles authentication-related HTTP requests.
  * Provides endpoints for user login.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*") // For development only – restrict in production
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthService authService;
 
@@ -53,13 +57,19 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        String email = request.getEmail();
+        logger.info("Login attempt for email: {}", email);
+
         Optional<User> userOpt = authService.authenticate(
-                request.getEmail(),
+                email,
                 request.getPassword()
         );
 
         if (userOpt.isPresent()) {
             User user = userOpt.get();
+            logger.info("Login successful for email: {}, userId: {}, roleId: {}",
+                    email, user.getId(), user.getRoleId());
+
             LoginResponse response = new LoginResponse();
             response.setId(user.getId());
             response.setFirstName(user.getFirstName());
@@ -68,6 +78,7 @@ public class AuthController {
             response.setRole(String.valueOf(user.getRoleId()));
             return ResponseEntity.ok(response);
         } else {
+            logger.error("Login failed – invalid credentials for email: {}", email);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Nieprawidłowy email lub hasło");
         }
