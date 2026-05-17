@@ -2,7 +2,7 @@
  * UserController.java
  *
  * Version: 1.2
- * Date: 2026-05-12
+ * Date: 2026-05-17
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -14,6 +14,8 @@ package com.vectorpeaks.backend.controller;
 import com.vectorpeaks.backend.dto.RegisterRequest;
 import com.vectorpeaks.backend.entity.User;
 import com.vectorpeaks.backend.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +37,8 @@ import java.util.Map;
 @RequestMapping("/api/users")
 @CrossOrigin(origins = "*") // For development only – restrict in production
 public class UserController {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final UserRepository userRepository;
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
@@ -155,7 +159,7 @@ public class UserController {
      */
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateUserStatus(@PathVariable Integer id,
-                                               @RequestBody java.util.Map<String, Integer> body) {
+                                              @RequestBody Map<String, Integer> body) {
         Integer newStatusId = body.get("accountStatusId");
         if (newStatusId == null) {
             return ResponseEntity.badRequest().body("accountStatusId is required");
@@ -175,23 +179,30 @@ public class UserController {
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        String email = request.getEmail();
+        logger.info("Registration attempt for email: {}", email);
 
         if (request.getFirstName() == null || request.getFirstName().isBlank() ||
                 request.getLastName() == null || request.getLastName().isBlank() ||
-                request.getEmail() == null || request.getEmail().isBlank() ||
+                email == null || email.isBlank() ||
                 request.getPassword() == null || request.getPassword().isBlank()) {
+            logger.error("Registration failed – missing required fields for email: {}", email);
             return ResponseEntity.badRequest().body("Wszystkie pola są wymagane");
         }
 
-        if (!EMAIL_PATTERN.matcher(request.getEmail()).matches()) {
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            logger.error("Registration failed – invalid email format: {}", email);
             return ResponseEntity.badRequest().body("Nieprawidłowy adres e-mail");
         }
 
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (userRepository.findByEmail(email).isPresent()) {
+            logger.error("Registration failed – email already in use: {}", email);
             return ResponseEntity.badRequest().body("Użytkownik z takim adresem email już istnieje");
         }
 
         if (request.getRoleId() == null || (request.getRoleId() != 2 && request.getRoleId() != 3)) {
+            logger.error("Registration failed – invalid roleId: {} for email: {}",
+                    request.getRoleId(), email);
             return ResponseEntity.badRequest().body("Nieprawidłowa rola");
         }
 
@@ -201,7 +212,7 @@ public class UserController {
         User user = new User();
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setEmail(request.getEmail());
+        user.setEmail(email);
         user.setPassword(hashedPassword);
         user.setRoleId(request.getRoleId());
         user.setAccountStatusId(1);
@@ -209,6 +220,7 @@ public class UserController {
         user.setPhoneNumber(request.getPhoneNumber());
 
         userRepository.save(user);
+        logger.info("Registration successful for email: {}, roleId: {}", email, request.getRoleId());
         return ResponseEntity.ok().build();
     }
 

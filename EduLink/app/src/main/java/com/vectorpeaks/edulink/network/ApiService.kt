@@ -18,6 +18,8 @@ import com.vectorpeaks.edulink.data.model.chat.SendMessageRequest
 import com.vectorpeaks.edulink.data.model.user.AdminStatsResponse
 import com.vectorpeaks.edulink.data.model.user.AdminReportsResponse
 import com.vectorpeaks.edulink.data.model.user.GlobalLimitDto
+import com.vectorpeaks.edulink.data.model.user.ReviewResponse
+import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -26,6 +28,7 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.Response
 import retrofit2.http.DELETE
+import retrofit2.http.Streaming
 
 interface ApiService {
     @POST("api/auth/login")
@@ -56,6 +59,9 @@ interface ApiService {
 
     @POST("api/reviews")
     suspend fun addReview(@Body review: ReviewRequest)
+
+    @GET("api/reviews/tutor/{tutorId}")
+    suspend fun getReviewsByTutor(@Path("tutorId") tutorId: Int): List<ReviewResponse>
 
     @GET("api/offers/{id}")
     suspend fun getOfferById(@Path("id") id: Int): Offer
@@ -189,4 +195,11 @@ interface ApiService {
 
     @DELETE("api/admin/subjects/{id}")
     suspend fun deleteSubject(@Path("id") id: Int): Response<Unit>
+
+    @Streaming
+    @GET("api/admin/reports/pdf")
+    suspend fun downloadReportPdf(
+        @Query("from") from: String,
+        @Query("to")   to: String
+    ): ResponseBody
 }

@@ -33,17 +33,15 @@ fun StudentProfileScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var phoneError by remember { mutableStateOf<String?>(null) }
 
-    // Load user when screen starts or userId changes
     LaunchedEffect(userId) {
         viewModel.loadUser(userId)
     }
 
-    // When data arrives, populate edit fields
     LaunchedEffect(uiState) {
         if (uiState is ProfileUiState.Success) {
             val user = (uiState as ProfileUiState.Success).user
             editPhone = user.phoneNumber ?: ""
-            editCity = user.address ?: ""
+            editCity  = user.address    ?: ""
         }
     }
 
@@ -77,15 +75,19 @@ fun StudentProfileScreen(
             is ProfileUiState.Success -> {
                 val user = (uiState as ProfileUiState.Success).user
 
-                // Avatar + name
+                val safeName  = user.fullName    .orEmpty().ifBlank { "—" }
+                val safeEmail = user.email       .orEmpty().ifBlank { "—" }
+                val safePhone = user.phoneNumber .orEmpty().ifBlank { "–" }
+                val safeCity  = user.address     .orEmpty().ifBlank { "–" }
+
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    UserAvatar(name = user.fullName, size = 80)
+                    UserAvatar(name = safeName, size = 80)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = user.fullName,
+                        text = safeName,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -104,46 +106,62 @@ fun StudentProfileScreen(
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        ProfileRow(icon = Icons.Default.Email, label = "E-mail", value = user.email)
+                        ProfileRow(
+                            icon  = Icons.Default.Email,
+                            label = "E-mail",
+                            value = safeEmail
+                        )
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                         if (isEditing) {
                             OutlinedTextField(
                                 value = editPhone,
                                 onValueChange = {
-                                    editPhone = it
+                                    editPhone  = it
                                     phoneError = null
                                 },
                                 label = { Text("Telefon") },
-                                leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Phone, contentDescription = null)
+                                },
                                 singleLine = true,
                                 isError = phoneError != null,
                                 supportingText = {
                                     if (phoneError != null) {
                                         Text(
-                                            text = phoneError!!,
+                                            text  = phoneError!!,
                                             color = Error,
                                             style = MaterialTheme.typography.bodySmall
                                         )
                                     }
                                 },
-                                shape = RoundedCornerShape(12.dp),
+                                shape    = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = editCity,
                                 onValueChange = { editCity = it },
-                                label = { Text("Miasto") },
-                                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+                                label       = { Text("Miasto") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.LocationOn, contentDescription = null)
+                                },
                                 singleLine = true,
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth()
+                                shape      = RoundedCornerShape(12.dp),
+                                modifier   = Modifier.fillMaxWidth()
                             )
                         } else {
-                            ProfileRow(icon = Icons.Default.Phone, label = "Telefon", value = user.phoneNumber ?: "–")
+                            ProfileRow(
+                                icon  = Icons.Default.Phone,
+                                label = "Telefon",
+                                value = safePhone
+                            )
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            ProfileRow(icon = Icons.Default.LocationOn, label = "Miasto", value = user.address ?: "–")
+                            ProfileRow(
+                                icon  = Icons.Default.LocationOn,
+                                label = "Miasto",
+                                value = safeCity
+                            )
                         }
                     }
                 }
@@ -153,21 +171,22 @@ fun StudentProfileScreen(
                 Button(
                     onClick = {
                         if (isEditing) {
-                            // Walidacja telefonu
                             if (!isPhoneValid(editPhone)) {
                                 phoneError = "Numer telefonu musi zawierać 9 cyfr (lub być pusty)"
                                 return@Button
                             }
-                            // Zapisz zmiany
-                            val updatedUser = user.copy(phoneNumber = editPhone, address = editCity)
+                            val updatedUser = user.copy(
+                                phoneNumber = editPhone,
+                                address     = editCity
+                            )
                             viewModel.updateUser(user.id, updatedUser) { }
                         }
                         isEditing = !isEditing
                         if (!isEditing) phoneError = null
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
+                    shape    = RoundedCornerShape(12.dp),
+                    colors   = ButtonDefaults.buttonColors(
                         containerColor = if (isEditing) Success else Primary
                     )
                 ) {
@@ -180,40 +199,48 @@ fun StudentProfileScreen(
                 }
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Actions
+                // Actions card
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape  = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Surface),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column {
                         TextButton(
-                            onClick = { showLogoutDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
+                            onClick        = { showLogoutDialog = true },
+                            modifier       = Modifier.fillMaxWidth(),
                             contentPadding = PaddingValues(16.dp)
                         ) {
-                            Icon(Icons.Default.Logout, contentDescription = null, tint = OnSurfaceVariant)
+                            Icon(
+                                Icons.Default.Logout,
+                                contentDescription = null,
+                                tint = OnSurfaceVariant
+                            )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 "Wyloguj się",
                                 modifier = Modifier.weight(1f),
-                                color = OnBackground,
-                                style = MaterialTheme.typography.bodyLarge
+                                color    = OnBackground,
+                                style    = MaterialTheme.typography.bodyLarge
                             )
                         }
                         HorizontalDivider()
                         TextButton(
-                            onClick = { showDeleteDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
+                            onClick        = { showDeleteDialog = true },
+                            modifier       = Modifier.fillMaxWidth(),
                             contentPadding = PaddingValues(16.dp)
                         ) {
-                            Icon(Icons.Default.DeleteForever, contentDescription = null, tint = Error)
+                            Icon(
+                                Icons.Default.DeleteForever,
+                                contentDescription = null,
+                                tint = Error
+                            )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 "Usuń konto",
                                 modifier = Modifier.weight(1f),
-                                color = Error,
-                                style = MaterialTheme.typography.bodyLarge
+                                color    = Error,
+                                style    = MaterialTheme.typography.bodyLarge
                             )
                         }
                     }
@@ -223,16 +250,17 @@ fun StudentProfileScreen(
         Spacer(modifier = Modifier.height(32.dp))
     }
 
-    // Logout confirmation
+    // Logout dialog
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Wyloguj się") },
-            text = { Text("Czy na pewno chcesz się wylogować?") },
+            title   = { Text("Wyloguj się") },
+            text    = { Text("Czy na pewno chcesz się wylogować?") },
             confirmButton = {
-                Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
-                    Text("Wyloguj")
-                }
+                Button(
+                    onClick = onLogout,
+                    colors  = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) { Text("Wyloguj") }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) { Text("Anuluj") }
@@ -240,29 +268,23 @@ fun StudentProfileScreen(
         )
     }
 
-    // Delete account confirmation
+    // Delete account dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Usuń konto", color = Error) },
-            text = { Text("Czy na pewno chcesz usunąć swoje konto? Ta operacja jest nieodwracalna.") },
+            text  = { Text("Czy na pewno chcesz usunąć swoje konto? Ta operacja jest nieodwracalna.") },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.deleteAccount(userId) {
-                            onLogout()
-                        }
+                        viewModel.deleteAccount(userId) { onLogout() }
                         showDeleteDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Error)
-                ) {
-                    Text("Usuń")
-                }
+                ) { Text("Usuń") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Anuluj")
-                }
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Anuluj") }
             }
         )
     }
@@ -270,23 +292,29 @@ fun StudentProfileScreen(
 
 @Composable
 private fun ProfileRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    value: String
+    icon  : androidx.compose.ui.graphics.vector.ImageVector,
+    label : String,
+    value : String
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier          = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, contentDescription = null, tint = Primary, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Column {
-            Text(text = label, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
-            Text(text = value, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text  = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = OnSurfaceVariant
+            )
+            Text(
+                text  = value,
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
     }
 }
 
-fun isPhoneValid(phone: String): Boolean {
-    return phone.isEmpty() || phone.matches(Regex("\\d{9}"))
-}
+fun isPhoneValid(phone: String): Boolean =
+    phone.isEmpty() || phone.matches(Regex("\\d{9}"))

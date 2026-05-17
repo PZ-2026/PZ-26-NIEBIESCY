@@ -2,7 +2,7 @@
  * Offer.java
  *
  * Version: 1.0
- * Date: 2026-04-26
+ * Date: 2026-05-17
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -13,6 +13,7 @@ package com.vectorpeaks.backend.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * Entity representing a tutoring offer made by a tutor.
@@ -61,6 +62,9 @@ public class Offer {
     @Column(name = "offer_type")
     private String offerType;
 
+    /** Timestamp when the offer was created. */
+    private LocalDateTime createdAt;
+
     // Getters and setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -88,4 +92,7 @@ public class Offer {
 
     public String getOfferType() { return offerType; }
     public void setOfferType(String offerType) { this.offerType = offerType; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

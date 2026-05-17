@@ -5,12 +5,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.screens.admin.AdminMainScreen
 import com.vectorpeaks.edulink.ui.screens.login.LoginScreen
+import com.vectorpeaks.edulink.ui.screens.student.ReviewsScreen
 import com.vectorpeaks.edulink.ui.screens.student.StudentMainScreen
 import com.vectorpeaks.edulink.ui.screens.tutor.TutorMainScreen
 import com.vectorpeaks.edulink.data.model.user.RoleID
@@ -57,6 +60,11 @@ fun AppNavGraph() {
                         navController.navigate(NavRoutes.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }
+                    },
+                    onNavigateToReviews = { tutorId, tutorName ->
+                        navController.navigate(
+                            NavRoutes.TutorReviews.createRoute(tutorId, tutorName)
+                        )
                     }
                 )
             }
@@ -88,6 +96,22 @@ fun AppNavGraph() {
                     }
                 )
             }
+        }
+
+        composable(
+            route = NavRoutes.TutorReviews.route,
+            arguments = listOf(
+                navArgument("tutorId") { type = NavType.IntType },
+                navArgument("tutorName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val tutorId = backStackEntry.arguments?.getInt("tutorId") ?: return@composable
+            val tutorName = backStackEntry.arguments?.getString("tutorName") ?: ""
+            ReviewsScreen(
+                tutorName = tutorName,
+                tutorId = tutorId,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }
