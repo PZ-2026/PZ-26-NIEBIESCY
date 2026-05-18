@@ -34,3 +34,8 @@ build/
 
 ### FIREBASE KEYS ###
 /src/main/resources/firebase-service-account.json
+
+### important files ###
+.env
+.env.local
+.env.production
