@@ -14,6 +14,10 @@ sealed class NavRoutes(val route: String) {
     object OfferDetail : NavRoutes("offer_detail/{offerId}") {
         fun createRoute(offerId: Int) = "offer_detail/$offerId"
     }
+    object TutorReviews : NavRoutes("tutor_reviews/{tutorId}/{tutorName}") {
+        fun createRoute(tutorId: Int, tutorName: String) =
+            "tutor_reviews/$tutorId/${tutorName.replace("/", " ")}"
+    }
 
     // Tutor
     object TutorMain : NavRoutes("tutor_main")

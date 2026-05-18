@@ -1,8 +1,8 @@
 /*
  * AuthController.java
  *
- * Version: 1.3
- * Date: 2026-05-16
+ * Version: 1.1
+ * Date: 2026-05-17
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  */
@@ -22,6 +22,8 @@ import com.vectorpeaks.backend.service.FcmTokenService;
 import com.vectorpeaks.backend.service.LoginAttemptService;
 import com.vectorpeaks.backend.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,7 +39,7 @@ import java.util.Optional;
  *   POST /api/auth/refresh – exchanges a refresh token for a new access token
  *   POST /api/auth/logout  – invalidates the refresh token in the database
  *
- * @version 1.3
+ * @version 1.1
  * @author EduLink Team
  */
 @RestController
@@ -50,6 +52,7 @@ public class AuthController {
     private final LoginAttemptService loginAttemptService;
     private final UserRepository      userRepository;
     private final FcmTokenService fcmTokenService;
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     // Spring injects all dependencies via the constructor
     public AuthController(AuthService authService,
@@ -65,6 +68,8 @@ public class AuthController {
         this.userRepository      = userRepository;
         this.fcmTokenService = fcmTokenService;
     }
+
+
 
     /**
      * POST /api/auth/login

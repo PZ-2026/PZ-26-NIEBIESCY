@@ -7,9 +7,7 @@
 
 android {
     namespace = "com.vectorpeaks.edulink"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.vectorpeaks.edulink"

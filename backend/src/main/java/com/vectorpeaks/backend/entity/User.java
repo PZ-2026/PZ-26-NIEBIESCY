@@ -1,7 +1,19 @@
+/*
+ * User.java
+ *
+ * Version: 1.1
+ * Date: 2026-05-17
+ *
+ * Copyright (c) 2026 EduLink Team. All rights reserved.
+ *
+ * This software is the confidential and proprietary information of EduLink.
+ */
+
 package com.vectorpeaks.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 /**
  * Represents a user entity mapped to the "users" database table.
@@ -18,27 +30,42 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "role_id")
+    /** Identifier of the user's role (e.g., 2 = Student, 3 = Tutor). */
+    @Column(name = "role_id", insertable = true, updatable = true, nullable = false)
     private Integer roleId;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", insertable = false, updatable = false)
     private Role role;
 
+    /** Hashed password – never returned in JSON responses. */
     @JsonIgnore
     private String password;
 
+    /** First name of the user. */
     private String firstName;
+
+    /** Last name of the user. */
     private String lastName;
 
+    /** Unique email address (used for login). */
     @Column(name = "email", unique = true)
     private String email;
 
+    /** Status identifier (e.g., 1 = active, 9 = deleted/anonymized). */
     private Integer accountStatusId;
+
+    /** City or full address of the user (used for offline offers). */
     private String address;
+
+    /** Phone number (9 digits). */
     private String phoneNumber;
 
-    // Getters and setters...
+    /** Timestamp when the user account was created. */
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    // Getters and setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -69,8 +96,11 @@ public class User {
     public String getPhoneNumber() { return phoneNumber; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
 
-    @Transient
-    public String getRoleName() {
-        return (role != null) ? role.getName() : "STUDENT";
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+  
+      @Transient
+      public String getRoleName() {
+          return (role != null) ? role.getName() : "STUDENT";
+      }
 }

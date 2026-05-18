@@ -38,7 +38,7 @@ CREATE TABLE users (
     account_status_id INTEGER NOT NULL,
     address TEXT NULL,
     phone_number VARCHAR(20) NULL,
-    -- fcm_token VARCHAR(255) NULL,
+    created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP, 
     PRIMARY KEY (id),
     CONSTRAINT users_email_unique UNIQUE (email),
     FOREIGN KEY (role_id) REFERENCES roles(id),
@@ -83,6 +83,7 @@ CREATE TABLE offers (
     status_id INTEGER NOT NULL,
     global_limit_id INTEGER NOT NULL,
     offer_type VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- NOWE
     PRIMARY KEY (id),
     FOREIGN KEY (tutor_id) REFERENCES users(id),
     FOREIGN KEY (availability_slot_id) REFERENCES availability_slots(id),
@@ -141,7 +142,7 @@ CREATE TABLE chat_participants (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- Indeksy (opcjonalne, dla wydajności)
+-- Indeksy
 CREATE INDEX idx_chat_participants_chat_id ON chat_participants(chat_id);
 CREATE INDEX idx_chat_participants_user_id ON chat_participants(user_id);
 CREATE INDEX idx_messages_chat_id ON messages(chat_id);
@@ -155,3 +156,5 @@ CREATE INDEX idx_reviews_tutor_id ON reviews(tutor_id);
 CREATE INDEX idx_reviews_booking_id ON reviews(booking_id);
 CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_fcm_tokens_user ON user_fcm_tokens(user_id);
+CREATE INDEX idx_users_created_at ON users(created_at);
+CREATE INDEX idx_offers_created_at ON offers(created_at);

@@ -24,7 +24,11 @@ import com.vectorpeaks.edulink.data.model.user.DataViewModel
 import com.vectorpeaks.edulink.data.model.user.OffersViewModel
 
 @Composable
-fun StudentSearchScreen(studentId: Int, modifier: Modifier = Modifier) {
+fun StudentSearchScreen(
+    studentId: Int,
+    modifier: Modifier = Modifier,
+    onNavigateToReviews: (tutorId: Int, tutorName: String) -> Unit  // ← NOWE
+) {
     val viewModel: OffersViewModel = viewModel()
     val offers by viewModel.offers.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -59,7 +63,8 @@ fun StudentSearchScreen(studentId: Int, modifier: Modifier = Modifier) {
         OfferDetailScreen(
             offer = offer,
             studentId = studentId,
-            onBack = { selectedOffer = null }
+            onBack = { selectedOffer = null },
+            onTutorClick = onNavigateToReviews  // ← NOWE
         )
     } ?: run {
         Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -97,7 +102,6 @@ fun StudentSearchScreen(studentId: Int, modifier: Modifier = Modifier) {
 
             AnimatedVisibility(visible = showFilters) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    // Subject filter
                     Text("Przedmiot:", style = MaterialTheme.typography.labelMedium, color = OnSurfaceVariant)
                     Spacer(modifier = Modifier.height(4.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -123,7 +127,6 @@ fun StudentSearchScreen(studentId: Int, modifier: Modifier = Modifier) {
                     }
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // City filter
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -155,7 +158,6 @@ fun StudentSearchScreen(studentId: Int, modifier: Modifier = Modifier) {
                     }
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Online filter
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Laptop, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
