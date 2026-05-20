@@ -1,8 +1,8 @@
 /*
  * BookingControllerTest.java
  *
- * Version: 1.0
- * Date: 2026-05-03
+ * Version: 1.1
+ * Date: 2026-05-17
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -18,10 +18,12 @@ import com.vectorpeaks.backend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -40,8 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * <p>Verifies the behaviour of the following endpoints:
  * <ul>
- *   <li>{@code GET /api/bookings/student/{studentId}} – retrieve bookings for a student,</li>
- *   <li>{@code POST /api/bookings} – create a new booking.</li>
+ * <li>{@code GET /api/bookings/student/{studentId}} – retrieve bookings for a student,</li>
+ * <li>{@code POST /api/bookings} – create a new booking.</li>
  * </ul>
  *
  * <p>Uses {@code @WebMvcTest} with {@link MockMvc} – only the controller layer
@@ -49,12 +51,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * All repository dependencies are replaced by Mockito mocks
  * ({@code @MockitoBean}).
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  * @see BookingController
  */
-@WebMvcTest(BookingController.class)
-class BookingControllerTest {
+@WebMvcTest(
+        controllers = BookingController.class,
+        excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class
+)
+class BookingControllerTest extends BaseControllerTest {
 
     /** HTTP client used to perform requests in web-layer tests. */
     @Autowired
@@ -221,6 +226,7 @@ class BookingControllerTest {
         BookingRequest request = buildBookingRequest(1, 10, 3);
 
         mockMvc.perform(post("/api/bookings")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
@@ -239,6 +245,7 @@ class BookingControllerTest {
         BookingRequest request = buildBookingRequest(999, 10, 3);
 
         mockMvc.perform(post("/api/bookings")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -256,10 +263,10 @@ class BookingControllerTest {
         when(offerRepository.existsById(1)).thenReturn(true);
         when(offerRepository.findById(1)).thenReturn(Optional.of(mockOffer));
 
-        // slot ID 99 does not match offer's slot ID 3
         BookingRequest request = buildBookingRequest(1, 10, 99);
 
         mockMvc.perform(post("/api/bookings")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -320,9 +327,9 @@ class BookingControllerTest {
     /**
      * Creates an {@link AvailabilitySlot} with the given ID, day, and start time.
      *
-     * @param id         slot identifier
-     * @param dayOfWeek  day of the week (0 = Sunday … 6 = Saturday)
-     * @param startTime  start time of the slot
+     * @param id        slot identifier
+     * @param dayOfWeek day of the week (0 = Sunday … 6 = Saturday)
+     * @param startTime start time of the slot
      * @return populated {@link AvailabilitySlot}
      */
     private AvailabilitySlot buildSlot(Integer id, Short dayOfWeek, LocalTime startTime) {

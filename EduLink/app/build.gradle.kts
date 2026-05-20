@@ -80,4 +80,6 @@ dependencies {
     implementation ("com.google.firebase:firebase-messaging")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 }

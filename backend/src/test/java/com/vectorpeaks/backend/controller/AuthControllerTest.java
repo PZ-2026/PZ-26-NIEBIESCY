@@ -1,8 +1,8 @@
 /*
  * AuthControllerTest.java
  *
- * Version: 1.2
- * Date: 2026-05-03
+ * Version: 1.1
+ * Date: 2026-05-17
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -13,19 +13,30 @@ package com.vectorpeaks.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vectorpeaks.backend.dto.LoginRequest;
+import com.vectorpeaks.backend.dto.RefreshRequest;
+import com.vectorpeaks.backend.entity.RefreshToken;
 import com.vectorpeaks.backend.entity.User;
+import com.vectorpeaks.backend.repository.UserRepository;
+import com.vectorpeaks.backend.security.JwtUtil;
 import com.vectorpeaks.backend.service.AuthService;
+import com.vectorpeaks.backend.service.FcmTokenService;
+import com.vectorpeaks.backend.service.LoginAttemptService;
+import com.vectorpeaks.backend.service.RefreshTokenService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -33,150 +44,355 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Unit tests for {@link AuthController}.
  *
- * <p>Verifies the behaviour of the {@code POST /api/auth/login} endpoint, including:
+ * <p>Verifies endpoint security rules and response payloads for:
  * <ul>
- *   <li>a {@code 200 OK} response with user data on valid credentials,</li>
- *   <li>a {@code 401 Unauthorized} response on invalid credentials,</li>
- *   <li>the correct {@code Content-Type} header in the response.</li>
+ *   <li>User login and authentication tracking,</li>
+ *   <li>JWT access token refreshing,</li>
+ *   <li>User logout and token revocation.</li>
  * </ul>
  *
- * <p>Uses {@code @WebMvcTest} with {@link MockMvc} – only the controller layer
- * is loaded; no full Spring context or database is required.
- * The {@link AuthService} dependency is replaced by a Mockito mock
- * ({@code @MockitoBean}).
+ * Uses {@code @WebMvcTest} where only the web layer is loaded.
+ * All application services and data repositories are fully mocked.
  *
- * @version 1.2
+ * @version 1.1
  * @author EduLink Team
- * @see AuthController
  */
-@WebMvcTest(AuthController.class)
-class AuthControllerTest {
+@WebMvcTest(
+        controllers = AuthController.class,
+        excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class
+)
+class AuthControllerTest extends BaseControllerTest {
 
-    /** HTTP client used to perform requests in web-layer tests. */
+    /**
+     * Main entry point for server-side Spring MVC test support.
+     */
     @Autowired
     private MockMvc mockMvc;
 
-    /** Mock of the authentication service – replaces the real implementation. */
-    @MockitoBean
-    private AuthService authService;
-
-    /** JSON mapper used to serialize request objects. */
+    /**
+     * ObjectMapper instance utilized to map data structures to JSON formats.
+     */
     @Autowired
     private ObjectMapper objectMapper;
 
-    /** Sample user initialised before each test. */
+    /**
+     * Mocked authentication processing service.
+     */
+    @MockitoBean
+    private AuthService authService;
+
+    /**
+     * Mocked database token lifespan and validation manager.
+     */
+    @MockitoBean
+    private RefreshTokenService refreshTokenService;
+
+    /**
+     * Mocked brute-force prevention and rate-limiting system tracker.
+     */
+    @MockitoBean
+    private LoginAttemptService loginAttemptService;
+
+    /**
+     * Mocked core repository providing application user account access.
+     */
+    @MockitoBean
+    private UserRepository userRepository;
+
+    /**
+     * Mocked service managing registration identifiers for Firebase Cloud Messaging.
+     */
+    @MockitoBean
+    private FcmTokenService fcmTokenService;
+
+    /**
+     * Reusable mock user data record initialized before individual test setups.
+     */
     private User mockUser;
 
     /**
-     * Initialises a sample user returned by the mock service
-     * before each test case.
+     * Reusable mock refresh token instance verifying session persistence flows.
+     */
+    private RefreshToken mockRefreshToken;
+
+    /**
+     * Prepares standard infrastructure dependencies and initial entity states
+     * prior to the execution of individual test cases.
      */
     @BeforeEach
     void setUp() {
         mockUser = new User();
-        mockUser.setId(42);
-        mockUser.setFirstName("Anna");
-        mockUser.setLastName("Nowak");
-        mockUser.setEmail("anna.nowak@example.com");
-        mockUser.setRoleId(1);
+        mockUser.setId(1);
+        mockUser.setEmail("jan@example.com");
+        mockUser.setFirstName("Jan");
+        mockUser.setLastName("Kowalski");
+        mockUser.setRoleId(3); // STUDENT
+        mockUser.setAccountStatusId(1);
+
+        mockRefreshToken = new RefreshToken();
+        mockRefreshToken.setToken("valid-refresh-uuid");
+        mockRefreshToken.setUserId(1);
+        mockRefreshToken.setExpiresAt(Instant.now().plusSeconds(604800));
+        mockRefreshToken.setRevoked(false);
     }
 
     // -----------------------------------------------------------------------
-    // POST /api/auth/login – success
+    // POST /api/auth/login
     // -----------------------------------------------------------------------
 
     /**
-     * Verifies that the endpoint returns {@code 200 OK} and correct user data
-     * in JSON format when valid credentials are provided.
-     *
-     * @throws Exception if the MockMvc request execution fails
+     * Comprehensive web context validation scenarios targeted directly at
+     * user login attempts.
      */
-    @Test
-    void login_validCredentials_returns200AndUserData() throws Exception {
-        when(authService.authenticate("anna.nowak@example.com", "tajne123"))
-                .thenReturn(Optional.of(mockUser));
+    @Nested
+    @DisplayName("POST /api/auth/login")
+    class LoginTests {
 
-        LoginRequest request = new LoginRequest();
-        request.setEmail("anna.nowak@example.com");
-        request.setPassword("tajne123");
+        /**
+         * Verifies that authenticating with complete and accurate parameters
+         * successfully produces an active access payload matching client properties.
+         *
+         * @throws Exception if serialization or interface querying exceptions occur
+         */
+        @Test
+        @DisplayName("Poprawne dane → 200 OK z tokenem i refreshToken")
+        void login_validCredentials_returns200WithTokens() throws Exception {
+            when(loginAttemptService.isBlocked(anyString(), anyString())).thenReturn(false);
+            when(loginAttemptService.getDelayMs(anyString(), anyString())).thenReturn(0L);
+            when(authService.authenticate("jan@example.com", "haslo123"))
+                    .thenReturn(Optional.of(mockUser));
+            when(jwtUtil.generateToken(anyInt(), anyString(), anyString()))
+                    .thenReturn("mock-jwt-token");
+            when(refreshTokenService.createRefreshToken(1))
+                    .thenReturn(mockRefreshToken);
 
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(42))
-                .andExpect(jsonPath("$.firstName").value("Anna"))
-                .andExpect(jsonPath("$.lastName").value("Nowak"))
-                .andExpect(jsonPath("$.email").value("anna.nowak@example.com"))
-                .andExpect(jsonPath("$.role").value("1"));
+            LoginRequest request = new LoginRequest();
+            request.setEmail("jan@example.com");
+            request.setPassword("haslo123");
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.token").value("mock-jwt-token"))
+                    .andExpect(jsonPath("$.refreshToken").value("valid-refresh-uuid"))
+                    .andExpect(jsonPath("$.email").value("jan@example.com"));
+        }
+
+        /**
+         * Confirms that login configurations supply standard authentication rejects
+         * whenever password parameters mismatch expected storage patterns.
+         *
+         * @throws Exception if serialization or interface querying exceptions occur
+         */
+        @Test
+        @DisplayName("Złe hasło → 401 Unauthorized")
+        void login_wrongPassword_returns401() throws Exception {
+            when(loginAttemptService.isBlocked(anyString(), anyString())).thenReturn(false);
+            when(loginAttemptService.getDelayMs(anyString(), anyString())).thenReturn(0L);
+            when(authService.authenticate(anyString(), anyString()))
+                    .thenReturn(Optional.empty());
+
+            LoginRequest request = new LoginRequest();
+            request.setEmail("jan@example.com");
+            request.setPassword("zle-haslo");
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        /**
+         * Confirms security safeguards block inbound requests entirely when repetitive
+         * incorrect credentials exceed tracking bounds.
+         *
+         * @throws Exception if serialization or interface querying exceptions occur
+         */
+        @Test
+        @DisplayName("Konto zablokowane (brute-force) → 429 Too Many Requests")
+        void login_blockedAccount_returns429() throws Exception {
+            when(loginAttemptService.isBlocked(anyString(), anyString())).thenReturn(true);
+
+            LoginRequest request = new LoginRequest();
+            request.setEmail("jan@example.com");
+            request.setPassword("haslo123");
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isTooManyRequests());
+        }
+
+        /**
+         * Validates security guidelines ensuring incomplete string components return
+         * identical generic rejections to prevent database username enumeration.
+         *
+         * @throws Exception if serialization or interface querying exceptions occur
+         */
+        @Test
+        @DisplayName("Pusty email → 401 (nie ujawniamy czy email istnieje)")
+        void login_emptyEmail_returns401() throws Exception {
+            when(loginAttemptService.isBlocked(anyString(), anyString())).thenReturn(false);
+            when(loginAttemptService.getDelayMs(anyString(), anyString())).thenReturn(0L);
+            when(authService.authenticate(anyString(), anyString()))
+                    .thenReturn(Optional.empty());
+
+            LoginRequest request = new LoginRequest();
+            request.setEmail("");
+            request.setPassword("haslo123");
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        /**
+         * Confirms response payload feedback messages remain uniform regardless of
+         * user email structure availability in underlying persistence schemas.
+         *
+         * @throws Exception if serialization or interface querying exceptions occur
+         */
+        @Test
+        @DisplayName("Odpowiedź błędu logowania nie ujawnia czy email istnieje")
+        void login_wrongCredentials_sameMessageRegardlessOfEmailExistence() throws Exception {
+            when(loginAttemptService.isBlocked(anyString(), anyString())).thenReturn(false);
+            when(loginAttemptService.getDelayMs(anyString(), anyString())).thenReturn(0L);
+            when(authService.authenticate(anyString(), anyString()))
+                    .thenReturn(Optional.empty());
+
+            LoginRequest request = new LoginRequest();
+            request.setEmail("nieistniejacy@example.com");
+            request.setPassword("jakies-haslo");
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(content().string(org.hamcrest.Matchers.containsString("Invalid email or password.")));
+        }
     }
 
     // -----------------------------------------------------------------------
-    // POST /api/auth/login – authorisation error
+    // POST /api/auth/refresh
     // -----------------------------------------------------------------------
 
     /**
-     * Verifies that the endpoint returns {@code 401 Unauthorized} and an error
-     * message when invalid credentials are provided.
-     *
-     * @throws Exception if the MockMvc request execution fails
+     * Web layer scenario suite verifying Token validation and regeneration.
      */
-    @Test
-    void login_invalidCredentials_returns401() throws Exception {
-        when(authService.authenticate(anyString(), anyString()))
-                .thenReturn(Optional.empty());
+    @Nested
+    @DisplayName("POST /api/auth/refresh")
+    class RefreshTests {
 
-        LoginRequest request = new LoginRequest();
-        request.setEmail("missing@example.com");
-        request.setPassword("wrongPassword");
+        /**
+         * Ensures a fully structural refresh workflow supplies authentic replacement
+         * short-lived tokens upon request.
+         *
+         * @throws Exception if serialization or interface querying exceptions occur
+         */
+        @Test
+        @DisplayName("Ważny refresh token → 200 OK z nowym access tokenem")
+        void refresh_validToken_returns200WithNewAccessToken() throws Exception {
+            when(refreshTokenService.validateRefreshToken("valid-refresh-uuid"))
+                    .thenReturn(Optional.of(mockRefreshToken));
+            when(userRepository.findById(1))
+                    .thenReturn(Optional.of(mockUser));
+            when(jwtUtil.generateToken(anyInt(), anyString(), anyString()))
+                    .thenReturn("new-jwt-token");
 
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().string("Nieprawidłowy email lub hasło"));
+            RefreshRequest request = new RefreshRequest();
+            request.setRefreshToken("valid-refresh-uuid");
+
+            mockMvc.perform(post("/api/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.token").value("new-jwt-token"));
+        }
+
+        /**
+         * Asserts authorization processing blocks continuation whenever lifetime bounds
+         * on parameters are completely exceeded.
+         *
+         * @throws Exception if serialization or interface querying exceptions occur
+         */
+        @Test
+        @DisplayName("Wygasły lub unieważniony refresh token → 401")
+        void refresh_expiredToken_returns401() throws Exception {
+            when(refreshTokenService.validateRefreshToken("expired-token"))
+                    .thenReturn(Optional.empty());
+
+            RefreshRequest request = new RefreshRequest();
+            request.setRefreshToken("expired-token");
+
+            mockMvc.perform(post("/api/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        /**
+         * Asserts token processor returns standard security denials when incoming strings
+         * do not map into existing context engines.
+         *
+         * @throws Exception if serialization or interface querying exceptions occur
+         */
+        @Test
+        @DisplayName("Nieznany refresh token → 401")
+        void refresh_unknownToken_returns401() throws Exception {
+            when(refreshTokenService.validateRefreshToken("unknown-token"))
+                    .thenReturn(Optional.empty());
+
+            RefreshRequest request = new RefreshRequest();
+            request.setRefreshToken("unknown-token");
+
+            mockMvc.perform(post("/api/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized());
+        }
     }
 
-    /**
-     * Verifies that the endpoint returns {@code 401 Unauthorized}
-     * when the request body is an empty JSON object (no email or password).
-     *
-     * @throws Exception if the MockMvc request execution fails
-     */
-    @Test
-    void login_emptyRequestBody_returns401() throws Exception {
-        when(authService.authenticate(anyString(), anyString()))
-                .thenReturn(Optional.empty());
-
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isUnauthorized());
-    }
-
     // -----------------------------------------------------------------------
-    // Response Content-Type
+    // POST /api/auth/logout
     // -----------------------------------------------------------------------
 
     /**
-     * Verifies that a successful login response carries a
-     * {@code Content-Type} header compatible with {@code application/json}.
-     *
-     * @throws Exception if the MockMvc request execution fails
+     * Web verification assertions handling active token revocation processing.
      */
-    @Test
-    void login_success_responseIsJson() throws Exception {
-        when(authService.authenticate(anyString(), anyString()))
-                .thenReturn(Optional.of(mockUser));
+    @Nested
+    @DisplayName("POST /api/auth/logout")
+    class LogoutTests {
 
-        LoginRequest request = new LoginRequest();
-        request.setEmail("anna.nowak@example.com");
-        request.setPassword("tajne123");
+        /**
+         * Validates standard user registration identity parameters discard context trackers
+         * successfully upon requesting clean system exit states.
+         *
+         * @throws Exception if serialization or interface querying exceptions occur
+         */
+        @Test
+        @DisplayName("Logout z ważnym tokenem → 200 OK")
+        void logout_validToken_returns200() throws Exception {
+            mockMvc.perform(post("/api/auth/logout")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"refreshToken\":\"valid-refresh-uuid\",\"userId\":1,\"fcmToken\":\"fcm-abc\"}"))
+                    .andExpect(status().isOk());
+        }
 
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+        /**
+         * Asserts system exit routines execute smoothly without errors when receiving
+         * requests for entries already dropped from storage states.
+         *
+         * @throws Exception if serialization or interface querying exceptions occur
+         */
+        @Test
+        @DisplayName("Logout z nieistniejącym tokenem → też 200 (idempotentny)")
+        void logout_unknownToken_returns200() throws Exception {
+            mockMvc.perform(post("/api/auth/logout")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"refreshToken\":\"ghost-token\",\"userId\":99}"))
+                    .andExpect(status().isOk());
+        }
     }
 }

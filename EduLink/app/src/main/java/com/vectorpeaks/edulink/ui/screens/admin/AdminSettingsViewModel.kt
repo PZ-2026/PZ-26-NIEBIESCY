@@ -111,6 +111,42 @@ class AdminSettingsViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Sends logout request to backend (invalidates refresh token + clears FCM),
+     * then clears local session data.
+     */
+    fun logout(context: android.content.Context, onComplete: () -> Unit) {
+        val authPrefs    = com.vectorpeaks.edulink.security.AuthPreferencesManager(context)
+        val refreshToken = authPrefs.getRefreshToken()
+        val userId       = authPrefs.getUserId()
+        val fcmToken     = authPrefs.getFcmToken()
+
+        timber.log.Timber.d("LOGOUT: refreshToken=$refreshToken, userId=$userId")
+
+        viewModelScope.launch {
+            try {
+                if (!refreshToken.isNullOrBlank()) {
+                    val response = RetrofitClient.apiService.logout(
+                        mapOf(
+                            "refreshToken" to (refreshToken ?: ""),
+                            "userId"       to userId.toString(),
+                            "fcmToken"     to (fcmToken ?: "")
+                        )
+                    )
+                    timber.log.Timber.d("LOGOUT: backend response = ${response.code()}")
+                } else {
+                    timber.log.Timber.w("LOGOUT: brak refresh tokena")
+                }
+            } catch (e: Exception) {
+                timber.log.Timber.e(e, "LOGOUT: wyjątek")
+            } finally {
+                timber.log.Timber.d("LOGOUT: czyszczę authPrefs")
+                authPrefs.clearAll()
+                onComplete()
+            }
+        }
+    }
+
     fun resetSaveSuccess() {
         _saveSuccess.value = false
     }

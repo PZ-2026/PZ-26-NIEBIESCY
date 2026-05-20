@@ -18,6 +18,7 @@ import com.vectorpeaks.backend.entity.Review;
 import com.vectorpeaks.backend.repository.BookingRepository;
 import com.vectorpeaks.backend.repository.ReviewRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -59,6 +60,7 @@ public class ReviewController {
      * @return ResponseEntity with success status
      */
     @PostMapping
+    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
     public ResponseEntity<?> addOrUpdateReview(@RequestBody ReviewRequest request) {
         Optional<Review> existing = reviewRepository.findByBookingId(request.getBookingId());
         Review review;

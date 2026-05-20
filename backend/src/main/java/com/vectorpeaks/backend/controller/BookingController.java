@@ -16,6 +16,7 @@ import com.vectorpeaks.backend.dto.BookingResponse;
 import com.vectorpeaks.backend.entity.*;
 import com.vectorpeaks.backend.repository.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -72,6 +73,7 @@ public class BookingController {
      * @return list of BookingResponse objects containing booking details
      */
     @GetMapping("/student/{studentId}")
+    @PreAuthorize("isAuthenticated()")
     public List<BookingResponse> getBookingsForStudent(@PathVariable Integer studentId) {
         List<Booking> bookings = bookingRepository.findByStudentId(studentId);
         return bookings.stream()
@@ -148,6 +150,7 @@ public class BookingController {
      * @return ResponseEntity with success or error message
      */
     @PostMapping
+    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
     public ResponseEntity<?> createBooking(@RequestBody BookingRequest request) {
         if (!offerRepository.existsById(request.getOfferId())) {
             return ResponseEntity.badRequest().body("Offer not found");
@@ -176,6 +179,7 @@ public class BookingController {
      * @return list of BookingResponse objects containing booking details
      */
     @GetMapping("/tutor/{tutorId}")
+    @PreAuthorize("isAuthenticated()")
     public List<BookingResponse> getBookingsForTutor(@PathVariable Integer tutorId) {
         List<Booking> bookings = bookingRepository.findAll().stream()
                 .filter(b -> {
@@ -196,6 +200,7 @@ public class BookingController {
      * @return ResponseEntity with success or error message
      */
     @PutMapping("/{bookingId}/status")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateBookingStatus(
             @PathVariable Integer bookingId,
             @RequestParam String status) {

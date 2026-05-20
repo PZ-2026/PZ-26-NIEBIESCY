@@ -1,8 +1,8 @@
 /*
  * LoginResponse.java
  *
- * Version: 1.0
- * Date: 2026-04-13
+ * Version: 1.1
+ * Date: 2026-05-16
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  */
@@ -14,7 +14,7 @@ import lombok.Data;
  * Data Transfer Object (DTO) for login responses.
  * Contains user information returned after successful authentication.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 @Data
@@ -33,4 +33,9 @@ public class LoginResponse {
 
     /** The role of the user (e.g., "STUDENT", "TUTOR", "ADMIN"). */
     private String role;
+
+    /** The user's token used to authenticate the user's requests. */
+    private String token;   // JWT access token (15 min)
+
+    private String refreshToken;    // refresh token (7 days)
 }

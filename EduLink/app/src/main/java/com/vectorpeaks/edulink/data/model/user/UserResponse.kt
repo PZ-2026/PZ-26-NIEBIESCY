@@ -6,6 +6,8 @@ data class UserResponse(
     val lastName: String,
     val email: String,
     val role: String,
+    val token: String,
+    val refreshToken: String,
     val address: String,
     val phoneNumber: String
 )

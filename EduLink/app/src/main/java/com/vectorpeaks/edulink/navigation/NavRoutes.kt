@@ -3,6 +3,7 @@ package com.vectorpeaks.edulink.navigation
 sealed class NavRoutes(val route: String) {
     object Login : NavRoutes("login")
     object Register : NavRoutes("register")
+    object AutoLogin   : NavRoutes("auto_login")
 
     // Student
     object StudentMain : NavRoutes("student_main")

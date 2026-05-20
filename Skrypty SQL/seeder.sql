@@ -1,6 +1,6 @@
 -- 1. Roles
 INSERT INTO roles (id, name) VALUES 
-(1, 'Admin'), (2, 'Tutor'), (3, 'Student');
+(1, 'ADMIN'), (2, 'TUTOR'), (3, 'STUDENT');
 
 -- 2. Statuses
 INSERT INTO statuses (id, status) VALUES 
@@ -25,17 +25,17 @@ INSERT INTO subjects (id, name, status_id) VALUES
 (7, 'Informatyka', 1), (8, 'Geografia', 1);
 
 -- 6. Users (z created_at — maj 2026)
-INSERT INTO users (id, role_id, password, first_name, last_name, email, account_status_id, address, phone_number, fcm_token, created_at) VALUES 
-(1,  1, 'hash1',  'Jan',    'Kowalski',    'admin@edulink.com',   1, 'Warszawa',  '111222333', NULL, '2026-05-01 08:00:00'),
-(2,  2, 'hash2',  'Anna',   'Nowak',       'tutor@edulink.com',   1, 'Kraków',    '222333444', NULL, '2026-05-01 09:00:00'),
-(3,  3, 'hash3',  'Piotr',  'Zieliński',   'student@edulink.com', 1, 'Gdańsk',    '333444555', NULL, '2026-05-02 10:00:00'),
-(4,  3, 'hash4',  'Maria',  'Dąbrowska',   'maria@edulink.com',   1, 'Wrocław',   '444555666', NULL, '2026-05-02 11:00:00'),
-(5,  2, 'hash5',  'Robert', 'Lewandowski', 'robert@edulink.com',  1, 'Poznań',    '555666777', NULL, '2026-05-03 12:00:00'),
-(6,  3, 'hash6',  'Kasia',  'Wójcik',      'kasia@edulink.com',   1, 'Łódź',      '666777888', NULL, '2026-05-03 13:00:00'),
-(7,  3, 'hash7',  'Michał', 'Wiśniewski',  'michal@edulink.com',  2, 'Szczecin',  '777888999', NULL, '2026-05-04 14:00:00'),
-(8,  2, 'hash8',  'Ewa',    'Kozłowska',   'ewa@edulink.com',     1, 'Lublin',    '888999000', NULL, '2026-05-04 15:00:00'),
-(9,  3, 'hash9',  'Tomasz', 'Jankowski',   'tomek@edulink.com',   1, 'Białystok', '999000111', NULL, '2026-05-05 16:00:00'),
-(10, 3, 'hash10', 'Adam',   'Mickiewicz',  'adam@edulink.com',    1, 'Wilno',     '000111222', NULL, '2026-05-05 17:00:00');
+INSERT INTO users (id, role_id, password, first_name, last_name, email, account_status_id, address, phone_number, created_at) VALUES 
+(1,  1, 'hash1',  'Jan',    'Kowalski',    'admin@edulink.com',   1, 'Warszawa',  '111222333', '2026-05-01 08:00:00'),
+(2,  2, 'hash2',  'Anna',   'Nowak',       'tutor@edulink.com',   1, 'Kraków',    '222333444', '2026-05-01 09:00:00'),
+(3,  3, 'hash3',  'Piotr',  'Zieliński',   'student@edulink.com', 1, 'Gdańsk',    '333444555', '2026-05-02 10:00:00'),
+(4,  3, 'hash4',  'Maria',  'Dąbrowska',   'maria@edulink.com',   1, 'Wrocław',   '444555666', '2026-05-02 11:00:00'),
+(5,  2, 'hash5',  'Robert', 'Lewandowski', 'robert@edulink.com',  1, 'Poznań',    '555666777', '2026-05-03 12:00:00'),
+(6,  3, 'hash6',  'Kasia',  'Wójcik',      'kasia@edulink.com',   1, 'Łódź',      '666777888', '2026-05-03 13:00:00'),
+(7,  3, 'hash7',  'Michał', 'Wiśniewski',  'michal@edulink.com',  2, 'Szczecin',  '777888999', '2026-05-04 14:00:00'),
+(8,  2, 'hash8',  'Ewa',    'Kozłowska',   'ewa@edulink.com',     1, 'Lublin',    '888999000', '2026-05-04 15:00:00'),
+(9,  3, 'hash9',  'Tomasz', 'Jankowski',   'tomek@edulink.com',   1, 'Białystok', '999000111', '2026-05-05 16:00:00'),
+(10, 3, 'hash10', 'Adam',   'Mickiewicz',  'adam@edulink.com',    1, 'Wilno',     '000111222', '2026-05-05 17:00:00');
 
 -- 7. Offers (z created_at — maj 2026)
 INSERT INTO offers (id, tutor_id, price, availability_slot_id, details, subject_id, status_id, global_limit_id, offer_type, created_at) VALUES 

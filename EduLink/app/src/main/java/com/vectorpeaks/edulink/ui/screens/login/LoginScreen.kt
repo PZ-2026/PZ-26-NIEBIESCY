@@ -65,14 +65,15 @@ fun LoginScreen(
                 color = PrimaryContainer,
                 modifier = Modifier.size(80.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.School,
-                        contentDescription = null,
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(id = com.vectorpeaks.edulink.R.drawable.grad_hat_logo),
+                    contentDescription = "Graduation had and test icon ",
                         tint = Primary,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .wrapContentSize()
                     )
-                }
+
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(

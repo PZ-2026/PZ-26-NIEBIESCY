@@ -24,6 +24,7 @@ import com.vectorpeaks.backend.repository.ReviewRepository;
 import com.vectorpeaks.backend.repository.SubjectRepository;
 import com.vectorpeaks.backend.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -80,6 +81,7 @@ public class OfferController {
      * @return list of OfferDto objects matching the criteria
      */
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public List<OfferDto> getOffers(
             @RequestParam(required = false) String subject,
             @RequestParam(required = false) String city,
@@ -135,6 +137,7 @@ public class OfferController {
      * @return ResponseEntity containing the OfferDto if found, otherwise 404 Not Found
      */
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<OfferDto> getOfferById(@PathVariable Integer id) {
         return offerRepository.findById(id)
                 .map(offer -> ResponseEntity.ok(convertToDto(offer)))
@@ -213,6 +216,7 @@ public class OfferController {
      * @return list of OfferDto objects belonging to the tutor
      */
     @GetMapping("/tutor/{tutorId}")
+    @PreAuthorize("isAuthenticated()")
     public List<OfferDto> getOffersByTutor(@PathVariable Integer tutorId) {
         List<Offer> offers = offerRepository.findAll().stream()
                 .filter(o -> o.getTutorId().equals(tutorId))
@@ -230,6 +234,7 @@ public class OfferController {
      * @return ResponseEntity with status 200 OK on success, or error message
      */
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR')")
     public ResponseEntity<?> createOffer(@RequestBody OfferCreateRequest request) {
         Offer offer = new Offer();
         offer.setTutorId(request.getTutorId());
