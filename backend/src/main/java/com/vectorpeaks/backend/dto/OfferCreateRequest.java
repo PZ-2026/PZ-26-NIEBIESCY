@@ -1,8 +1,8 @@
 /*
  * OfferCreateRequest.java
  *
- * Version: 1.0
- * Date: 2026-04-29
+ * Version: 1.1
+ * Date: 2026-05-22
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -12,12 +12,13 @@
 package com.vectorpeaks.backend.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Data Transfer Object (DTO) for creating a new tutoring offer.
  * Contains all information needed to create an offer by a tutor.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 
@@ -39,7 +40,7 @@ public class OfferCreateRequest {
     private String offerType;
 
     /** Identifier of the chosen availability slot (optional, may be null). */
-    private Integer availabilitySlotId;
+    private List<Integer> availabilitySlotIds;
 
     // Getters and setters
 
@@ -58,8 +59,6 @@ public class OfferCreateRequest {
     public String getOfferType() { return offerType; }
     public void setOfferType(String offerType) { this.offerType = offerType; }
 
-    public Integer getAvailabilitySlotId() { return availabilitySlotId; }
-    public void setAvailabilitySlotId(Integer availabilitySlotId) {
-        this.availabilitySlotId = availabilitySlotId;
-    }
+    public List<Integer> getAvailabilitySlotIds() { return availabilitySlotIds; }
+    public void setAvailabilitySlotIds(List<Integer> availabilitySlotIds) { this.availabilitySlotIds = availabilitySlotIds; }
 }

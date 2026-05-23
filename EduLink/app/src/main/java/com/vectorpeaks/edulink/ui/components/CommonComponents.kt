@@ -24,6 +24,13 @@ import com.vectorpeaks.edulink.data.model.*
 import com.vectorpeaks.edulink.data.model.user.RoleID
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.theme.*
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 // ==================== SEARCH BAR ====================
 
@@ -474,5 +481,125 @@ fun SectionHeader(
             color = OnBackground
         )
         action?.invoke()
+    }
+}
+
+// ==================== OFFER CARD ====================
+
+@Composable
+fun OfferCard(
+    offer: Offer,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+    onDetail: (() -> Unit)? = null
+) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = offer.subject, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Primary)
+                Text(text = "${offer.pricePerHour.toInt()} zł/h", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = OnBackground)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                UserAvatar(name = offer.tutorName, size = 28)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = offer.tutorName, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = offer.description, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RatingBar(rating = offer.rating)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "(${offer.reviewCount})", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (offer.isOnline) {
+                        SuggestionChip(onClick = {}, label = { Text("Online", style = MaterialTheme.typography.labelSmall) }, shape = RoundedCornerShape(8.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    Text(text = offer.city, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                }
+            }
+
+            if (onEdit != null || onDelete != null || onDetail != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    if (onDetail != null) {
+                        OutlinedButton(
+                            onClick = onDetail,
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.Info, contentDescription = "Szczegóły", modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Szczegóły", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                    if (onEdit != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedButton(
+                            onClick = onEdit,
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edytuj", modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Edytuj", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                    if (onDelete != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedButton(
+                            onClick = { showDeleteConfirm = true },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Error),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Usuń", modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Usuń", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Usuń ofertę") },
+            text = { Text("Czy na pewno chcesz usunąć ofertę z przedmiotu ${offer.subject}? Tej operacji nie można cofnąć.") },
+            confirmButton = {
+                Button(onClick = { showDeleteConfirm = false; onDelete?.invoke() }, colors = ButtonDefaults.buttonColors(containerColor = Error)) {
+                    Text("Usuń")
+                }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Anuluj") } }
+        )
     }
 }

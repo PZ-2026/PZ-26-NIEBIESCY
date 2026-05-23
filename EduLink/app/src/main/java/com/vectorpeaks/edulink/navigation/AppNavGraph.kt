@@ -34,8 +34,8 @@ fun AppNavGraph() {
                     currentUser = user
                     val destination = when (user.getRole()) {
                         RoleID.STUDENT -> NavRoutes.StudentMain.route
-                        RoleID.TUTOR   -> NavRoutes.TutorMain.route
-                        RoleID.ADMIN   -> NavRoutes.AdminMain.route
+                        RoleID.TUTOR -> NavRoutes.TutorMain.route
+                        RoleID.ADMIN -> NavRoutes.AdminMain.route
                     }
                     navController.navigate(destination) {
                         popUpTo(NavRoutes.Login.route) { inclusive = true }
@@ -43,6 +43,35 @@ fun AppNavGraph() {
                 },
                 onRegisterClick = { navController.navigate(NavRoutes.Register.route) }
             )
+        }
+
+        composable(
+            route = NavRoutes.TutorMain.route + "?startTab={startTab}",
+            arguments = listOf(
+                navArgument("startTab") {
+                    type = NavType.IntType
+                    defaultValue = 0
+                }
+            )
+        ) { backStackEntry ->
+            val startTab = backStackEntry.arguments?.getInt("startTab") ?: 0
+            currentUser?.let { user ->
+                TutorMainScreen(
+                    user = user,
+                    startTab = startTab,
+                    onLogout = {
+                        currentUser = null
+                        navController.navigate(NavRoutes.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onNavigateToReviews = { tutorId, tutorName ->
+                        navController.navigate(
+                            NavRoutes.TutorReviews.createRoute(tutorId, tutorName)
+                        )
+                    }
+                )
+            }
         }
 
         composable(NavRoutes.Register.route) {
@@ -79,6 +108,11 @@ fun AppNavGraph() {
                         navController.navigate(NavRoutes.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }
+                    },
+                    onNavigateToReviews = { tutorId, tutorName ->
+                        navController.navigate(
+                            NavRoutes.TutorReviews.createRoute(tutorId, tutorName)
+                        )
                     }
                 )
             }
@@ -110,7 +144,13 @@ fun AppNavGraph() {
             ReviewsScreen(
                 tutorName = tutorName,
                 tutorId = tutorId,
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    navController.navigate(NavRoutes.TutorMain.route + "?startTab=1") {
+                        popUpTo(NavRoutes.TutorMain.route + "?startTab={startTab}") {
+                            inclusive = true
+                        }
+                    }
+                }
             )
         }
     }

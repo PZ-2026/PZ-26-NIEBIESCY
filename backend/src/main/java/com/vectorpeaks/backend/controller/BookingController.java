@@ -1,8 +1,8 @@
 /*
  * BookingController.java
  *
- * Version: 1.0
- * Date: 2026-04-26
+ * Version: 1.1
+ * Date: 2026-05-22
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  * Controller for managing bookings (lesson reservations).
  * Provides endpoints to create bookings and retrieve bookings for a specific student.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 @RestController
@@ -40,6 +40,7 @@ public class BookingController {
     private final UserRepository userRepository;
     private final AvailabilitySlotRepository slotRepository;
     private final ReviewRepository reviewRepository;
+    private final OfferSlotRepository offerSlotRepository;
 
     /**
      * Constructs a new BookingController with all required repositories.
@@ -50,19 +51,22 @@ public class BookingController {
      * @param userRepository      repository for users
      * @param slotRepository      repository for availability slots
      * @param reviewRepository    repository for reviews
+     * @param offerSlotRepository repository for offers slots
      */
     public BookingController(BookingRepository bookingRepository,
                              OfferRepository offerRepository,
                              SubjectRepository subjectRepository,
                              UserRepository userRepository,
                              AvailabilitySlotRepository slotRepository,
-                             ReviewRepository reviewRepository) {
+                             ReviewRepository reviewRepository,
+                             OfferSlotRepository offerSlotRepository) {
         this.bookingRepository = bookingRepository;
         this.offerRepository = offerRepository;
         this.subjectRepository = subjectRepository;
         this.userRepository = userRepository;
         this.slotRepository = slotRepository;
         this.reviewRepository = reviewRepository;
+        this.offerSlotRepository = offerSlotRepository;
     }
 
     /**
@@ -153,8 +157,12 @@ public class BookingController {
             return ResponseEntity.badRequest().body("Offer not found");
         }
 
-        Optional<Offer> offerOpt = offerRepository.findById(request.getOfferId());
-        if (offerOpt.isEmpty() || !offerOpt.get().getAvailabilitySlotId().equals(request.getAvailabilitySlotId())) {
+        boolean slotBelongsToOffer = offerSlotRepository
+                .findByOfferId(request.getOfferId())
+                .stream()
+                .anyMatch(os -> os.getAvailabilitySlotId().equals(request.getAvailabilitySlotId()));
+
+        if (!slotBelongsToOffer) {
             return ResponseEntity.badRequest().body("Slot does not belong to this offer");
         }
 

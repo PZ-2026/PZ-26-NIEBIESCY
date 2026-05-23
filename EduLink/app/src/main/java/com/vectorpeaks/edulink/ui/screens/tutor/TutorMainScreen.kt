@@ -21,16 +21,18 @@ data class TutorTab(
 @Composable
 fun TutorMainScreen(
     user: User,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToReviews: (tutorId: Int, tutorName: String) -> Unit,
+    startTab: Int = 0
 ) {
     val tabs = listOf(
-        TutorTab("Pulpit", Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
-        TutorTab("Oferty", Icons.Filled.LocalOffer, Icons.Outlined.LocalOffer),
-        TutorTab("Rezerwacje", Icons.Filled.EventNote, Icons.Outlined.EventNote),
-        TutorTab("Rozmowy", Icons.Filled.ChatBubble, Icons.Outlined.ChatBubbleOutline),
-        TutorTab("Profil", Icons.Filled.Person, Icons.Outlined.Person)
+        TutorTab("Pulpit",     Icons.Filled.Dashboard,    Icons.Outlined.Dashboard),
+        TutorTab("Oferty",     Icons.Filled.LocalOffer,   Icons.Outlined.LocalOffer),
+        TutorTab("Rezerwacje", Icons.Filled.EventNote,    Icons.Outlined.EventNote),
+        TutorTab("Rozmowy",    Icons.Filled.ChatBubble,   Icons.Outlined.ChatBubbleOutline),
+        TutorTab("Profil",     Icons.Filled.Person,       Icons.Outlined.Person)
     )
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(startTab) }
     var isChatDetailOpen by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -68,7 +70,11 @@ fun TutorMainScreen(
     ) { innerPadding ->
         when (selectedTab) {
             0 -> TutorDashboardScreen(user = user, modifier = Modifier.padding(innerPadding))
-            1 -> TutorOffersScreen(user = user, modifier = Modifier.padding(innerPadding))
+            1 -> TutorOffersScreen(
+                user = user,
+                modifier = Modifier.padding(innerPadding),
+                onNavigateToReviews = onNavigateToReviews
+            )
             2 -> TutorReservationsScreen(tutorId = user.id, modifier = Modifier.padding(innerPadding))
             3 -> TutorChatScreen(
                 user = user,

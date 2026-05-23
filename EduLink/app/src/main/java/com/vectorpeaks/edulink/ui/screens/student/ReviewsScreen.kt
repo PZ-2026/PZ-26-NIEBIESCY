@@ -127,7 +127,6 @@ private fun ReviewCard(review: ReviewResponse) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            // Gwiazdki + data
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -153,7 +152,6 @@ private fun ReviewCard(review: ReviewResponse) {
                 }
             }
 
-            // Komentarz
             if (!review.comment.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(

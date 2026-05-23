@@ -1,8 +1,8 @@
 /*
  * SlotDto.java
  *
- * Version: 1.0
- * Date: 2026-04-26
+ * Version: 1.1
+ * Date: 2026-05-22
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -15,7 +15,7 @@ package com.vectorpeaks.backend.dto;
  * Data Transfer Object (DTO) for an availability slot.
  * Contains the slot ID and a human-readable label (e.g., "Pon 10:00").
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 public class SlotDto {
@@ -25,15 +25,21 @@ public class SlotDto {
     /** Human-readable label combining day and start time. */
     private String label;
 
+    /** Numeric representation of the day of week (e.g., 1 = Monday, 7 = Sunday).  */
+    private Integer dayOfWeek;
+
     /**
      * Constructs a new SlotDto with the given ID and label.
      *
-     * @param id    the slot identifier
-     * @param label the display label
+     * @param id        the slot identifier
+     * @param label     the display label
+     * @param dayOfWeek the day of week as an integer (1-7)
      */
-    public SlotDto(Integer id, String label) {
+
+    public SlotDto(Integer id, String label, Integer dayOfWeek) {
         this.id = id;
         this.label = label;
+        this.dayOfWeek = dayOfWeek;
     }
 
     // Getters and setters
@@ -42,4 +48,7 @@ public class SlotDto {
 
     public String getLabel() { return label; }
     public void setLabel(String label) { this.label = label; }
+
+    public Integer getDayOfWeek() { return dayOfWeek; }
+    public void setDayOfWeek(Integer dayOfWeek) { this.dayOfWeek = dayOfWeek; }
 }

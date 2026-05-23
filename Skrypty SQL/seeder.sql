@@ -11,12 +11,21 @@ INSERT INTO statuses (id, status) VALUES
 INSERT INTO global_limits (id, hourly_price_limit, message) VALUES 
 (1, 200.00, 'Tutor hour price limit');
 
--- 4. AvailabilitySlots
-INSERT INTO availability_slots (id, day_of_week, start_time, end_time) VALUES 
-(1, 1, '08:00:00', '09:00:00'), (2, 1, '10:00:00', '11:00:00'),
-(3, 2, '14:00:00', '15:00:00'), (4, 3, '16:00:00', '17:00:00'),
-(5, 4, '09:00:00', '10:00:00'), (6, 5, '12:00:00', '13:00:00'),
-(7, 6, '10:00:00', '12:00:00'), (8, 0, '18:00:00', '20:00:00');
+-- 4. AvailabilitySlots 
+DO $$
+DECLARE
+    day_num INTEGER;
+    hour_num INTEGER;
+    next_id INTEGER := 1;
+BEGIN
+    FOR day_num IN 0..6 LOOP
+        FOR hour_num IN 8..17 LOOP
+            INSERT INTO availability_slots (id, day_of_week, start_time, end_time)
+            VALUES (next_id, day_num, make_time(hour_num, 0, 0), make_time(hour_num+1, 0, 0));
+            next_id := next_id + 1;
+        END LOOP;
+    END LOOP;
+END $$;
 
 -- 5. Subjects
 INSERT INTO subjects (id, name, status_id) VALUES 
@@ -24,7 +33,7 @@ INSERT INTO subjects (id, name, status_id) VALUES
 (4, 'Biologia', 1), (5, 'Chemia', 1), (6, 'Historia', 1), 
 (7, 'Informatyka', 1), (8, 'Geografia', 1);
 
--- 6. Users (z created_at — maj 2026)
+-- 6. Users 
 INSERT INTO users (id, role_id, password, first_name, last_name, email, account_status_id, address, phone_number, fcm_token, created_at) VALUES 
 (1,  1, 'hash1',  'Jan',    'Kowalski',    'admin@edulink.com',   1, 'Warszawa',  '111222333', NULL, '2026-05-01 08:00:00'),
 (2,  2, 'hash2',  'Anna',   'Nowak',       'tutor@edulink.com',   1, 'Kraków',    '222333444', NULL, '2026-05-01 09:00:00'),
@@ -37,18 +46,23 @@ INSERT INTO users (id, role_id, password, first_name, last_name, email, account_
 (9,  3, 'hash9',  'Tomasz', 'Jankowski',   'tomek@edulink.com',   1, 'Białystok', '999000111', NULL, '2026-05-05 16:00:00'),
 (10, 3, 'hash10', 'Adam',   'Mickiewicz',  'adam@edulink.com',    1, 'Wilno',     '000111222', NULL, '2026-05-05 17:00:00');
 
--- 7. Offers (z created_at — maj 2026)
-INSERT INTO offers (id, tutor_id, price, availability_slot_id, details, subject_id, status_id, global_limit_id, offer_type, created_at) VALUES 
-(1, 1, 60.00, 1, 'Podstawy algebry',                  1, 1, 1, 'Stacjonarne', '2026-05-05 10:00:00'),
-(2, 1, 70.00, 2, 'Analiza matematyczna',              1, 1, 1, 'Online',       '2026-05-05 11:00:00'),
-(3, 2, 50.00, 3, 'Gramatyka i czasy w j. Angielskim', 3, 1, 1, 'Stacjonarne', '2026-05-06 12:00:00'),
-(4, 5, 80.00, 4, 'Fizyka kwantowa i teoria strun',    2, 1, 1, 'Online',       '2026-05-06 13:00:00'),
-(5, 8, 45.00, 5, 'Historia 2 wojny światowej',        6, 1, 1, 'Stacjonarne', '2026-05-07 14:00:00'),
-(6, 2, 55.00, 6, 'Angielski Zawodowy',                3, 1, 1, 'Stacjonarne', '2026-05-07 15:00:00'),
-(7, 1, 65.00, 7, 'Python dla początkujących',         7, 1, 1, 'Stacjonarne', '2026-05-08 16:00:00'),
-(8, 5, 90.00, 8, 'Fizyka podstawowa',                 2, 1, 1, 'Online',       '2026-05-08 17:00:00');
+-- 7. Offers
+INSERT INTO offers (id, tutor_id, price, details, subject_id, status_id, global_limit_id, offer_type, created_at) VALUES 
+(1, 1, 60.00, 'Podstawy algebry',                  1, 1, 1, 'Stacjonarne', '2026-05-05 10:00:00'),
+(2, 1, 70.00, 'Analiza matematyczna',              1, 1, 1, 'Online',       '2026-05-05 11:00:00'),
+(3, 2, 50.00, 'Gramatyka i czasy w j. Angielskim', 3, 1, 1, 'Stacjonarne', '2026-05-06 12:00:00'),
+(4, 5, 80.00, 'Fizyka kwantowa i teoria strun',    2, 1, 1, 'Online',       '2026-05-06 13:00:00'),
+(5, 8, 45.00, 'Historia 2 wojny światowej',        6, 1, 1, 'Stacjonarne', '2026-05-07 14:00:00'),
+(6, 2, 55.00, 'Angielski Zawodowy',                3, 1, 1, 'Stacjonarne', '2026-05-07 15:00:00'),
+(7, 1, 65.00, 'Python dla początkujących',         7, 1, 1, 'Stacjonarne', '2026-05-08 16:00:00'),
+(8, 5, 90.00, 'Fizyka podstawowa',                 2, 1, 1, 'Online',       '2026-05-08 17:00:00');
 
--- 8. Bookings (maj 2026)
+-- 8. Offer_slots 
+INSERT INTO offer_slots (offer_id, availability_slot_id) VALUES
+(1, 1), (2, 2), (3, 3), (4, 4),
+(5, 5), (6, 6), (7, 7), (8, 8);
+
+-- 9. Bookings
 INSERT INTO bookings (id, availability_slot_id, status_id, offer_id, student_id, booking_date) VALUES 
 (1, 1, 4, 1, 3,  '2026-05-08 10:00:00'),
 (2, 2, 4, 2, 4,  '2026-05-09 11:00:00'),
@@ -59,7 +73,7 @@ INSERT INTO bookings (id, availability_slot_id, status_id, offer_id, student_id,
 (7, 7, 4, 7, 4,  '2026-05-13 10:00:00'),
 (8, 8, 3, 8, 6,  '2026-05-14 18:00:00');
 
--- 9. Reviews
+-- 10. Reviews
 INSERT INTO reviews (id, rating, tutor_id, comment, booking_id) VALUES 
 (1, 5, 1, 'Bardzo dobry nauczyciel!',                     1),
 (2, 4, 1, 'Bardzo pomocny.',                              2),
@@ -70,19 +84,19 @@ INSERT INTO reviews (id, rating, tutor_id, comment, booking_id) VALUES
 (7, 5, 2, 'Super friendly!',                              3),
 (8, 4, 5, 'Bardzo kompetentny.',                          8);
 
--- 10. Chats
+-- 11. Chats
 INSERT INTO chats (id, created_at) VALUES 
 (1, '2026-05-08 12:00:00'), (2, '2026-05-09 13:00:00'),
 (3, '2026-05-10 14:00:00'), (4, '2026-05-10 15:00:00'),
 (5, '2026-05-11 16:00:00'), (6, '2026-05-12 17:00:00'),
 (7, '2026-05-13 18:00:00'), (8, '2026-05-14 19:00:00');
 
--- 11. ChatParticipants
+-- 12. ChatParticipants
 INSERT INTO chat_participants (chat_id, user_id) VALUES 
 (1, 1), (1, 3), (2, 1), (2, 4), (3, 2), (3, 6), (4, 5), (4, 9),
 (5, 8), (5, 10), (6, 2), (6, 3), (7, 1), (7, 4), (8, 5), (8, 6);
 
--- 12. Messages
+-- 13. Messages
 INSERT INTO messages (id, chat_id, content, sent_at, user_id) VALUES 
 (1, 1, 'Hello, I want to book a lesson',  '2026-05-08 12:05:00', 3),
 (2, 1, 'Sure, what time?',                '2026-05-08 12:10:00', 1),
@@ -101,11 +115,12 @@ SELECT setval(pg_get_serial_sequence('availability_slots', 'id'), (SELECT MAX(id
 SELECT setval(pg_get_serial_sequence('subjects',           'id'), (SELECT MAX(id) FROM subjects));
 SELECT setval(pg_get_serial_sequence('users',              'id'), (SELECT MAX(id) FROM users));
 SELECT setval(pg_get_serial_sequence('offers',             'id'), (SELECT MAX(id) FROM offers));
+SELECT setval(pg_get_serial_sequence('offer_slots',        'id'), (SELECT MAX(id) FROM offer_slots));
 SELECT setval(pg_get_serial_sequence('bookings',           'id'), (SELECT MAX(id) FROM bookings));
 SELECT setval(pg_get_serial_sequence('reviews',            'id'), (SELECT MAX(id) FROM reviews));
 SELECT setval(pg_get_serial_sequence('chats',              'id'), (SELECT MAX(id) FROM chats));
 SELECT setval(pg_get_serial_sequence('messages',           'id'), (SELECT MAX(id) FROM messages));
 
--- Hash passwords
+-- Hashowanie haseł 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 UPDATE users SET password = crypt(password, gen_salt('bf')) WHERE password NOT LIKE '$2a$%';

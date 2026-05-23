@@ -2,7 +2,7 @@
  * OfferDto.java
  *
  * Version: 1.0
- * Date: 2026-04-26
+ * Date: 2026-05-23
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -16,9 +16,9 @@ import java.util.List;
 /**
  * Data Transfer Object (DTO) for tutoring offers.
  * Contains all information needed to display an offer in the frontend,
- * including tutor details, subject, pricing, location, ratings, and availability.
+ * including tutor details, subject, pricing, location, ratings, status and availability.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 public class OfferDto {
@@ -58,6 +58,9 @@ public class OfferDto {
     /** Approval status of the offer (default true). */
     private Boolean isApproved = true;
 
+    /** Status of the offer: e.g. "ACTIVE", "PENDING", "REJECTED" */
+    private String status;
+
     // Getters and setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -94,4 +97,7 @@ public class OfferDto {
 
     public Boolean getIsApproved() { return isApproved; }
     public void setIsApproved(Boolean isApproved) { this.isApproved = isApproved; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

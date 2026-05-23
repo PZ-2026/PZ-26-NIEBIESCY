@@ -12,5 +12,6 @@ data class Offer(
     val rating: Float = 0f,
     val reviewCount: Int = 0,
     val isApproved: Boolean = true,
+    val status: String = "ACTIVE",
     val availableSlots: List<Slot>
 )

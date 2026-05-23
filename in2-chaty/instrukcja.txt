@@ -1,0 +1,27 @@
+1. wsadzić plik \EduLink\app\google-services.json:
+
+do  \EduLink\app\
+
+2. wsadzić plik /src/main/resources/firebase-service-account.json
+
+do	backend\src\main\resources\
+		
+
+
+3. zaktualizować bazę z zaktualizowanego seedera i skryptu sql
+
+4. opcjonalnie dodać do backend (java): application.properties
+
+# application.properties
+logging.level.com.google.firebase=DEBUG
+logging.level.com.vectorpeaks.backend=DEBUG
+
+5. (jak coś nie będzie działać w android studio to):
+ zsynchronizować EduLink\app\build.gradle.kts i EduLink\build.gradle.kts 
+ a na backendzie mavenem odświeżyć projekt
+
+6. TO DO: 
+ - zmienić logo na ekranie logowania
+ - zrobić jwt tokeny, 
+ - zaktualizować po czym się ludziom daje tokeny do fcm firebase (wyskakiwanie powiadomień z czatu), bo jak ktoś ma wiele kont, to wszystcy dostają na tym telefonie powiadomienie
+ - zrobić przycisk zapamiętaj mnie żeby nie musieć wpisywać ciągle hasła (ale do tego trzeba zrobić tokeny jwt)

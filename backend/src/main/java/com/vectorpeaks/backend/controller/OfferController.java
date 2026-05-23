@@ -1,8 +1,8 @@
 /*
  * OfferController.java
  *
- * Version: 1.2
- * Date: 2026-05-03
+ * Version: 1.3
+ * Date: 2026-05-22
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -14,27 +14,22 @@ package com.vectorpeaks.backend.controller;
 import com.vectorpeaks.backend.dto.OfferCreateRequest;
 import com.vectorpeaks.backend.dto.OfferDto;
 import com.vectorpeaks.backend.dto.SlotDto;
-import com.vectorpeaks.backend.entity.AvailabilitySlot;
-import com.vectorpeaks.backend.entity.Offer;
-import com.vectorpeaks.backend.entity.Subject;
-import com.vectorpeaks.backend.entity.User;
-import com.vectorpeaks.backend.repository.AvailabilitySlotRepository;
-import com.vectorpeaks.backend.repository.OfferRepository;
-import com.vectorpeaks.backend.repository.ReviewRepository;
-import com.vectorpeaks.backend.repository.SubjectRepository;
-import com.vectorpeaks.backend.repository.UserRepository;
+import com.vectorpeaks.backend.entity.*;
+import com.vectorpeaks.backend.repository.*;
+import jakarta.transaction.Transactional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
  * Controller for managing tutoring offers.
  * Provides endpoints to retrieve filtered offers with tutor and subject details.
  *
- * @version 1.2
+ * @version 1.3
  * @author EduLink Team
  */
 @RestController
@@ -47,6 +42,7 @@ public class OfferController {
     private final SubjectRepository subjectRepository;
     private final ReviewRepository reviewRepository;
     private final AvailabilitySlotRepository availabilitySlotRepository;
+    private final OfferSlotRepository offerSlotRepository;
 
     /**
      * Constructs a new OfferController with all required repositories.
@@ -56,17 +52,20 @@ public class OfferController {
      * @param subjectRepository          repository for subjects
      * @param reviewRepository           repository for reviews
      * @param availabilitySlotRepository repository for availability slots
+     * @param offerSlotRepository        reposiotory for offer slots
      */
     public OfferController(OfferRepository offerRepository,
                            UserRepository userRepository,
                            SubjectRepository subjectRepository,
                            ReviewRepository reviewRepository,
-                           AvailabilitySlotRepository availabilitySlotRepository) {
+                           AvailabilitySlotRepository availabilitySlotRepository,
+                           OfferSlotRepository offerSlotRepository ) {
         this.offerRepository = offerRepository;
         this.userRepository = userRepository;
         this.subjectRepository = subjectRepository;
         this.reviewRepository = reviewRepository;
         this.availabilitySlotRepository = availabilitySlotRepository;
+        this.offerSlotRepository = offerSlotRepository;
     }
 
     /**
@@ -117,7 +116,9 @@ public class OfferController {
                         Subject s = subjectRepository.findById(o.getSubjectId()).orElse(null);
                         User tutor = userRepository.findById(o.getTutorId()).orElse(null);
                         String subjectName = s != null ? s.getName().toLowerCase() : "";
-                        String tutorName = tutor != null ? (tutor.getFirstName() + " " + tutor.getLastName()).toLowerCase() : "";
+                        String tutorName = tutor != null
+                                ? (tutor.getFirstName() + " " + tutor.getLastName()).toLowerCase()
+                                : "";
                         return subjectName.contains(lowerSearch) || tutorName.contains(lowerSearch);
                     })
                     .collect(Collectors.toList());
@@ -154,17 +155,20 @@ public class OfferController {
         String tutorName = (tutor != null) ? tutor.getFirstName() + " " + tutor.getLastName() : "";
         String city = (tutor != null) ? tutor.getAddress() : "";
         String subjectName = (subject != null) ? subject.getName() : "";
-        String description = offer.getDetails();
         Double price = offer.getPrice().doubleValue();
         Boolean isOnline = "Online".equalsIgnoreCase(offer.getOfferType());
 
-        AvailabilitySlot slot = availabilitySlotRepository.findById(offer.getAvailabilitySlotId()).orElse(null);
+        List<OfferSlot> offerSlots = offerSlotRepository.findByOfferId(offer.getId());
         List<SlotDto> slots = new ArrayList<>();
-        if (slot != null) {
-            String dayName = getDayName(slot.getDayOfWeek());
-            String start = slot.getStartTime().toString().substring(0, 5);
-            String label = dayName + " " + start;
-            slots.add(new SlotDto(slot.getId(), label));
+        for (OfferSlot offerSlot : offerSlots) {
+            AvailabilitySlot slot = availabilitySlotRepository
+                    .findById(offerSlot.getAvailabilitySlotId()).orElse(null);
+            if (slot != null) {
+                String dayName = getDayName(slot.getDayOfWeek());
+                String start = slot.getStartTime().toString().substring(0, 5);
+                String label = dayName + " " + start;
+                slots.add(new SlotDto(slot.getId(), label, slot.getDayOfWeek().intValue()));
+            }
         }
 
         Double avgRating = reviewRepository.getAverageRatingByTutorId(offer.getTutorId());
@@ -176,14 +180,15 @@ public class OfferController {
         dto.setTutorId(offer.getTutorId());
         dto.setTutorName(tutorName);
         dto.setSubject(subjectName);
-        dto.setDescription(description);
+        dto.setDescription(offer.getDetails());
         dto.setPricePerHour(price);
         dto.setCity(city);
         dto.setIsOnline(isOnline);
         dto.setRating(rating);
         dto.setReviewCount(reviewCount);
         dto.setAvailableSlots(slots);
-        dto.setIsApproved(true);
+        dto.setIsApproved(offer.getStatusId() == 1);
+        dto.setStatus(mapStatusId(offer.getStatusId()));
         return dto;
     }
 
@@ -214,10 +219,8 @@ public class OfferController {
      */
     @GetMapping("/tutor/{tutorId}")
     public List<OfferDto> getOffersByTutor(@PathVariable Integer tutorId) {
-        List<Offer> offers = offerRepository.findAll().stream()
+        return offerRepository.findAll().stream()
                 .filter(o -> o.getTutorId().equals(tutorId))
-                .collect(Collectors.toList());
-        return offers.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -226,10 +229,11 @@ public class OfferController {
      * Creates a new tutoring offer.
      *
      * @param request the offer creation data (tutorId, subjectId, details,
-     *                price, offerType, optional availabilitySlotId)
+     *                price, offerType, availabilitySlotIds)
      * @return ResponseEntity with status 200 OK on success, or error message
      */
     @PostMapping
+    @Transactional
     public ResponseEntity<?> createOffer(@RequestBody OfferCreateRequest request) {
         Offer offer = new Offer();
         offer.setTutorId(request.getTutorId());
@@ -237,10 +241,85 @@ public class OfferController {
         offer.setDetails(request.getDetails());
         offer.setPrice(request.getPrice());
         offer.setOfferType(request.getOfferType());
-        offer.setAvailabilitySlotId(request.getAvailabilitySlotId());
-        offer.setStatusId(1);
+        offer.setStatusId(3);
         offer.setGlobalLimitId(1);
-        offerRepository.save(offer);
+        Offer saved = offerRepository.save(offer);
+
+        if (request.getAvailabilitySlotIds() != null) {
+            for (Integer slotId : request.getAvailabilitySlotIds()) {
+                OfferSlot offerSlot = new OfferSlot();
+                offerSlot.setOfferId(saved.getId());
+                offerSlot.setAvailabilitySlotId(slotId);
+                offerSlotRepository.save(offerSlot);
+            }
+        }
+
         return ResponseEntity.ok().build();
+    }
+
+    /**
+    * Deletes an offer by its ID.
+     * @param id the unique identifier of the offer to delete
+     * @return  ResponseEntity with status  200 OK if deletion was successful,
+     *          or 404 Not Found if the offer does not exist
+     */
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<?> deleteOffer(@PathVariable Integer id) {
+        if (!offerRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        offerRepository.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     *  Updates an existing offer with the given ID.
+     *  @param id      the unique identifier of the offer to update
+     *  @param request the object containing new offer data (tutorId is ignored, statusId is fixed)
+     *  @return ResponseEntity with status  200 OK on successful update,
+     *          or 404 Not Found if the offer does not exist
+     */
+    @PutMapping("/{id}")
+    @Transactional
+    public ResponseEntity<?> updateOffer(@PathVariable Integer id,
+                                         @RequestBody OfferCreateRequest request) {
+        Optional<Offer> offerOpt = offerRepository.findById(id);
+        if (offerOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Offer offer = offerOpt.get();
+        offer.setSubjectId(request.getSubjectId());
+        offer.setDetails(request.getDetails());
+        offer.setPrice(request.getPrice());
+        offer.setOfferType(request.getOfferType());
+        offer.setStatusId(3);
+        offerRepository.save(offer);
+
+        if (request.getAvailabilitySlotIds() != null) {
+            offerSlotRepository.deleteByOfferId(id);
+            for (Integer slotId : request.getAvailabilitySlotIds()) {
+                OfferSlot offerSlot = new OfferSlot();
+                offerSlot.setOfferId(id);
+                offerSlot.setAvailabilitySlotId(slotId);
+                offerSlotRepository.save(offerSlot);
+            }
+        }
+
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Maps an internal status ID to a human-readable status name.
+     * @param statusId the numeric status identifier (e.g., 1, 3, 7)
+     * @return the corresponding status string, or "UNKNOWN" if the ID is not recognized
+     */
+    private String mapStatusId(Integer statusId) {
+        switch (statusId) {
+            case 1: return "ACTIVE";
+            case 3: return "PENDING";
+            case 7: return "REJECTED";
+            default: return "UNKNOWN";
+        }
     }
 }

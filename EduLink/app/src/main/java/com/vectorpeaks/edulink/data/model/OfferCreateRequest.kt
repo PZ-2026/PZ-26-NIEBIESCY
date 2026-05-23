@@ -6,5 +6,5 @@ data class OfferCreateRequest(
     val details: String,
     val price: Double,
     val offerType: String,
-    val availabilitySlotId: Int? = null
+    val availabilitySlotIds: List<Int> = emptyList()
 )
