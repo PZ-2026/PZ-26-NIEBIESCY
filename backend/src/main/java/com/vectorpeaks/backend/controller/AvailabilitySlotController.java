@@ -1,8 +1,8 @@
 /*
  * AvailabilitySlotController.java
  *
- * Version: 1.0
- * Date: 2026-04-28
+ * Version: 1.1
+ * Date: 2026-05-22
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -12,7 +12,11 @@ package com.vectorpeaks.backend.controller;
 
 import com.vectorpeaks.backend.dto.SlotDto;
 import com.vectorpeaks.backend.entity.AvailabilitySlot;
+import com.vectorpeaks.backend.entity.Offer;
+import com.vectorpeaks.backend.entity.OfferSlot;
 import com.vectorpeaks.backend.repository.AvailabilitySlotRepository;
+import com.vectorpeaks.backend.repository.OfferRepository;
+import com.vectorpeaks.backend.repository.OfferSlotRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +27,7 @@ import java.util.stream.Collectors;
  * Controller for managing availability slots.
  * Provides an endpoint to retrieve all slots (global, defined by admin).
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 @RestController
@@ -32,14 +36,22 @@ import java.util.stream.Collectors;
 public class AvailabilitySlotController {
 
     private final AvailabilitySlotRepository slotRepository;
+    private final OfferRepository offerRepository;
+    private final OfferSlotRepository offerSlotRepository;
 
     /**
      * Constructs a new AvailabilitySlotController with required repository.
      *
      * @param slotRepository repository for availability slots
+     * @param offerRepository repository for offers
+     * @param offerSlotRepository repository for offers slots
      */
-    public AvailabilitySlotController(AvailabilitySlotRepository slotRepository) {
+    public AvailabilitySlotController(AvailabilitySlotRepository slotRepository,
+                                      OfferRepository offerRepository,
+                                      OfferSlotRepository offerSlotRepository) {
         this.slotRepository = slotRepository;
+        this.offerRepository = offerRepository;
+        this.offerSlotRepository = offerSlotRepository;
     }
 
     /**
@@ -51,7 +63,60 @@ public class AvailabilitySlotController {
     @PreAuthorize("isAuthenticated()")
     public List<SlotDto> getAllSlots() {
         return slotRepository.findAll().stream()
-                .map(slot -> new SlotDto(slot.getId(), formatSlotLabel(slot)))
+                .map(slot -> new SlotDto(
+                        slot.getId(),
+                        formatSlotLabel(slot),
+                        slot.getDayOfWeek().intValue()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Retrieves all available time slots for a specific tutor, excluding those already used in any offer.
+     *
+     * @return a list of SlotDto objects representing slots that are not yet used by the tutor
+     */
+
+    @GetMapping("/available/{tutorId}")
+    public List<SlotDto> getAvailableSlotsForTutor(@PathVariable Integer tutorId) {
+        List<Integer> usedSlotIds = offerRepository.findAll().stream()
+                .filter(o -> o.getTutorId().equals(tutorId))
+                .flatMap(o -> offerSlotRepository.findByOfferId(o.getId()).stream())
+                .map(OfferSlot::getAvailabilitySlotId)
+                .collect(Collectors.toList());
+
+        return slotRepository.findAll().stream()
+                .filter(slot -> !usedSlotIds.contains(slot.getId()))
+                .map(slot -> new SlotDto(
+                        slot.getId(),
+                        formatSlotLabel(slot),
+                        slot.getDayOfWeek().intValue()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Retrieves all available time slots for a specific tutor, excluding slots already used in the tutor's other offers.
+     *
+     * @return a list of SlotDto objects representing slots that are available for the tutor,
+     *         excluding those already occupied by the tutor's other offers
+     */
+
+    @GetMapping("/available/{tutorId}/excluding/{offerId}")
+    public List<SlotDto> getAvailableSlotsExcludingOffer(
+            @PathVariable Integer tutorId,
+            @PathVariable Integer offerId) {
+
+        List<Integer> usedSlotIds = offerRepository.findAll().stream()
+                .filter(o -> o.getTutorId().equals(tutorId) && !o.getId().equals(offerId))
+                .flatMap(o -> offerSlotRepository.findByOfferId(o.getId()).stream())
+                .map(OfferSlot::getAvailabilitySlotId)
+                .collect(Collectors.toList());
+
+        return slotRepository.findAll().stream()
+                .filter(slot -> !usedSlotIds.contains(slot.getId()))
+                .map(slot -> new SlotDto(
+                        slot.getId(),
+                        formatSlotLabel(slot),
+                        slot.getDayOfWeek().intValue()))
                 .collect(Collectors.toList());
     }
 

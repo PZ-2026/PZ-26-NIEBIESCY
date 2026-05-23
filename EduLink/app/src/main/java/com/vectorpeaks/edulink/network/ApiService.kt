@@ -118,7 +118,23 @@ interface ApiService {
     @GET("api/data/subjects-with-id")
     suspend fun getSubjectsWithId(): List<SubjectDto>
 
+    @GET("api/slots/by-day/{dayOfWeek}")
+    suspend fun getSlotsByDay(@Path("dayOfWeek") dayOfWeek: Int): List<Slot>
 
+    @GET("api/slots/available/{tutorId}")
+    suspend fun getAvailableSlotsForTutor(@Path("tutorId") tutorId: Int): List<Slot>
+
+    @GET("api/slots/available/{tutorId}/excluding/{offerId}")
+    suspend fun getAvailableSlotsExcludingOffer(
+        @Path("tutorId") tutorId: Int,
+        @Path("offerId") offerId: Int
+    ): List<Slot>
+
+    @DELETE("api/offers/{id}")
+    suspend fun deleteOffer(@Path("id") id: Int): Response<Unit>
+
+    @PUT("api/offers/{id}")
+    suspend fun updateOffer(@Path("id") id: Int, @Body request: OfferCreateRequest): Response<Unit>
 
 // --------- CHAT ---------
 

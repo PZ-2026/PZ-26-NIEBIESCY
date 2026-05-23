@@ -20,7 +20,9 @@ sealed class NavRoutes(val route: String) {
     }
 
     // Tutor
-    object TutorMain : NavRoutes("tutor_main")
+    object TutorMain : NavRoutes("tutor_main") {
+        fun withTab(tab: Int) = "tutor_main?startTab=$tab"
+    }
     object TutorDashboard : NavRoutes("tutor_dashboard")
     object TutorOffers : NavRoutes("tutor_offers")
     object TutorReservations : NavRoutes("tutor_reservations")

@@ -19,9 +19,6 @@ class TutorOffersViewModel : ViewModel() {
     private val _offers = MutableStateFlow<List<Offer>>(emptyList())
     val offers: StateFlow<List<Offer>> = _offers
 
-    private val _slots = MutableStateFlow<List<Slot>>(emptyList())
-    val slots: StateFlow<List<Slot>> = _slots
-
     private val _subjects = MutableStateFlow<List<SubjectDto>>(emptyList())
     val subjects: StateFlow<List<SubjectDto>> = _subjects
 
@@ -34,17 +31,23 @@ class TutorOffersViewModel : ViewModel() {
     private val _isCreating = MutableStateFlow(false)
     val isCreating: StateFlow<Boolean> = _isCreating
 
+    private val _slotsByDay = MutableStateFlow<List<Slot>>(emptyList())
+    val slotsByDay: StateFlow<List<Slot>> = _slotsByDay
+
+    private val _editSlotsByDay = MutableStateFlow<List<Slot>>(emptyList())
+    val editSlotsByDay: StateFlow<List<Slot>> = _editSlotsByDay
+
+    private val _currentOfferSlots = MutableStateFlow<List<Slot>>(emptyList())
+    val currentOfferSlots: StateFlow<List<Slot>> = _currentOfferSlots
+
     fun loadData(tutorId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
                 val offersDeferred = async { RetrofitClient.apiService.getOffersByTutor(tutorId) }
-                val slotsDeferred = async { RetrofitClient.apiService.getAvailabilitySlots() }
                 val subjectsDeferred = async { RetrofitClient.apiService.getSubjectsWithId() }
-
                 _offers.value = offersDeferred.await()
-                _slots.value = slotsDeferred.await()
                 _subjects.value = subjectsDeferred.await()
             } catch (e: HttpException) {
                 _error.value = "HTTP error: ${e.code()}"
@@ -56,6 +59,38 @@ class TutorOffersViewModel : ViewModel() {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun loadSlotsByDay(dayOfWeek: Int, tutorId: Int) {
+        viewModelScope.launch {
+            try {
+                val available = RetrofitClient.apiService.getAvailableSlotsForTutor(tutorId)
+                _slotsByDay.value = available.filter { it.dayOfWeek == dayOfWeek }
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
+            }
+        }
+    }
+
+    fun loadEditSlotsByDay(dayOfWeek: Int, tutorId: Int, offerId: Int) {
+        viewModelScope.launch {
+            try {
+                val available = RetrofitClient.apiService
+                    .getAvailableSlotsExcludingOffer(tutorId, offerId)
+                _editSlotsByDay.value = available.filter { it.dayOfWeek == dayOfWeek }
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
+            }
+        }
+    }
+
+    fun loadCurrentOfferSlots(offer: Offer) {
+        _currentOfferSlots.value = offer.availableSlots
+    }
+
+    fun clearEditSlots() {
+        _editSlotsByDay.value = emptyList()
+        _currentOfferSlots.value = emptyList()
     }
 
     fun createOffer(request: OfferCreateRequest, onSuccess: () -> Unit) {
@@ -77,6 +112,40 @@ class TutorOffersViewModel : ViewModel() {
                 _error.value = "Error: ${e.message}"
             } finally {
                 _isCreating.value = false
+            }
+        }
+    }
+
+    fun updateOffer(offerId: Int, request: OfferCreateRequest, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _isCreating.value = true
+            try {
+                val response = RetrofitClient.apiService.updateOffer(offerId, request)
+                if (response.isSuccessful) {
+                    loadData(request.tutorId)
+                    onSuccess()
+                } else {
+                    _error.value = "Failed to update offer: ${response.code()}"
+                }
+            } catch (e: HttpException) {
+                _error.value = "HTTP error: ${e.code()}"
+            } catch (e: IOException) {
+                _error.value = "Network error"
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
+            } finally {
+                _isCreating.value = false
+            }
+        }
+    }
+
+    fun deleteOffer(offerId: Int, tutorId: Int) {
+        viewModelScope.launch {
+            try {
+                RetrofitClient.apiService.deleteOffer(offerId)
+                loadData(tutorId)
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
             }
         }
     }
