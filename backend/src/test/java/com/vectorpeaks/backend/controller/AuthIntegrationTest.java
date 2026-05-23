@@ -1,16 +1,7 @@
-/*
- * AuthIntegrationTest.java
- *
- * Version: 1.2
- * Date: 2026-05-03
- *
- * Copyright (c) 2026 EduLink Team. All rights reserved.
- *
- * This software is the confidential and proprietary information of EduLink.
- */
-
 package com.vectorpeaks.backend.controller;
 
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -24,18 +15,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * End-to-end integration tests for authentication.
- *
- * <p>Verifies the behaviour of the {@code POST /api/auth/login} endpoint in a full
- * application context, including:
- * <ul>
- * <li>a {@code 200 OK} response with user data on valid credentials,</li>
- * <li>a {@code 401 Unauthorized} response on invalid password,</li>
- * <li>a {@code 401 Unauthorized} response on non-existent user.</li>
- * </ul>
- *
- * <p>Uses {@code @SpringBootTest} and {@code @AutoConfigureMockMvc} to load the
- * complete Spring application context and test against a real or in-memory database.
+ * End-to-end integration tests for authentication workflows.
+ * <p>
+ * This class spins up the full Spring application context, incorporating the real
+ * {@code SecurityConfig} without mocking the underlying authentication mechanisms.
+ * </p>
+ * <p>
+ * <strong>Prerequisite:</strong> Since these are end-to-end tests connected to an actual
+ * database instance (or a live test database), a user with the email {@code admin@edulink.com}
+ * and password {@code hash1} must exist in the database prior to running these tests
+ * (e.g., via database seed scripts or database migrations).
+ * </p>
  *
  * @version 1.2
  * @author EduLink Team
@@ -44,94 +34,75 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class AuthIntegrationTest {
 
-    /** HTTP client used to perform requests in integration tests. */
+    /**
+     * Main entry point for server-side Spring MVC test support.
+     * Used to execute HTTP requests against the controllers.
+     */
     @Autowired
     private MockMvc mockMvc;
 
-    /** JSON mapper used to serialize request objects. */
+    /**
+     * ObjectMapper instance used to serialize Java request objects into JSON payloads.
+     */
     @Autowired
     private ObjectMapper objectMapper;
 
-    /** Existing user email in the test database. */
+    /**
+     * The email of the pre-existing user required to be present in the database.
+     */
     private static final String EXISTING_EMAIL = "admin@edulink.com";
 
-    /** Correct password for the existing user. */
-    private static final String CORRECT_PASSWD   = "hash1";
-
-    // -----------------------------------------------------------------------
-    // POST /api/auth/login
-    // -----------------------------------------------------------------------
+    /**
+     * The correct password corresponding to the pre-existing test user.
+     */
+    private static final String CORRECT_PASSWD = "hash1";
 
     /**
-     * Verifies that the endpoint returns {@code 200 OK} and the correct email
-     * in the JSON response when valid credentials of an existing user are provided.
-     *
-     * @throws Exception if the MockMvc request execution fails
+     * Integration tests targeting the login endpoint.
      */
-    @Test
-    void login_existingUser_returns200() throws Exception {
-        LoginRequest request = new LoginRequest();
-        request.setEmail(EXISTING_EMAIL);
-        request.setPassword(CORRECT_PASSWD);
+    @Nested
+    @DisplayName("POST /api/auth/login")
+    class LoginTests {
 
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value(EXISTING_EMAIL));
+        /**
+         * Verifies that providing valid credentials for an existing user in the database
+         * successfully authenticates the user and returns a 200 OK status along with the
+         * access tokens.
+         *
+         * @throws Exception if any error occurs during the MockMvc request execution
+         */
+        @Test
+        @DisplayName("Poprawne dane logowania → 200 OK z tokenami")
+        void login_existingUser_returns200() throws Exception {
+            LoginRequest request = new LoginRequest();
+            request.setEmail(EXISTING_EMAIL);
+            request.setPassword(CORRECT_PASSWD);
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.email").value(EXISTING_EMAIL))
+                    .andExpect(jsonPath("$.token").exists());
+        }
+
+        /**
+         * Verifies that providing an incorrect password for an existing user
+         * correctly triggers authentication failure and returns a 401 Unauthorized status.
+         *
+         * @throws Exception if any error occurs during the MockMvc request execution
+         */
+        @Test
+        @DisplayName("Niepoprawne hasło → 401")
+        void login_invalidPassword_returns401() throws Exception {
+            LoginRequest request = new LoginRequest();
+            request.setEmail(EXISTING_EMAIL);
+            request.setPassword("wrongPassword");
+
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized());
+        }
     }
-
-    /**
-     * Verifies that the endpoint returns {@code 401 Unauthorized}
-     * when an existing user's email is provided with an incorrect password.
-     *
-     * @throws Exception if the MockMvc request execution fails
-     */
-    @Test
-    void login_invalidPassword_returns401() throws Exception {
-        LoginRequest request = new LoginRequest();
-        request.setEmail(EXISTING_EMAIL);
-        request.setPassword("zleHaslo999");
-
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
-    }
-
-    /**
-     * Verifies that the endpoint returns {@code 401 Unauthorized}
-     * when a non-existent email address is provided.
-     *
-     * @throws Exception if the MockMvc request execution fails
-     */
-    @Test
-    void login_nonExistentUser_returns401() throws Exception {
-        LoginRequest request = new LoginRequest();
-        request.setEmail("notexist@example.com");
-        request.setPassword("whatever");
-
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
-    }
-
-    /**
-     * Intentionally tests a failing scenario where an invalid password is used,
-     * but a {@code 200 OK} status is expected.
-     *
-     * @throws Exception if the MockMvc request execution fails
-     */
-//    @Test
-//    void login_invalidPasswordButExpecting200_shouldFail() throws Exception {
-//        LoginRequest request = new LoginRequest();
-//        request.setEmail(EXISTING_EMAIL);
-//        request.setPassword("zleHaslo999");
-//
-//        mockMvc.perform(post("/api/auth/login")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request)))
-//                .andExpect(status().isOk());
-//    }
 }

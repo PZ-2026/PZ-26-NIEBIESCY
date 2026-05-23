@@ -14,6 +14,7 @@ package com.vectorpeaks.backend.controller;
 import com.vectorpeaks.backend.dto.SubjectDto;
 import com.vectorpeaks.backend.repository.SubjectRepository;
 import com.vectorpeaks.backend.repository.UserRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,6 +52,7 @@ public class DataController {
      * @return list of subject names
      */
     @GetMapping("/subjects")
+    @PreAuthorize("isAuthenticated()")
     public List<String> getSubjects() {
         return subjectRepository.findAllDistinctNames();
     }
@@ -61,6 +63,7 @@ public class DataController {
      * @return list of city names
      */
     @GetMapping("/cities")
+    @PreAuthorize("isAuthenticated()")
     public List<String> getCities() {
         return userRepository.findAllDistinctCities();
     }
@@ -72,6 +75,7 @@ public class DataController {
      * @return list of SubjectDto objects
      */
     @GetMapping("/subjects-with-id")
+    @PreAuthorize("isAuthenticated()")
     public List<SubjectDto> getSubjectsWithId() {
         return subjectRepository.findAll().stream()
                 .map(s -> new SubjectDto(s.getId(), s.getName()))

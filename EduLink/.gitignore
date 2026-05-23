@@ -16,3 +16,8 @@ local.properties
 
 ### firebase key ###
 app/google-services.json
+
+### important files ###
+.env
+.env.local
+.env.production

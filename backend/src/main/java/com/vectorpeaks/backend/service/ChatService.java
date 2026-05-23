@@ -57,6 +57,9 @@ public class ChatService {
     @Autowired
     private FcmService fcmService;
 
+    @Autowired
+    private FcmTokenService fcmTokenService;
+
     // -----------------------------------------------------------------------
     // Chat creation
     // -----------------------------------------------------------------------
@@ -166,13 +169,14 @@ public class ChatService {
         String senderName = sender.getFirstName() + " " + sender.getLastName();
         chat.getParticipants().stream()
                 .filter(p -> !p.getId().equals(sender.getId()))
-                .filter(p -> p.getFcmToken() != null && !p.getFcmToken().isBlank())
                 .forEach(recipient -> {
-                    fcmService.sendNotification(
-                            recipient.getFcmToken(),
-                            senderName,
-                            message.getContent()
-                    );
+                    // Pobierz wszystkie tokeny urządzeń odbiorcy (może mieć telefon + tablet)
+                    fcmTokenService.getTokensForUser(recipient.getId())
+                            .forEach(token -> fcmService.sendNotification(
+                                    token,
+                                    senderName,
+                                    message.getContent()
+                            ));
                 });
 
         return toMessageResponse(message);

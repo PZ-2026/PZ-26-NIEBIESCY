@@ -31,8 +31,12 @@ public class User {
     private Integer id;
 
     /** Identifier of the user's role (e.g., 2 = Student, 3 = Tutor). */
-    @Column(name = "role_id")
+    @Column(name = "role_id", insertable = true, updatable = true, nullable = false)
     private Integer roleId;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", insertable = false, updatable = false)
+    private Role role;
 
     /** Hashed password – never returned in JSON responses. */
     @JsonIgnore
@@ -57,10 +61,6 @@ public class User {
     /** Phone number (9 digits). */
     private String phoneNumber;
 
-    /** Firebase Cloud Messaging token for push notifications. */
-    @Column(name = "fcm_token")
-    private String fcmToken;
-
     /** Timestamp when the user account was created. */
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -71,6 +71,9 @@ public class User {
 
     public Integer getRoleId() { return roleId; }
     public void setRoleId(Integer roleId) { this.roleId = roleId; }
+
+    public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
@@ -93,9 +96,11 @@ public class User {
     public String getPhoneNumber() { return phoneNumber; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
 
-    public String getFcmToken() { return fcmToken; }
-    public void setFcmToken(String fcmToken) { this.fcmToken = fcmToken; }
-
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+  
+      @Transient
+      public String getRoleName() {
+          return (role != null) ? role.getName() : "STUDENT";
+      }
 }

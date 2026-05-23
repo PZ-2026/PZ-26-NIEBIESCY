@@ -1,6 +1,6 @@
 -- 1. Roles
 INSERT INTO roles (id, name) VALUES 
-(1, 'Admin'), (2, 'Tutor'), (3, 'Student');
+(1, 'ADMIN'), (2, 'TUTOR'), (3, 'STUDENT');
 
 -- 2. Statuses
 INSERT INTO statuses (id, status) VALUES 

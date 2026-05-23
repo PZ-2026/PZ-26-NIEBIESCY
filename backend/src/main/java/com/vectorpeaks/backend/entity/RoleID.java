@@ -24,5 +24,5 @@ public enum RoleID {
     TUTOR,
 
     /** Administrator role – has full system access. */
-    ADMIN
+    ADMIN;
 }

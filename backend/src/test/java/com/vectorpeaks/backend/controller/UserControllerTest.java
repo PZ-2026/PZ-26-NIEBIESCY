@@ -15,8 +15,10 @@
     import com.vectorpeaks.backend.dto.RegisterRequest;
     import com.vectorpeaks.backend.entity.User;
     import com.vectorpeaks.backend.repository.UserRepository;
+    import com.vectorpeaks.backend.service.FcmTokenService;
     import org.junit.jupiter.api.Test;
     import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
     import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
     import org.springframework.http.MediaType;
     import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -52,8 +54,11 @@
      * @author EduLink Team
      * @see UserController
      */
-    @WebMvcTest(UserController.class)
-    class UserControllerTest {
+    @WebMvcTest(
+            controllers = UserController.class,
+            excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class
+    )
+    class UserControllerTest extends BaseControllerTest {
 
         /** HTTP client used to perform requests in web-layer tests. */
         @Autowired
@@ -66,6 +71,9 @@
         /** JSON mapper used to serialize request objects. */
         @Autowired
         private ObjectMapper objectMapper;
+
+        @MockitoBean
+        private FcmTokenService fcmTokenService;
 
         // -----------------------------------------------------------------------
         // GET /api/users

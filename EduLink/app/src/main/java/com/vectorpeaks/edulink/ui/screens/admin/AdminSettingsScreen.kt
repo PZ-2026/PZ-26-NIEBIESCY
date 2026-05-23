@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -36,6 +37,7 @@ fun AdminSettingsScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showAddSubjectDialog by remember { mutableStateOf(false) }
     var newSubjectName by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.loadSettings()
@@ -273,7 +275,15 @@ fun AdminSettingsScreen(
             title = { Text("Wyloguj się") },
             text = { Text("Czy na pewno chcesz się wylogować?") },
             confirmButton = {
-                Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = Primary)) { Text("Wyloguj") }
+                Button(
+                    onClick = {
+                        viewModel.logout(context) {
+                            showLogoutDialog = false
+                            onLogout()  // navigation after succes logout
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) { Text("Wyloguj") }
             },
             dismissButton = { TextButton(onClick = { showLogoutDialog = false }) { Text("Anuluj") } }
         )

@@ -17,6 +17,7 @@ import com.vectorpeaks.backend.entity.OfferSlot;
 import com.vectorpeaks.backend.repository.AvailabilitySlotRepository;
 import com.vectorpeaks.backend.repository.OfferRepository;
 import com.vectorpeaks.backend.repository.OfferSlotRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -59,6 +60,7 @@ public class AvailabilitySlotController {
      * @return list of SlotDto objects
      */
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public List<SlotDto> getAllSlots() {
         return slotRepository.findAll().stream()
                 .map(slot -> new SlotDto(

@@ -16,6 +16,7 @@ import com.vectorpeaks.backend.service.ChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -55,6 +56,7 @@ public class ChatController {
      *         {@code 400 Bad Request} if either user does not exist
      */
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> createOrGetChat(@RequestBody CreateChatRequest request) {
         try {
             ChatResponse chat = chatService.getOrCreateChat(request);
@@ -76,6 +78,7 @@ public class ChatController {
      * @return {@code 200 OK} with a list of {@link ChatResponse} objects
      */
     @GetMapping("/user/{userId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ChatResponse>> getUserChats(@PathVariable Integer userId) {
         return ResponseEntity.ok(chatService.getChatsForUser(userId));
     }
@@ -93,6 +96,7 @@ public class ChatController {
      *         {@code 404 Not Found} if the chat does not exist
      */
     @GetMapping("/{chatId}/messages")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getMessages(@PathVariable Integer chatId) {
         try {
             return ResponseEntity.ok(chatService.getMessages(chatId));
@@ -115,6 +119,7 @@ public class ChatController {
      *         {@code 400 Bad Request} if the chat or sender does not exist
      */
     @PostMapping("/{chatId}/messages")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> sendMessage(
             @PathVariable Integer chatId,
             @RequestBody SendMessageRequest request) {

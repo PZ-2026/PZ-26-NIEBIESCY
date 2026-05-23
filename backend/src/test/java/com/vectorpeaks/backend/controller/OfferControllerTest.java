@@ -19,6 +19,7 @@ import com.vectorpeaks.backend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -50,8 +51,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author EduLink Team
  * @see OfferController
  */
-@WebMvcTest(OfferController.class)
-class OfferControllerTest {
+@WebMvcTest(
+        controllers = OfferController.class,
+        excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class
+)
+class OfferControllerTest extends BaseControllerTest {
 
     /** HTTP client used to perform requests in web-layer tests. */
     @Autowired

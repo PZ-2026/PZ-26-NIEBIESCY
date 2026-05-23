@@ -1,14 +1,17 @@
 package com.vectorpeaks.edulink.ui.screens.login
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.network.RetrofitClient
+import com.vectorpeaks.edulink.security.AuthPreferencesManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import timber.log.Timber
 import java.io.IOException
 
 sealed class ProfileUiState {
@@ -58,6 +61,63 @@ class ProfileViewModel : ViewModel() {
             try {
                 val response = RetrofitClient.apiService.deleteUser(userId)
                 if (response.isSuccessful) {
+                    onSuccess()
+                } else {
+                    _uiState.value = ProfileUiState.Error("Błąd usuwania: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                _uiState.value = ProfileUiState.Error("Błąd: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Sends a logout request to the backend (invalidates the refresh token + clears FCM),
+     * then clears local data and triggers the navigation callback.
+     */
+    fun logout(context: Context, onComplete: () -> Unit) {
+        val authPrefs    = AuthPreferencesManager(context)
+        val refreshToken = authPrefs.getRefreshToken()
+        val userId       = authPrefs.getUserId()
+        val fcmToken     = authPrefs.getFcmToken()
+
+        Timber.d("LOGOUT: refreshToken=$refreshToken, userId=$userId")
+
+        viewModelScope.launch {
+            try {
+                if (!refreshToken.isNullOrBlank()) {
+                    val response = RetrofitClient.apiService.logout(
+                        mapOf(
+                            "refreshToken" to (refreshToken ?: ""),
+                            "userId"       to userId.toString(),
+                            "fcmToken"     to (fcmToken ?: "")
+                        )
+                    )
+                    Timber.d("LOGOUT: backend response = ${response.code()}")
+                } else {
+                    Timber.w("LOGOUT: brak refresh tokena — nie wysyłam do backendu")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "LOGOUT: wyjątek przy wylogowaniu")
+            } finally {
+                Timber.d("LOGOUT: czyszczę authPrefs")
+                authPrefs.clearAll()
+                onComplete()
+            }
+        }
+    }
+
+    /**
+     * Usuwa konto z backendu, następnie czyści lokalną sesję.
+     */
+    fun deleteAccount(userId: Int, context: Context, onSuccess: () -> Unit) {
+        val authPrefs = AuthPreferencesManager(context)
+        viewModelScope.launch {
+            _uiState.value = ProfileUiState.Loading
+            try {
+                val response = RetrofitClient.apiService.deleteUser(userId)
+                if (response.isSuccessful) {
+                    authPrefs.clearAll() // Wyczyść token, refresh token, userId
                     onSuccess()
                 } else {
                     _uiState.value = ProfileUiState.Error("Błąd usuwania: ${response.code()}")
