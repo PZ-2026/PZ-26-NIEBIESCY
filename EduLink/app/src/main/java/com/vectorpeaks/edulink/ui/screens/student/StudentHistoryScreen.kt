@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +35,9 @@ fun StudentHistoryScreen(
     var ratingBooking by remember { mutableStateOf<BookingResponse?>(null) }
     var ratingValue by remember { mutableStateOf(0) }
     var ratingComment by remember { mutableStateOf("") }
+
+    var showCompleteDialog by remember { mutableStateOf(false) }
+    var completingBooking by remember { mutableStateOf<BookingResponse?>(null) }
 
     LaunchedEffect(studentId) {
         viewModel.loadBookings(studentId)
@@ -117,9 +122,16 @@ fun StudentHistoryScreen(
                                 if (booking.status == "COMPLETED") {
                                     ratingBooking = booking
                                     ratingValue = booking.rating ?: 0
+                                    ratingComment = booking.reviewComment ?: ""
                                     showRatingDialog = true
                                 }
-                            }
+                            },
+                            onComplete = if (booking.status == "ACCEPTED") {
+                                {
+                                    completingBooking = booking
+                                    showCompleteDialog = true
+                                }
+                            } else null
                         )
                     }
                 }
@@ -127,7 +139,7 @@ fun StudentHistoryScreen(
         }
     }
 
-    // Dialog oceny
+    // Rating dialog
     if (showRatingDialog && ratingBooking != null) {
         AlertDialog(
             onDismissRequest = { showRatingDialog = false },
@@ -160,7 +172,7 @@ fun StudentHistoryScreen(
                     onClick = {
                         if (ratingValue > 0) {
                             viewModel.addReview(
-                                bookingId = ratingBooking!!.id.toLong(),
+                                bookingId = ratingBooking!!.id,
                                 tutorId = ratingBooking!!.tutorId,
                                 rating = ratingValue,
                                 comment = ratingComment.takeIf { it.isNotBlank() }
@@ -181,6 +193,36 @@ fun StudentHistoryScreen(
                 TextButton(onClick = {
                     showRatingDialog = false
                     ratingComment = ""
+                }) {
+                    Text("Anuluj")
+                }
+            }
+        )
+    }
+
+    if (showCompleteDialog && completingBooking != null) {
+        AlertDialog(
+            onDismissRequest = { showCompleteDialog = false },
+            title = { Text("Zakończ lekcję") },
+            text = { Text("Czy na pewno chcesz oznaczyć lekcję ${completingBooking!!.subject} z ${completingBooking!!.tutorName} jako zakończoną?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.completeBooking(completingBooking!!.id) {
+                            viewModel.loadBookings(studentId)
+                        }
+                        showCompleteDialog = false
+                        completingBooking = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Success)
+                ) {
+                    Text("Zakończ")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showCompleteDialog = false
+                    completingBooking = null
                 }) {
                     Text("Anuluj")
                 }

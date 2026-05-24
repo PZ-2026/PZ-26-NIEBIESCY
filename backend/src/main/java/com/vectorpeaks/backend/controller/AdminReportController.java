@@ -1,8 +1,8 @@
 /*
  * AdminReportController.java
  *
- * Version: 1.0
- * Date: 2026-05-17
+ * Version: 1.2
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -11,7 +11,6 @@
 
 package com.vectorpeaks.backend.controller;
 
-// Import from external library edulink-pdf-1.0.0.jar (located in libs/)
 import com.vectorpeaks.pdf.EduLinkPdfReport;
 import com.vectorpeaks.pdf.EduLinkPdfReport.*;
 import com.vectorpeaks.backend.repository.*;
@@ -32,7 +31,7 @@ import java.util.stream.Collectors;
  * Controller responsible for generating PDF reports for the administrator panel.
  * Uses the custom EduLinkPdfReport library (based on iText 9) to produce statistical reports.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 @RestController
@@ -74,6 +73,10 @@ public class AdminReportController {
      *
      * @param from start date (YYYY-MM-DD), optional, defaults to 30 days before today
      * @param to   end date (YYYY-MM-DD), optional, defaults to today
+     * @param topSubjectsN number of top subjects to include (1-100, default 5)
+     * @param topTutorsN   number of top tutors to include (1-100, default 5)
+     * @param includeSubjects whether to include the top subjects section
+     * @param includeTutors   whether to include the top tutors section
      * @return PDF file as byte array with Content-Disposition attachment header
      * @throws IOException if PDF generation fails
      */
@@ -82,8 +85,15 @@ public class AdminReportController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false, defaultValue = "5")  Integer topSubjectsN,
+            @RequestParam(required = false, defaultValue = "5")  Integer topTutorsN,
+            @RequestParam(required = false, defaultValue = "true") Boolean includeSubjects,
+            @RequestParam(required = false, defaultValue = "true") Boolean includeTutors)
             throws IOException {
+
+        topSubjectsN = Math.max(1, Math.min(100, topSubjectsN));
+        topTutorsN   = Math.max(1, Math.min(100, topTutorsN));
 
         if (to   == null) to   = LocalDate.now();
         if (from == null) from = to.minusDays(30);
@@ -96,7 +106,9 @@ public class AdminReportController {
 
         // 1. Summary data
         long totalBookings = bookingRepository.findAll().stream()
-                .filter(b -> inPeriod(b.getBookingDate(), dtFrom, dtTo))
+                .filter(b -> b.getBookingDate() != null
+                        && !b.getBookingDate().isBefore(dtFrom)
+                        && !b.getBookingDate().isAfter(dtTo))
                 .count();
 
         long newOffers = offerRepository.findAll().stream()
@@ -175,15 +187,21 @@ public class AdminReportController {
                 })
                 .collect(Collectors.toList());
 
-        // 5. Build PDF using the custom library
-        byte[] pdfBytes = new EduLinkPdfReport()
+        // 5. PDF building
+        EduLinkPdfReport report = new EduLinkPdfReport()
                 .title("Raport statystyk platformy")
                 .period(periodFrom, periodTo)
                 .addSummarySection(summary)
-                .addBookingStatusSection(statusMap)
-                .addTopSubjectsSection(topSubjects)
-                .addTopTutorsSection(topTutors)
-                .build();
+                .addBookingStatusSection(statusMap);
+
+        if (Boolean.TRUE.equals(includeSubjects)) {
+            report.addTopSubjectsSection(topSubjects, topSubjectsN);
+        }
+        if (Boolean.TRUE.equals(includeTutors)) {
+            report.addTopTutorsSection(topTutors, topTutorsN);
+        }
+
+        byte[] pdfBytes = report.build();
 
         // 6. Return as downloadable file
         String filename = "edulink_raport_" + periodFrom + "_" + periodTo + ".pdf";

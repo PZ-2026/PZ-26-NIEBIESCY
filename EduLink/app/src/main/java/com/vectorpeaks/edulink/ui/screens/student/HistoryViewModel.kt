@@ -40,7 +40,7 @@ class HistoryViewModel : ViewModel() {
         }
     }
 
-    fun addReview(bookingId: Long, tutorId: Int, rating: Int, comment: String? = null, onSuccess: () -> Unit) {
+    fun addReview(bookingId: Int, tutorId: Int, rating: Int, comment: String? = null, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 val request = ReviewRequest(bookingId, tutorId, rating, comment)
@@ -48,6 +48,20 @@ class HistoryViewModel : ViewModel() {
                 onSuccess()
             } catch (e: HttpException) {
                 _error.value = "HTTP error: ${e.code()}"
+            }
+        }
+    }
+
+    fun completeBooking(bookingId: Int, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.completeBooking(bookingId)
+                if (response.isSuccessful) onSuccess()
+                else _error.value = "Błąd: ${response.code()}"
+            } catch (e: HttpException) {
+                _error.value = "HTTP error: ${e.code()}"
+            } catch (e: Exception) {
+                _error.value = "Błąd: ${e.message}"
             }
         }
     }

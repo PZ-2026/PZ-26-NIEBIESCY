@@ -1,7 +1,7 @@
 /*
  * OfferController.java
  *
- * Version: 1.4
+ * Version: 1.5
  * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 /**
  * Controller for managing tutoring offers.
  * Provides endpoints to retrieve filtered offers with tutor and subject details.
- * <p>Includes built-in BOLA (Broken Object Level Authorization) protection and security event logging.
+ * Includes built-in BOLA (Broken Object Level Authorization) protection and security event logging.
  *
  * @version 1.4
  * @author EduLink Team
@@ -49,6 +49,7 @@ public class OfferController {
     private final ReviewRepository reviewRepository;
     private final AvailabilitySlotRepository availabilitySlotRepository;
     private final OfferSlotRepository offerSlotRepository;
+    private final BookingRepository bookingRepository;
 
     /**
      * Constructs a new OfferController with all required repositories.
@@ -58,20 +59,23 @@ public class OfferController {
      * @param subjectRepository          repository for subjects
      * @param reviewRepository           repository for reviews
      * @param availabilitySlotRepository repository for availability slots
-     * @param offerSlotRepository        reposiotory for offer slots
+     * @param offerSlotRepository        repository for offer slots
+     * @param bookingRepository          repository for bookings
      */
     public OfferController(OfferRepository offerRepository,
                            UserRepository userRepository,
                            SubjectRepository subjectRepository,
                            ReviewRepository reviewRepository,
                            AvailabilitySlotRepository availabilitySlotRepository,
-                           OfferSlotRepository offerSlotRepository ) {
+                           OfferSlotRepository offerSlotRepository,
+                           BookingRepository bookingRepository) {
         this.offerRepository = offerRepository;
         this.userRepository = userRepository;
         this.subjectRepository = subjectRepository;
         this.reviewRepository = reviewRepository;
         this.availabilitySlotRepository = availabilitySlotRepository;
         this.offerSlotRepository = offerSlotRepository;
+        this.bookingRepository = bookingRepository;
     }
 
     /**
@@ -92,7 +96,10 @@ public class OfferController {
             @RequestParam(required = false) Boolean onlineOnly,
             @RequestParam(required = false) String search
     ) {
-        List<Offer> offers = offerRepository.findAll();
+        List<Offer> offers = offerRepository.findAll().stream()
+                .filter(o -> o.getStatusId() == 1)
+                .collect(Collectors.toList());
+
         if (subject != null && !subject.isEmpty()) {
             offers = offers.stream()
                     .filter(o -> {
@@ -174,7 +181,13 @@ public class OfferController {
                 String dayName = getDayName(slot.getDayOfWeek());
                 String start = slot.getStartTime().toString().substring(0, 5);
                 String label = dayName + " " + start;
-                slots.add(new SlotDto(slot.getId(), label, slot.getDayOfWeek().intValue()));
+
+                boolean isBooked = bookingRepository
+                        .findByOfferIdAndAvailabilitySlotId(offer.getId(), slot.getId())
+                        .stream()
+                        .anyMatch(b -> b.getStatusId() == 3 || b.getStatusId() == 6);
+
+                slots.add(new SlotDto(slot.getId(), label, slot.getDayOfWeek().intValue(), isBooked));
             }
         }
 
@@ -237,7 +250,7 @@ public class OfferController {
      * Creates a new tutoring offer.
      *
      * @param request the offer creation data (tutorId, subjectId, details,
-     * price, offerType, availabilitySlotIds)
+     *                price, offerType, availabilitySlotIds)
      * @return ResponseEntity with status 200 OK on success, or error message
      */
     @PostMapping
@@ -261,17 +274,17 @@ public class OfferController {
                 offerSlotRepository.save(offerSlot);
             }
         }
-
         return ResponseEntity.ok().build();
     }
 
     /**
      * Deletes an offer by its ID.
      * Includes BOLA protection logging.
-     * * @param id the unique identifier of the offer to delete
+     *
+     * @param id the unique identifier of the offer to delete
      * @param authentication the security context containing the logged-in user's details
-     * @return  ResponseEntity with status  200 OK if deletion was successful,
-     * or 404 Not Found if the offer does not exist
+     * @return ResponseEntity with status 200 OK if deletion was successful,
+     *         or 404 Not Found if the offer does not exist
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR')")
@@ -290,7 +303,7 @@ public class OfferController {
             logger.warn("SECURITY ALERT (BOLA): User ID {} attempted to delete Offer ID {} belonging to Tutor ID {}",
                     loggedInUserId, id, offerOpt.get().getTutorId());
             return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
-                    .body("Nie możesz usunąć cudzej oferty.");
+                    .body("You cannot delete another user's offer.");
         }
 
         offerRepository.deleteById(id);
@@ -300,11 +313,12 @@ public class OfferController {
     /**
      * Updates an existing offer with the given ID.
      * Includes BOLA protection logging.
-     * * @param id      the unique identifier of the offer to update
+     *
+     * @param id      the unique identifier of the offer to update
      * @param request the object containing new offer data (tutorId is ignored, statusId is fixed)
      * @param authentication the security context containing the logged-in user's details
-     * @return ResponseEntity with status  200 OK on successful update,
-     * or 404 Not Found if the offer does not exist
+     * @return ResponseEntity with status 200 OK on successful update,
+     *         or 404 Not Found if the offer does not exist
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR')")
@@ -325,7 +339,7 @@ public class OfferController {
             logger.warn("SECURITY ALERT (BOLA): User ID {} attempted to update Offer ID {} belonging to Tutor ID {}",
                     loggedInUserId, id, offer.getTutorId());
             return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
-                    .body("Nie możesz modyfikować cudzej oferty.");
+                    .body("You cannot modify another user's offer.");
         }
 
         offer.setSubjectId(request.getSubjectId());
@@ -343,12 +357,12 @@ public class OfferController {
                 offerSlotRepository.save(offerSlot);
             }
         }
-
         return ResponseEntity.ok().build();
     }
 
     /**
      * Maps an internal status ID to a human-readable status name.
+     *
      * @param statusId the numeric status identifier (e.g., 1, 3, 7)
      * @return the corresponding status string, or "UNKNOWN" if the ID is not recognized
      */

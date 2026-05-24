@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vectorpeaks.edulink.data.model.SubjectDto
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.network.RetrofitClient
 import com.vectorpeaks.edulink.security.AuthPreferencesManager
@@ -117,7 +118,7 @@ class ProfileViewModel : ViewModel() {
             try {
                 val response = RetrofitClient.apiService.deleteUser(userId)
                 if (response.isSuccessful) {
-                    authPrefs.clearAll() // Wyczyść token, refresh token, userId
+                    authPrefs.clearAll()
                     onSuccess()
                 } else {
                     _uiState.value = ProfileUiState.Error("Błąd usuwania: ${response.code()}")
@@ -138,13 +139,46 @@ class ProfileViewModel : ViewModel() {
     private val _tutorSubjects = MutableStateFlow<List<String>>(emptyList())
     val tutorSubjects: StateFlow<List<String>> = _tutorSubjects
 
+    private val _tutorSubjectDtos = MutableStateFlow<List<SubjectDto>>(emptyList())
+
+    val tutorSubjectDtos: StateFlow<List<SubjectDto>> = _tutorSubjectDtos
+
     fun loadTutorSubjects(userId: Int) {
         viewModelScope.launch {
             try {
                 val offers = RetrofitClient.apiService.getOffersByTutor(userId)
-                _tutorSubjects.value = offers.map { it.subject }.distinct().sorted()
+                val subjectNames = offers.map { it.subject }.distinct().sorted()
+                _tutorSubjects.value = subjectNames
+
+                val allSubjectDtos = RetrofitClient.apiService.getSubjectsWithId()
+                _tutorSubjectDtos.value = allSubjectDtos
+                    .filter { it.name in subjectNames }
+                    .sortedBy { it.name }
             } catch (e: Exception) {
                 _tutorSubjects.value = emptyList()
+                _tutorSubjectDtos.value = emptyList()
+            }
+        }
+    }
+
+    fun loadStudentSubjects(userId: Int) {
+        viewModelScope.launch {
+            try {
+                val bookings = RetrofitClient.apiService.getBookingsForStudent(userId)
+                val acceptedSubjects = bookings
+                    .filter { it.status == "ACCEPTED" }
+                    .map { it.subject }
+                    .distinct()
+                    .sorted()
+                _tutorSubjects.value = acceptedSubjects
+
+                val allSubjectDtos = RetrofitClient.apiService.getSubjectsWithId()
+                _tutorSubjectDtos.value = allSubjectDtos
+                    .filter { it.name in acceptedSubjects }
+                    .sortedBy { it.name }
+            } catch (e: Exception) {
+                _tutorSubjects.value = emptyList()
+                _tutorSubjectDtos.value = emptyList()
             }
         }
     }

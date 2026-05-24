@@ -19,6 +19,7 @@ import com.vectorpeaks.edulink.data.model.user.AdminStatsResponse
 import com.vectorpeaks.edulink.data.model.user.AdminReportsResponse
 import com.vectorpeaks.edulink.data.model.user.GlobalLimitDto
 import com.vectorpeaks.edulink.data.model.user.ReviewResponse
+import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -223,10 +224,56 @@ interface ApiService {
     @POST("api/auth/logout")
     suspend fun logout(@Body body: Map<String, String>): Response<Unit>
 
+    @PUT("api/bookings/{bookingId}/complete")
+    suspend fun completeBooking(@Path("bookingId") bookingId: Int): Response<Unit>
+
+    // ==================== Admin: PDF Report ====================
+
     @Streaming
     @GET("api/admin/reports/pdf")
     suspend fun downloadReportPdf(
-        @Query("from") from: String,
-        @Query("to")   to: String
+        @Query("from")             from: String,
+        @Query("to")               to: String,
+        @Query("topSubjectsN")     topSubjectsN: Int,
+        @Query("topTutorsN")       topTutorsN: Int,
+        @Query("includeSubjects")  includeSubjects: Boolean,
+        @Query("includeTutors")    includeTutors: Boolean
+    ): ResponseBody
+
+    // ==================== Tutor: PDF Report ====================
+
+    @GET("api/tutor/{tutorId}/reports/pdf")
+    @Streaming
+    suspend fun downloadTutorReportPdf(
+        @Path("tutorId")          tutorId        : Int,
+        @Query("from")            from           : String,
+        @Query("to")              to             : String,
+        @Query("includeStudents") includeStudents: Boolean,
+        @Query("includeSubjects") includeSubjects: Boolean,
+        @Query("subjectIds")      subjectIds     : List<Int>,
+        @Query("includeReviews")  includeReviews : Boolean,
+        @Query("reviewsN")        reviewsN       : Int
+    ): ResponseBody
+
+    @GET("api/tutor/{tutorId}/schedule/pdf")
+    @Streaming
+    suspend fun downloadTutorSchedulePdf(
+        @Path("tutorId")           tutorId        : Int,
+        @Query("subjectIds")       subjectIds     : List<Int>,
+        @Query("includeStudents")  includeStudents: Boolean,
+        @Query("includeTotalHours") includeTotalHours: Boolean,
+        @Query("days")             days           : List<Int>
+    ): ResponseBody
+
+    // ==================== Student: PDF Report ====================
+
+    @GET("api/student/{studentId}/schedule/pdf")
+    @Streaming
+    suspend fun downloadStudentSchedulePdf(
+        @Path("studentId")         studentId        : Int,
+        @Query("subjectIds")       subjectIds        : List<Int>,
+        @Query("includeTutors")    includeTutors     : Boolean,
+        @Query("includeTotalHours") includeTotalHours: Boolean,
+        @Query("days")             days             : List<Int>
     ): ResponseBody
 }

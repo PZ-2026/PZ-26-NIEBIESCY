@@ -1,7 +1,7 @@
 /*
  * AvailabilitySlotController.java
  *
- * Version: 1.2
+ * Version: 1.3
  * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 
 /**
  * REST controller for managing availability slots.
- * * <p>Provides endpoints to retrieve global slots defined by the admin,
+ * Provides endpoints to retrieve global slots defined by the admin,
  * as well as slots specific to a given tutor or offer.
  *
  * @version 1.2
@@ -67,7 +67,8 @@ public class AvailabilitySlotController {
                 .map(slot -> new SlotDto(
                         slot.getId(),
                         formatSlotLabel(slot),
-                        slot.getDayOfWeek().intValue()))
+                        slot.getDayOfWeek().intValue(),
+                        false))
                 .collect(Collectors.toList());
     }
 
@@ -91,7 +92,8 @@ public class AvailabilitySlotController {
                 .map(slot -> new SlotDto(
                         slot.getId(),
                         formatSlotLabel(slot),
-                        slot.getDayOfWeek().intValue()))
+                        slot.getDayOfWeek().intValue(),
+                        false))
                 .collect(Collectors.toList());
     }
 
@@ -120,7 +122,8 @@ public class AvailabilitySlotController {
                 .map(slot -> new SlotDto(
                         slot.getId(),
                         formatSlotLabel(slot),
-                        slot.getDayOfWeek().intValue()))
+                        slot.getDayOfWeek().intValue(),
+                        false))
                 .collect(Collectors.toList());
     }
 

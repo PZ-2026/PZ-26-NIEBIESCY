@@ -14,13 +14,14 @@ sealed class BookingUiState {
     object Loading : BookingUiState()
     data class Success(val message: String) : BookingUiState()
     data class Error(val message: String) : BookingUiState()
+    object SlotTaken : BookingUiState()
 }
 
 class BookingViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<BookingUiState>(BookingUiState.Idle)
     val uiState: StateFlow<BookingUiState> = _uiState
 
-    fun createBooking(offerId: Int, studentId: Int, slotId: Int, onSuccess: () -> Unit) {
+    fun createBooking(offerId: Int, studentId: Int, slotId: Int, onSuccess: () -> Unit, onSlotTaken: () -> Unit) {
         viewModelScope.launch {
             _uiState.value = BookingUiState.Loading
             try {
@@ -29,6 +30,9 @@ class BookingViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     _uiState.value = BookingUiState.Success("Rezerwacja została złożona")
                     onSuccess()
+                } else if (response.code() == 409) {
+                    _uiState.value = BookingUiState.SlotTaken
+                    onSlotTaken()
                 } else {
                     _uiState.value = BookingUiState.Error("Błąd: ${response.code()}")
                 }

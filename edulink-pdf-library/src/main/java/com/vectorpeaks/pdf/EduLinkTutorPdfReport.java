@@ -1,7 +1,7 @@
 /*
- * EduLinkPdfReport.java
+ * EduLinkTutorPdfReport.java
  *
- * Version: 1.1
+ * Version: 1.0.0
  * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
@@ -32,54 +32,52 @@ import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Main class of the EduLink PDF report library.
- * Provides a fluent Builder API to configure and generate a PDF report
- * containing summary statistics, booking status distribution, top subjects, and top tutors.
+ * PDF report generator for a tutor.
+ * Provides a fluent Builder API to produce a report containing
+ * summary statistics, student lists, subject breakdowns, and reviews.
  *
  * <p>Usage example:
  * <pre>
- * byte[] pdf = new EduLinkPdfReport()
- *     .title("EduLink Report")
+ * byte[] pdf = new EduLinkTutorPdfReport()
+ *     .title("Tutor report: Jan Nowak")
  *     .period("2026-01-01", "2026-12-31")
  *     .addSummarySection(summaryData)
- *     .addBookingStatusSection(statusMap)
- *     .addTopSubjectsSection(subjectList)
- *     .addTopTutorsSection(tutorList)
+ *     .addStudentsSection(studentList)
+ *     .addSubjectsSection(subjectList)
+ *     .addReviewsSection(reviewList)
  *     .build();
  * </pre>
  *
  * @version 1.0.0
  * @author EduLink Team
  */
-public class EduLinkPdfReport {
+public class EduLinkTutorPdfReport {
 
-    // Brand colors
+    // Brand colors (identical to EduLinkPdfReport)
     private static final DeviceRgb COLOR_PRIMARY        = new DeviceRgb(63,  81,  181);
     private static final DeviceRgb COLOR_PRIMARY_LIGHT  = new DeviceRgb(197, 202, 233);
     private static final DeviceRgb COLOR_SUCCESS        = new DeviceRgb(76,  175,  80);
-    private static final DeviceRgb COLOR_WARNING        = new DeviceRgb(255, 193,   7);
     private static final DeviceRgb COLOR_TEAL           = new DeviceRgb(  0, 150, 136);
     private static final DeviceRgb COLOR_SURFACE        = new DeviceRgb(245, 245, 250);
     private static final DeviceRgb COLOR_TEXT_SECONDARY = new DeviceRgb(117, 117, 117);
 
     // Builder state
-    private String               reportTitle      = "EduLink Report";
-    private String               periodFrom       = "";
-    private String               periodTo         = "";
-    private ReportSummaryData    summaryData      = null;
-    private Map<String, Long>    bookingStatusMap = null;
-    private List<SubjectReportRow> topSubjects    = null;
-    private List<TutorReportRow>   topTutors      = null;
+    private String              reportTitle  = "Tutor report";
+    private String              periodFrom   = "";
+    private String              periodTo     = "";
+    private SummaryData         summaryData  = null;
+    private List<StudentRow>    students     = null;
+    private List<SubjectRow>    subjects     = null;
+    private List<ReviewRow>     reviews      = null;
 
     // Fonts (initialized in build())
     private PdfFont fontRegular;
     private PdfFont fontBold;
 
     // ========================================================================
-    // Builder API – each method returns this for method chaining
+    // Builder API
     // ========================================================================
 
     /**
@@ -88,7 +86,7 @@ public class EduLinkPdfReport {
      * @param title the report title
      * @return this instance for method chaining
      */
-    public EduLinkPdfReport title(String title) {
+    public EduLinkTutorPdfReport title(String title) {
         this.reportTitle = title;
         return this;
     }
@@ -100,77 +98,53 @@ public class EduLinkPdfReport {
      * @param to   end date (e.g., "2026-12-31")
      * @return this instance for method chaining
      */
-    public EduLinkPdfReport period(String from, String to) {
+    public EduLinkTutorPdfReport period(String from, String to) {
         this.periodFrom = from;
         this.periodTo   = to;
         return this;
     }
 
     /**
-     * Adds a summary statistics section (cards with total bookings, new offers, new users).
+     * Adds the summary statistics section.
      *
      * @param data the summary data object
      * @return this instance for method chaining
      */
-    public EduLinkPdfReport addSummarySection(ReportSummaryData data) {
+    public EduLinkTutorPdfReport addSummarySection(SummaryData data) {
         this.summaryData = data;
         return this;
     }
 
     /**
-     * Adds a table of booking status distribution.
+     * Adds the list of students (with subject and status) as a table.
      *
-     * @param statusMap map of status name → number of bookings
+     * @param studentList list of student rows
      * @return this instance for method chaining
      */
-    public EduLinkPdfReport addBookingStatusSection(Map<String, Long> statusMap) {
-        this.bookingStatusMap = statusMap;
+    public EduLinkTutorPdfReport addStudentsSection(List<StudentRow> studentList) {
+        this.students = studentList;
         return this;
     }
 
     /**
-     * Adds a table of top subjects by number of bookings.
+     * Adds a table of subjects taught (with booking counts and average ratings).
      *
-     * @param subjects list of subject rows (recommended max 5-10)
+     * @param subjectList list of subject rows
      * @return this instance for method chaining
      */
-    public EduLinkPdfReport addTopSubjectsSection(List<SubjectReportRow> subjects) {
-        this.topSubjects = subjects;
+    public EduLinkTutorPdfReport addSubjectsSection(List<SubjectRow> subjectList) {
+        this.subjects = subjectList;
         return this;
     }
 
     /**
-     * Adds a table of top subjects with a row limit.
+     * Adds a table of reviews left by students.
      *
-     * @param subjects full list of subject rows (backend may provide more than the limit)
-     * @param topN     number of rows to show in the PDF (1-100)
+     * @param reviewList list of review rows
      * @return this instance for method chaining
      */
-    public EduLinkPdfReport addTopSubjectsSection(List<SubjectReportRow> subjects, int topN) {
-        this.topSubjects = subjects.subList(0, Math.min(topN, subjects.size()));
-        return this;
-    }
-
-    /**
-     * Adds a table of top tutors by number of bookings.
-     *
-     * @param tutors list of tutor rows (recommended max 5-10)
-     * @return this instance for method chaining
-     */
-    public EduLinkPdfReport addTopTutorsSection(List<TutorReportRow> tutors) {
-        this.topTutors = tutors;
-        return this;
-    }
-
-    /**
-     * Adds a table of top tutors with a row limit.
-     *
-     * @param tutors full list of tutor rows
-     * @param topN   number of rows to show in the PDF (1-100)
-     * @return this instance for method chaining
-     */
-    public EduLinkPdfReport addTopTutorsSection(List<TutorReportRow> tutors, int topN) {
-        this.topTutors = tutors.subList(0, Math.min(topN, tutors.size()));
+    public EduLinkTutorPdfReport addReviewsSection(List<ReviewRow> reviewList) {
+        this.reviews = reviewList;
         return this;
     }
 
@@ -180,7 +154,6 @@ public class EduLinkPdfReport {
 
     /**
      * Builds the PDF report and returns its content as a byte array.
-     * Call this method after configuring all sections.
      *
      * @return byte array containing the generated PDF
      * @throws IOException if font loading or PDF writing fails
@@ -200,10 +173,10 @@ public class EduLinkPdfReport {
         renderMetaInfo(document);
         renderDivider(document);
 
-        if (summaryData      != null) renderSummaryCards(document);
-        if (bookingStatusMap != null) renderBookingStatusTable(document);
-        if (topSubjects      != null) renderTopSubjectsTable(document);
-        if (topTutors        != null) renderTopTutorsTable(document);
+        if (summaryData != null) renderSummaryCards(document);
+        if (students    != null) renderStudentsTable(document);
+        if (subjects    != null) renderSubjectsTable(document);
+        if (reviews     != null) renderReviewsTable(document);
 
         renderFooter(document);
         document.close();
@@ -266,56 +239,68 @@ public class EduLinkPdfReport {
     }
 
     private void renderSummaryCards(Document doc) {
-        addSectionTitle(doc, "Period summary");
+        addSectionTitle(doc, "Summary");
 
         Table cards = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1}))
                 .useAllAvailableWidth()
                 .setMarginBottom(20);
 
-        cards.addCell(summaryCard("Bookings",
-                String.valueOf(summaryData.totalBookings), COLOR_PRIMARY));
-        cards.addCell(summaryCard("New offers",
-                String.valueOf(summaryData.newOffers), COLOR_SUCCESS));
-        cards.addCell(summaryCard("New users",
-                String.valueOf(summaryData.newUsers), COLOR_WARNING));
+        cards.addCell(summaryCard(
+                "Active\ntutorings",
+                String.valueOf(summaryData.activeBookings),
+                COLOR_PRIMARY));
+        cards.addCell(summaryCard(
+                "Completed\ntutorings",
+                String.valueOf(summaryData.completedBookings),
+                COLOR_SUCCESS));
+        cards.addCell(summaryCard(
+                "Average rating",
+                summaryData.avgRating != null
+                        ? String.format("%.1f ★", summaryData.avgRating)
+                        : "—",
+                COLOR_TEAL));
 
         doc.add(cards);
     }
 
-    private void renderBookingStatusTable(Document doc) {
-        addSectionTitle(doc, "Bookings by status");
+    private void renderStudentsTable(Document doc) {
+        if (students.isEmpty()) return;
+        addSectionTitle(doc, "Students");
 
-        Table table = styledTable(new float[]{3, 1});
+        Table table = styledTable(new float[]{0.5f, 3, 2, 1.5f});
+        table.addHeaderCell(headerCell("#"));
+        table.addHeaderCell(headerCell("Student"));
+        table.addHeaderCell(headerCell("Subject"));
         table.addHeaderCell(headerCell("Status"));
-        table.addHeaderCell(headerCell("Count"));
 
-        boolean odd = true;
-        for (Map.Entry<String, Long> entry : bookingStatusMap.entrySet()) {
-            DeviceRgb bg = odd ? COLOR_SURFACE : null;
-            table.addCell(dataCell(translateStatus(entry.getKey()), bg, TextAlignment.LEFT));
-            table.addCell(dataCell(String.valueOf(entry.getValue()), bg, TextAlignment.CENTER));
-            odd = !odd;
+        for (int i = 0; i < students.size(); i++) {
+            StudentRow row = students.get(i);
+            DeviceRgb bg = (i % 2 == 0) ? COLOR_SURFACE : null;
+            table.addCell(dataCell(String.valueOf(i + 1),          bg, TextAlignment.CENTER));
+            table.addCell(dataCell(row.studentName,                bg, TextAlignment.LEFT));
+            table.addCell(dataCell(row.subjectName,                bg, TextAlignment.LEFT));
+            table.addCell(dataCell(translateStatus(row.bookingStatus), bg, TextAlignment.CENTER));
         }
 
         doc.add(table);
         doc.add(new Paragraph().setMarginBottom(20));
     }
 
-    private void renderTopSubjectsTable(Document doc) {
-        if (topSubjects.isEmpty()) return;
-        addSectionTitle(doc, "Most popular subjects (by bookings)");
+    private void renderSubjectsTable(Document doc) {
+        if (subjects.isEmpty()) return;
+        addSectionTitle(doc, "Subjects taught");
 
-        Table table = styledTable(new float[]{0.5f, 3, 1, 1});
+        Table table = styledTable(new float[]{0.5f, 3, 1.5f, 1.5f});
         table.addHeaderCell(headerCell("#"));
         table.addHeaderCell(headerCell("Subject"));
         table.addHeaderCell(headerCell("Bookings"));
         table.addHeaderCell(headerCell("Avg rating"));
 
-        for (int i = 0; i < topSubjects.size(); i++) {
-            SubjectReportRow row = topSubjects.get(i);
+        for (int i = 0; i < subjects.size(); i++) {
+            SubjectRow row = subjects.get(i);
             DeviceRgb bg = (i % 2 == 0) ? COLOR_SURFACE : null;
-            table.addCell(dataCell(String.valueOf(i + 1),        bg, TextAlignment.CENTER));
-            table.addCell(dataCell(row.subjectName,              bg, TextAlignment.LEFT));
+            table.addCell(dataCell(String.valueOf(i + 1),            bg, TextAlignment.CENTER));
+            table.addCell(dataCell(row.subjectName,                  bg, TextAlignment.LEFT));
             table.addCell(dataCell(String.valueOf(row.bookingCount), bg, TextAlignment.CENTER));
             table.addCell(dataCell(
                     row.avgRating != null ? String.format("%.1f ★", row.avgRating) : "—",
@@ -326,24 +311,26 @@ public class EduLinkPdfReport {
         doc.add(new Paragraph().setMarginBottom(20));
     }
 
-    private void renderTopTutorsTable(Document doc) {
-        if (topTutors.isEmpty()) return;
-        addSectionTitle(doc, "Top rated tutors");
+    private void renderReviewsTable(Document doc) {
+        if (reviews.isEmpty()) return;
+        addSectionTitle(doc, "Student reviews");
 
-        Table table = styledTable(new float[]{0.5f, 3, 1, 1});
-        table.addHeaderCell(headerCell("#"));
-        table.addHeaderCell(headerCell("Tutor"));
-        table.addHeaderCell(headerCell("Bookings"));
-        table.addHeaderCell(headerCell("Avg rating"));
+        Table table = styledTable(new float[]{2, 0.7f, 4, 1.5f});
+        table.addHeaderCell(headerCell("Student"));
+        table.addHeaderCell(headerCell("Rating"));
+        table.addHeaderCell(headerCell("Comment"));
+        table.addHeaderCell(headerCell("Date"));
 
-        for (int i = 0; i < topTutors.size(); i++) {
-            TutorReportRow row = topTutors.get(i);
+        for (int i = 0; i < reviews.size(); i++) {
+            ReviewRow row = reviews.get(i);
             DeviceRgb bg = (i % 2 == 0) ? COLOR_SURFACE : null;
-            table.addCell(dataCell(String.valueOf(i + 1), bg, TextAlignment.CENTER));
-            table.addCell(dataCell(row.tutorName,         bg, TextAlignment.LEFT));
-            table.addCell(dataCell(String.valueOf(row.bookingCount), bg, TextAlignment.CENTER));
+            table.addCell(dataCell(row.studentName,                       bg, TextAlignment.LEFT));
+            table.addCell(dataCell(row.rating + " ★",                    bg, TextAlignment.CENTER));
+            table.addCell(dataCell(row.comment != null ? row.comment : "—", bg, TextAlignment.LEFT));
             table.addCell(dataCell(
-                    row.avgRating != null ? String.format("%.1f", row.avgRating) : "—",
+                    row.createdAt != null
+                            ? row.createdAt.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+                            : "—",
                     bg, TextAlignment.CENTER));
         }
 
@@ -437,25 +424,13 @@ public class EduLinkPdfReport {
         }
     }
 
-    // ========================================================================
-    // Font loading from classpath
-    // ========================================================================
-
-    /**
-     * Loads a TTF font from the classpath resources.
-     * DejaVu fonts support Polish characters (UTF-8).
-     * If the font is not found, falls back to Helvetica (without Unicode support).
-     *
-     * @param resourceName name of the font resource (e.g., "DejaVuSans.ttf")
-     * @return loaded PdfFont object
-     * @throws IOException if font loading fails
-     */
     private PdfFont loadFont(String resourceName) throws IOException {
         InputStream is = getClass().getClassLoader().getResourceAsStream(resourceName);
         if (is == null) {
             return PdfFontFactory.createFont(
                     com.itextpdf.io.font.constants.StandardFonts.HELVETICA,
-                    PdfEncodings.WINANSI, PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
+                    PdfEncodings.WINANSI,
+                    PdfFontFactory.EmbeddingStrategy.PREFER_EMBEDDED);
         }
         byte[] fontBytes = is.readAllBytes();
         is.close();
@@ -465,54 +440,78 @@ public class EduLinkPdfReport {
     }
 
     // ========================================================================
-    // Data transfer classes (inner DTOs of the library)
-    // The library user creates these objects and passes them to the builder.
+    // Data Transfer Objects (inner DTOs)
     // ========================================================================
 
     /**
-     * Data object for the summary cards section.
+     * Summary data for the cards section.
      */
-    public static class ReportSummaryData {
-        /** Total number of bookings in the period. */
-        public final long totalBookings;
-        /** Number of new offers created in the period. */
-        public final long newOffers;
-        /** Number of new users registered in the period. */
-        public final long newUsers;
+    public static class SummaryData {
+        /** Number of active bookings (accepted or pending). */
+        public final long   activeBookings;
+        /** Number of completed bookings. */
+        public final long   completedBookings;
+        /** Average rating of the tutor (may be null if no reviews). */
+        public final Double avgRating;
 
         /**
-         * Constructs a new ReportSummaryData object.
+         * Constructs a new SummaryData object.
          *
-         * @param totalBookings total bookings in the period
-         * @param newOffers     new offers in the period
-         * @param newUsers      new users in the period
+         * @param activeBookings    number of active bookings
+         * @param completedBookings number of completed bookings
+         * @param avgRating         average rating (nullable)
          */
-        public ReportSummaryData(long totalBookings, long newOffers, long newUsers) {
-            this.totalBookings = totalBookings;
-            this.newOffers     = newOffers;
-            this.newUsers      = newUsers;
+        public SummaryData(long activeBookings, long completedBookings, Double avgRating) {
+            this.activeBookings    = activeBookings;
+            this.completedBookings = completedBookings;
+            this.avgRating         = avgRating;
         }
     }
 
     /**
-     * Row data for the top subjects table.
+     * Row data for the students table.
      */
-    public static class SubjectReportRow {
+    public static class StudentRow {
+        /** Full name of the student. */
+        public final String studentName;
         /** Name of the subject. */
         public final String subjectName;
-        /** Number of bookings for this subject in the period. */
+        /** Status of the booking (e.g., "ACCEPTED", "PENDING"). */
+        public final String bookingStatus;
+
+        /**
+         * Constructs a new StudentRow object.
+         *
+         * @param studentName   student's full name
+         * @param subjectName   subject name
+         * @param bookingStatus booking status string
+         */
+        public StudentRow(String studentName, String subjectName, String bookingStatus) {
+            this.studentName   = studentName;
+            this.subjectName   = subjectName;
+            this.bookingStatus = bookingStatus;
+        }
+    }
+
+    /**
+     * Row data for the subjects table.
+     */
+    public static class SubjectRow {
+        /** Name of the subject. */
+        public final String subjectName;
+        /** Number of bookings for this subject. */
         public final long   bookingCount;
-        /** Average rating of tutors teaching this subject (may be null). */
+        /** Average rating (may be null if no reviews). */
         public final Double avgRating;
 
         /**
-         * Constructs a new SubjectReportRow object.
+         * Constructs a new SubjectRow object.
          *
-         * @param subjectName  name of the subject
-         * @param bookingCount number of bookings for this subject
-         * @param avgRating    average rating (null if no ratings)
+         * @param subjectName  subject name
+         * @param bookingCount number of bookings
+         * @param avgRating    average rating (nullable)
          */
-        public SubjectReportRow(String subjectName, long bookingCount, Double avgRating) {
+        public SubjectRow(String subjectName, long bookingCount, Double avgRating) {
             this.subjectName  = subjectName;
             this.bookingCount = bookingCount;
             this.avgRating    = avgRating;
@@ -520,27 +519,32 @@ public class EduLinkPdfReport {
     }
 
     /**
-     * Row data for the top tutors table.
+     * Row data for the reviews table.
      */
-    public static class TutorReportRow {
-        /** Full name of the tutor. */
-        public final String tutorName;
-        /** Number of bookings for this tutor in the period. */
-        public final long   bookingCount;
-        /** Average rating (may be null if no reviews). */
-        public final Double avgRating;
+    public static class ReviewRow {
+        /** Full name of the student who left the review. */
+        public final String        studentName;
+        /** Rating value (1-5). */
+        public final int           rating;
+        /** Comment text (may be null). */
+        public final String        comment;
+        /** Timestamp when the review was created. */
+        public final LocalDateTime createdAt;
 
         /**
-         * Constructs a new TutorReportRow object.
+         * Constructs a new ReviewRow object.
          *
-         * @param tutorName    full name of the tutor
-         * @param bookingCount number of bookings for this tutor
-         * @param avgRating    average rating (null if no reviews)
+         * @param studentName student's full name
+         * @param rating      rating value
+         * @param comment     review comment (nullable)
+         * @param createdAt   creation timestamp
          */
-        public TutorReportRow(String tutorName, long bookingCount, Double avgRating) {
-            this.tutorName    = tutorName;
-            this.bookingCount = bookingCount;
-            this.avgRating    = avgRating;
+        public ReviewRow(String studentName, int rating,
+                         String comment, LocalDateTime createdAt) {
+            this.studentName = studentName;
+            this.rating      = rating;
+            this.comment     = comment;
+            this.createdAt   = createdAt;
         }
     }
 }

@@ -1,7 +1,7 @@
 /*
  * BookingController.java
  *
- * Version: 1.2
+ * Version: 1.3
  * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 /**
  * Controller for managing bookings (lesson reservations).
  * Provides endpoints to create bookings and retrieve bookings for a specific student.
- * * <p>Includes built-in BOLA (Broken Object Level Authorization) protection and security event logging.
+ * Includes built-in BOLA (Broken Object Level Authorization) protection and security event logging.
  *
  * @version 1.2
  * @author EduLink Team
@@ -57,7 +57,7 @@ public class BookingController {
      * @param userRepository      repository for users
      * @param slotRepository      repository for availability slots
      * @param reviewRepository    repository for reviews
-     * @param offerSlotRepository repository for offers slots
+     * @param offerSlotRepository repository for offer slots
      */
     public BookingController(BookingRepository bookingRepository,
                              OfferRepository offerRepository,
@@ -115,10 +115,12 @@ public class BookingController {
         }
 
         Short rating = null;
+        String reviewComment = null;
         if (booking.getId() != null) {
-            Optional<Review> reviewOpt = reviewRepository.findByBookingId(booking.getId().longValue());
+            Optional<Review> reviewOpt = reviewRepository.findByBookingId(booking.getId());
             if (reviewOpt.isPresent()) {
                 rating = reviewOpt.get().getRating();
+                reviewComment = reviewOpt.get().getComment();
             }
         }
 
@@ -133,6 +135,7 @@ public class BookingController {
         dto.setStatus(mapStatusId(booking.getStatusId()));
         dto.setRating(rating);
         dto.setTutorId(offer.getTutorId());
+        dto.setReviewComment(reviewComment);
         return dto;
     }
 
@@ -174,6 +177,16 @@ public class BookingController {
             return ResponseEntity.badRequest().body("Slot does not belong to this offer");
         }
 
+        boolean slotAlreadyBooked = bookingRepository
+                .findByOfferIdAndAvailabilitySlotId(request.getOfferId(), request.getAvailabilitySlotId())
+                .stream()
+                .anyMatch(b -> b.getStatusId() == 3 || b.getStatusId() == 6);
+
+        if (slotAlreadyBooked) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                    .body("Slot is already booked.");
+        }
+
         Booking booking = new Booking();
         booking.setOfferId(request.getOfferId());
         booking.setStudentId(request.getStudentId());
@@ -207,10 +220,9 @@ public class BookingController {
 
     /**
      * Updates the status of a booking.
-     * Logika zabezpieczająca przed IDOR/BOLA znajduje się wewnątrz metody wraz z loggerem.
      *
      * @param bookingId the ID of the booking
-     * @param status    new status string (ACCEPTED or REJECTED)
+     * @param status    new status string (ACCEPTED, REJECTED, or COMPLETED)
      * @param authentication the security context containing the logged-in user's details
      * @return ResponseEntity with success or error message
      */
@@ -239,7 +251,7 @@ public class BookingController {
             logger.warn("SECURITY ALERT (BOLA): User ID {} attempted to update booking ID {} belonging to Tutor ID {}",
                     loggedInUserId, bookingId, offer.getTutorId());
             return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
-                    .body("Nie masz uprawnień do zmiany statusu tej rezerwacji.");
+                    .body("You do not have permission to change the status of this booking.");
         }
 
         switch (status) {
@@ -248,6 +260,45 @@ public class BookingController {
             case "COMPLETED": booking.setStatusId(4); break;
             default: return ResponseEntity.badRequest().body("Unknown status: " + status);
         }
+        bookingRepository.save(booking);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Marks a booking as completed by the student.
+     *
+     * @param bookingId the ID of the booking
+     * @param authentication the security context containing the logged-in user's details
+     * @return ResponseEntity with success or error message
+     */
+    @PutMapping("/{bookingId}/complete")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
+    public ResponseEntity<?> completeBooking(
+            @PathVariable Integer bookingId,
+            org.springframework.security.core.Authentication authentication) {
+
+        Optional<Booking> bookingOpt = bookingRepository.findById(bookingId);
+        if (bookingOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Booking booking = bookingOpt.get();
+
+        Integer loggedInUserId = (Integer) authentication.getPrincipal();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && !booking.getStudentId().equals(loggedInUserId)) {
+            logger.warn("SECURITY ALERT (BOLA): User ID {} attempted to complete Booking ID {} belonging to Student ID {}",
+                    loggedInUserId, bookingId, booking.getStudentId());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body("You do not have permission to complete this booking.");
+        }
+
+        if (booking.getStatusId() != 6) {
+            return ResponseEntity.badRequest().body("Booking must be accepted before it can be completed.");
+        }
+
+        booking.setStatusId(4);
         bookingRepository.save(booking);
         return ResponseEntity.ok().build();
     }
