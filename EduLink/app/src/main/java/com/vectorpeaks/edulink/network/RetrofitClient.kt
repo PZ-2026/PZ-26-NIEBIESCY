@@ -38,7 +38,7 @@ object RetrofitClient {
             })
 
             // Custom interceptor adding Authorization header (jwt token)
-            .addInterceptor(AuthInterceptor(authPrefs) {apiService})
+            .addInterceptor(AuthInterceptor(authPrefs) { apiService })
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
