@@ -23,6 +23,7 @@ import com.vectorpeaks.edulink.ui.screens.register.RegisterScreen
 import com.vectorpeaks.edulink.ui.screens.student.ReviewsScreen
 import com.vectorpeaks.edulink.ui.screens.student.StudentMainScreen
 import com.vectorpeaks.edulink.ui.screens.tutor.TutorMainScreen
+import com.vectorpeaks.edulink.ui.screens.tutor.TutorReviewsScreen
 
 @Composable
 fun AppNavGraph() {
@@ -32,15 +33,11 @@ fun AppNavGraph() {
 
     var currentUser by remember { mutableStateOf<User?>(null) }
 
-    // Determine the start destination: if a refresh token exists -> the user was logged in
-    // Note: currentUser will be null after an app restart — handled below
     val startDestination = remember {
         if (authPrefs.getRefreshToken() != null) NavRoutes.AutoLogin.route
         else NavRoutes.Login.route
     }
 
-    // Observe session expiration from AuthInterceptor
-    // When the interceptor clears authPrefs -> navigate to login
     LaunchedEffect(Unit) {
         SessionManager.sessionExpired.collect {
             currentUser = null
@@ -50,13 +47,9 @@ fun AppNavGraph() {
         }
     }
 
-    NavHost(
-        navController    = navController,
-        startDestination = startDestination
-    ) {
+    NavHost(navController = navController, startDestination = startDestination) {
 
-        // ── Auto Login on App Restart ────────────────────────────
-        // The user had a valid refresh token — fetch their data
+        // ── Auto Login ───────────────────────────────────────────
         composable(NavRoutes.AutoLogin.route) {
             AutoLoginScreen(
                 authPrefs = authPrefs,
@@ -72,7 +65,6 @@ fun AppNavGraph() {
                     }
                 },
                 onFailure = {
-                    // Refresh token expired or network error -> login screen
                     navController.navigate(NavRoutes.Login.route) {
                         popUpTo(NavRoutes.AutoLogin.route) { inclusive = true }
                     }
@@ -87,8 +79,8 @@ fun AppNavGraph() {
                     currentUser = user
                     val destination = when (user.getRole()) {
                         RoleID.STUDENT -> NavRoutes.StudentMain.route
-                        RoleID.TUTOR -> NavRoutes.TutorMain.route
-                        RoleID.ADMIN -> NavRoutes.AdminMain.route
+                        RoleID.TUTOR   -> NavRoutes.TutorMain.route
+                        RoleID.ADMIN   -> NavRoutes.AdminMain.route
                     }
                     navController.navigate(destination) {
                         popUpTo(NavRoutes.Login.route) { inclusive = true }
@@ -98,40 +90,9 @@ fun AppNavGraph() {
             )
         }
 
-        composable(
-            route = NavRoutes.TutorMain.route + "?startTab={startTab}",
-            arguments = listOf(
-                navArgument("startTab") {
-                    type = NavType.IntType
-                    defaultValue = 0
-                }
-            )
-        ) { backStackEntry ->
-            val startTab = backStackEntry.arguments?.getInt("startTab") ?: 0
-            currentUser?.let { user ->
-                TutorMainScreen(
-                    user = user,
-                    startTab = startTab,
-                    onLogout = {
-                        currentUser = null
-                        navController.navigate(NavRoutes.Login.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    },
-                    onNavigateToReviews = { tutorId, tutorName ->
-                        navController.navigate(
-                            NavRoutes.TutorReviews.createRoute(tutorId, tutorName)
-                        )
-                    }
-                )
-            }
-        }
-
         // ── Register ─────────────────────────────────────────────
         composable(NavRoutes.Register.route) {
-            RegisterScreen(
-                onBackToLogin = { navController.popBackStack() }
-            )
+            RegisterScreen(onBackToLogin = { navController.popBackStack() })
         }
 
         // ── Student ──────────────────────────────────────────────
@@ -155,10 +116,20 @@ fun AppNavGraph() {
         }
 
         // ── Tutor ────────────────────────────────────────────────
-        composable(NavRoutes.TutorMain.route) {
+        composable(
+            route = NavRoutes.TutorMain.route + "?startTab={startTab}",
+            arguments = listOf(
+                navArgument("startTab") {
+                    type = NavType.IntType
+                    defaultValue = 0
+                }
+            )
+        ) { backStackEntry ->
+            val startTab = backStackEntry.arguments?.getInt("startTab") ?: 0
             currentUser?.let { user ->
                 TutorMainScreen(
                     user = user,
+                    startTab = startTab,
                     onLogout = {
                         currentUser = null
                         navController.navigate(NavRoutes.Login.route) {
@@ -167,7 +138,7 @@ fun AppNavGraph() {
                     },
                     onNavigateToReviews = { tutorId, tutorName ->
                         navController.navigate(
-                            NavRoutes.TutorReviews.createRoute(tutorId, tutorName)
+                            NavRoutes.TutorReviewsFromTutor.createRoute(tutorId, tutorName)
                         )
                     }
                 )
@@ -189,6 +160,7 @@ fun AppNavGraph() {
             }
         }
 
+        // ── Reviews (Student) ────────────────────────────────────
         composable(
             route = NavRoutes.TutorReviews.route,
             arguments = listOf(
@@ -196,12 +168,29 @@ fun AppNavGraph() {
                 navArgument("tutorName") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val tutorId = backStackEntry.arguments?.getInt("tutorId") ?: return@composable
+            val tutorId   = backStackEntry.arguments?.getInt("tutorId") ?: return@composable
             val tutorName = backStackEntry.arguments?.getString("tutorName") ?: ""
             ReviewsScreen(
                 tutorName = tutorName,
-                tutorId = tutorId,
-                onBack = {
+                tutorId   = tutorId,
+                onBack    = { navController.popBackStack() }
+            )
+        }
+
+        // ── Reviews (Tutor) ──────────────────────────────────────
+        composable(
+            route = NavRoutes.TutorReviewsFromTutor.route,
+            arguments = listOf(
+                navArgument("tutorId") { type = NavType.IntType },
+                navArgument("tutorName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val tutorId   = backStackEntry.arguments?.getInt("tutorId") ?: return@composable
+            val tutorName = backStackEntry.arguments?.getString("tutorName") ?: ""
+            TutorReviewsScreen(
+                tutorName = tutorName,
+                tutorId   = tutorId,
+                onBack    = {
                     navController.navigate(NavRoutes.TutorMain.route + "?startTab=1") {
                         popUpTo(NavRoutes.TutorMain.route + "?startTab={startTab}") {
                             inclusive = true

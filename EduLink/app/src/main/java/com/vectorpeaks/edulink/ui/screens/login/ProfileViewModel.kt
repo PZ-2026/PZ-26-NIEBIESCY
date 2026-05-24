@@ -135,4 +135,18 @@ class ProfileViewModel : ViewModel() {
         _showAddress.value = value
     }
 
+    private val _tutorSubjects = MutableStateFlow<List<String>>(emptyList())
+    val tutorSubjects: StateFlow<List<String>> = _tutorSubjects
+
+    fun loadTutorSubjects(userId: Int) {
+        viewModelScope.launch {
+            try {
+                val offers = RetrofitClient.apiService.getOffersByTutor(userId)
+                _tutorSubjects.value = offers.map { it.subject }.distinct().sorted()
+            } catch (e: Exception) {
+                _tutorSubjects.value = emptyList()
+            }
+        }
+    }
+
 }

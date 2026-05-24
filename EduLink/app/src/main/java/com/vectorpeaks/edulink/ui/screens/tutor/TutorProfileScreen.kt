@@ -18,6 +18,8 @@ import com.vectorpeaks.edulink.ui.screens.login.ProfileViewModel
 import com.vectorpeaks.edulink.ui.screens.login.ProfileUiState
 import com.vectorpeaks.edulink.ui.theme.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
 fun TutorProfileScreen(
@@ -37,9 +39,38 @@ fun TutorProfileScreen(
 
     val context = LocalContext.current
 
+    var showScheduleDialog by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+
+    // Checkboxy dla planu zajęć
+    var scheduleIncludeSubjects by remember { mutableStateOf(true) }
+    var scheduleIncludeStudents by remember { mutableStateOf(false) }
+    var scheduleIncludeHours by remember { mutableStateOf(false) }
+
+    // Dni tygodnia
+    var scheduleIncludeDates by remember { mutableStateOf(false) }
+    var scheduleDatesAll by remember { mutableStateOf(true) } // true = wszystkie, false = wybrane dni tygodnia
+    val daysOfWeek = listOf("Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela")
+    var scheduleSelectedDays by remember { mutableStateOf(setOf<String>()) }
+
+    var reportIncludeEarnings by remember { mutableStateOf(true) }
+    var reportIncludeLessonsCount by remember { mutableStateOf(true) }
+    var reportIncludeStudents by remember { mutableStateOf(false) }
+    var reportIncludeRatings by remember { mutableStateOf(false) }
+    var reportRatingsCount by remember { mutableStateOf("5") }
+    var reportRatingsCountError by remember { mutableStateOf<String?>(null) }
+
+    // Przedmioty
+    var reportIncludeSubjects by remember { mutableStateOf(false) }
+    var reportSubjectsAll by remember { mutableStateOf(true) } // true = wszystkie, false = wybrane
+    val availableSubjects by viewModel.tutorSubjects.collectAsState()
+    var reportSelectedSubjects by remember { mutableStateOf(setOf<String>()) }
+
     LaunchedEffect(userId) {
         viewModel.loadUser(userId)
+        viewModel.loadTutorSubjects(userId)
     }
+
 
     LaunchedEffect(uiState) {
         if (uiState is ProfileUiState.Success) {
@@ -149,32 +180,59 @@ fun TutorProfileScreen(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Surface),
-                    elevation = CardDefaults.cardElevation(2.dp)
+//                Card(
+//                    shape = RoundedCornerShape(16.dp),
+//                    colors = CardDefaults.cardColors(containerColor = Surface),
+//                    elevation = CardDefaults.cardElevation(2.dp)
+//                ) {
+//                    Column(modifier = Modifier.padding(16.dp)) {
+//                        Text("Ustawienia widoczności", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+//                        Spacer(modifier = Modifier.height(8.dp))
+//                        Row(
+//                            modifier = Modifier.fillMaxWidth(),
+//                            horizontalArrangement = Arrangement.SpaceBetween,
+//                            verticalAlignment = Alignment.CenterVertically
+//                        ) {
+//                            Column {
+//                                Text("Pokaż dokładny adres", style = MaterialTheme.typography.bodyMedium)
+//                                Text(
+//                                    "Uczniowie z zaakceptowaną lekcją zobaczą Twój adres",
+//                                    style = MaterialTheme.typography.bodySmall,
+//                                    color = OnSurfaceVariant
+//                                )
+//                            }
+//                            Switch(
+//                                checked = showAddress,
+//                                onCheckedChange = { viewModel.updateShowAddress(it) } // ← ZMIANA
+//                            )
+//                        }
+//                    }
+//                }
+//                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Ustawienia widoczności", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text("Pokaż dokładny adres", style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    "Uczniowie z zaakceptowaną lekcją zobaczą Twój adres",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = OnSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = showAddress,
-                                onCheckedChange = { viewModel.updateShowAddress(it) } // ← ZMIANA
-                            )
-                        }
+                    OutlinedButton(
+                        onClick = { showScheduleDialog = true },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
+                    ) {
+                        Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Plan zajęć", style = MaterialTheme.typography.bodyMedium)
+                    }
+
+                    OutlinedButton(
+                        onClick = { showReportDialog = true },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary)
+                    ) {
+                        Icon(Icons.Default.BarChart, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Raport", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -296,6 +354,309 @@ fun TutorProfileScreen(
             }
         )
     }
+
+    if (showScheduleDialog) {
+        AlertDialog(
+            onDismissRequest = { showScheduleDialog = false },
+            title = { Text("Wygeneruj plan zajęć", fontWeight = FontWeight.Bold) },
+            text = {
+                Box(
+                    modifier = Modifier.heightIn(max = 400.dp)
+                ) {
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState())
+                        ) {
+                            Text(
+                                "Wybierz, co ma zawierać plan:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = OnSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            CheckboxRow("Przedmioty", reportIncludeSubjects) {
+                                reportIncludeSubjects = it
+                                if (!it) reportSelectedSubjects = setOf()
+                            }
+                            if (reportIncludeSubjects) {
+                                Column(
+                                    modifier = Modifier
+                                        .padding(start = 16.dp)
+                                        .fillMaxWidth()
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(
+                                            selected = reportSubjectsAll,
+                                            onClick = {
+                                                reportSubjectsAll = true
+                                                reportSelectedSubjects = setOf()
+                                            },
+                                            colors = RadioButtonDefaults.colors(selectedColor = Primary)
+                                        )
+                                        Text("Wszystkie", style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(
+                                            selected = !reportSubjectsAll,
+                                            onClick = { reportSubjectsAll = false },
+                                            colors = RadioButtonDefaults.colors(selectedColor = Primary)
+                                        )
+                                        Text("Wybrane", style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    if (!reportSubjectsAll) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        if (availableSubjects.isEmpty()) {
+                                            Text(
+                                                text = "Brak przypisanych przedmiotów",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = OnSurfaceVariant,
+                                                modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                                            )
+                                        } else {
+                                            availableSubjects.forEach { subject ->
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(start = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Checkbox(
+                                                        checked = subject in reportSelectedSubjects,
+                                                        onCheckedChange = { checked ->
+                                                            reportSelectedSubjects = if (checked)
+                                                                reportSelectedSubjects + subject
+                                                            else
+                                                                reportSelectedSubjects - subject
+                                                        },
+                                                        colors = CheckboxDefaults.colors(checkedColor = Primary)
+                                                    )
+                                                    Text(subject, style = MaterialTheme.typography.bodyMedium)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CheckboxRow("Imiona uczniów", scheduleIncludeStudents) { scheduleIncludeStudents = it }
+                            CheckboxRow("Łączna liczba godzin", scheduleIncludeHours) { scheduleIncludeHours = it }
+
+                            // --- Sekcja: Daty ---
+                            CheckboxRow("Daty zajęć", scheduleIncludeDates) {
+                                scheduleIncludeDates = it
+                                if (!it) scheduleSelectedDays = setOf()
+                            }
+                            if (scheduleIncludeDates) {
+                                Column(
+                                    modifier = Modifier
+                                        .padding(start = 16.dp)
+                                        .fillMaxWidth()
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(
+                                            selected = scheduleDatesAll,
+                                            onClick = {
+                                                scheduleDatesAll = true
+                                                scheduleSelectedDays = setOf()
+                                            },
+                                            colors = RadioButtonDefaults.colors(selectedColor = Primary)
+                                        )
+                                        Text("Wszystkie", style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(
+                                            selected = !scheduleDatesAll,
+                                            onClick = { scheduleDatesAll = false },
+                                            colors = RadioButtonDefaults.colors(selectedColor = Primary)
+                                        )
+                                        Text("Wybrane dni tygodnia", style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    if (!scheduleDatesAll) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        daysOfWeek.forEach { day ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(start = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Checkbox(
+                                                    checked = day in scheduleSelectedDays,
+                                                    onCheckedChange = { checked ->
+                                                        scheduleSelectedDays = if (checked)
+                                                            scheduleSelectedDays + day
+                                                        else
+                                                            scheduleSelectedDays - day
+                                                    },
+                                                    colors = CheckboxDefaults.colors(checkedColor = Primary)
+                                                )
+                                                Text(day, style = MaterialTheme.typography.bodyMedium)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+            },
+
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // TODO: logika generowania planu z wybranymi opcjami
+                        showScheduleDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Generuj")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showScheduleDialog = false }) { Text("Anuluj") }
+            }
+        )
+    }
+
+
+    if (showReportDialog) {
+        AlertDialog(
+            onDismissRequest = { showReportDialog = false },
+            title = { Text("Raport korepetycji", fontWeight = FontWeight.Bold) },
+            text = {
+                Box(
+                    modifier = Modifier.heightIn(max = 400.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState())
+                    ) {
+                        Column {
+                            Text(
+                                "Wybierz, co ma zawierać raport:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = OnSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            CheckboxRow("Liczba prowadzonych korepetycji", reportIncludeLessonsCount) { reportIncludeLessonsCount = it }
+                            CheckboxRow("Liczba zakończonych korepetycji", reportIncludeLessonsCount) { reportIncludeLessonsCount = it }
+                            CheckboxRow("Lista uczniów", reportIncludeStudents) { reportIncludeStudents = it }
+                            CheckboxRow("Przedmioty", reportIncludeSubjects) {
+                                reportIncludeSubjects = it
+                                if (!it) reportSelectedSubjects = setOf()
+                            }
+                            if (reportIncludeSubjects) {
+                                Column(
+                                    modifier = Modifier
+                                        .padding(start = 16.dp)
+                                        .fillMaxWidth()
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(
+                                            selected = reportSubjectsAll,
+                                            onClick = {
+                                                reportSubjectsAll = true
+                                                reportSelectedSubjects = setOf()
+                                            },
+                                            colors = RadioButtonDefaults.colors(selectedColor = Primary)
+                                        )
+                                        Text("Wszystkie", style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(
+                                            selected = !reportSubjectsAll,
+                                            onClick = { reportSubjectsAll = false },
+                                            colors = RadioButtonDefaults.colors(selectedColor = Primary)
+                                        )
+                                        Text("Wybrane", style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    if (!reportSubjectsAll) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        if (availableSubjects.isEmpty()) {
+                                            Text(
+                                                text = "Brak przypisanych przedmiotów",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = OnSurfaceVariant,
+                                                modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                                            )
+                                        } else {
+                                            availableSubjects.forEach { subject ->
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(start = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Checkbox(
+                                                        checked = subject in reportSelectedSubjects,
+                                                        onCheckedChange = { checked ->
+                                                            reportSelectedSubjects = if (checked)
+                                                                reportSelectedSubjects + subject
+                                                            else
+                                                                reportSelectedSubjects - subject
+                                                        },
+                                                        colors = CheckboxDefaults.colors(checkedColor = Primary)
+                                                    )
+                                                    Text(subject, style = MaterialTheme.typography.bodyMedium)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CheckboxRow("Opinie uczniów", reportIncludeRatings) { reportIncludeRatings = it }
+                            if (reportIncludeRatings) {
+                                Column(
+                                    modifier = Modifier
+                                        .padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                        .fillMaxWidth()
+                                ) {
+                                    OutlinedTextField(
+                                        value = reportRatingsCount,
+                                        onValueChange = { value ->
+                                            reportRatingsCount = value.filter { it.isDigit() }
+                                            reportRatingsCountError = when {
+                                                reportRatingsCount.isEmpty() -> "Podaj liczbę opinii"
+                                                reportRatingsCount.toInt() < 1 -> "Minimalna wartość to 1"
+                                                reportRatingsCount.toInt() > 100 -> "Maksymalna wartość to 100"
+                                                else -> null
+                                            }
+                                        },
+                                        label = { Text("Liczba najnowszych opinii") },
+                                        singleLine = true,
+                                        isError = reportRatingsCountError != null,
+                                        supportingText = {
+                                            Text(
+                                                text = reportRatingsCountError ?: "Zakres: 1–100",
+                                                color = if (reportRatingsCountError != null) Error else OnSurfaceVariant,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // TODO: logika generowania raportu
+                        showReportDialog = false
+                    },
+                    enabled = !reportIncludeRatings || reportRatingsCountError == null && reportRatingsCount.isNotEmpty(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Generuj")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReportDialog = false }) { Text("Anuluj") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -319,4 +680,26 @@ private fun ProfileRow(
 
 fun isPhoneValid(phone: String): Boolean {
     return phone.isEmpty() || phone.matches(Regex("\\d{9}"))
+}
+
+@Composable
+private fun CheckboxRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(checkedColor = Primary)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = label, style = MaterialTheme.typography.bodyMedium)
+    }
 }
