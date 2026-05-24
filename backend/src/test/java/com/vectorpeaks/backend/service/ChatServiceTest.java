@@ -1,8 +1,8 @@
 /*
  * ChatServiceTest.java
  *
- * Version: 1.0
- * Date: 2026-05-18
+ * Version: 1.2
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -38,10 +38,10 @@ import static org.mockito.Mockito.*;
 /**
  * Unit tests for {@link ChatService}.
  *
- * <p>Verifies business logic, repository interactions, and push notification
- * triggers using pure Mockito unit tests.
+ * <p>Verifies business logic, repository interactions, participant authorization checks,
+ * and push notification triggers using pure Mockito unit tests.
  *
- * @version 1.0
+ * @version 1.2
  * @author EduLink Team
  * @see ChatService
  */
@@ -193,25 +193,42 @@ class ChatServiceTest {
 
     /**
      * Verifies that {@link ChatService#getMessages} delivers the entire structural
-     * text ledger mapped sequentially according to chronological guidelines.
+     * text ledger mapped sequentially according to chronological guidelines
+     * when the requester is a valid participant.
      */
     @Test
-    void getMessages_chatExists_returnsMessagesList() {
+    void getMessages_userIsParticipant_returnsMessagesList() {
         Integer chatId = 100;
+        Integer loggedInUserId = 1; // user1 is a participant
+
         Message msg = new Message();
         msg.setId(501);
         msg.setContent("Test message");
         msg.setSender(user1);
         msg.setSentAt(LocalDateTime.now());
 
-        when(chatRepository.existsById(chatId)).thenReturn(true);
+        when(chatRepository.findById(chatId)).thenReturn(Optional.of(sampleChat));
         when(messageRepository.findByChat_IdOrderBySentAtAsc(chatId)).thenReturn(List.of(msg));
 
-        List<MessageResponse> result = chatService.getMessages(chatId);
+        List<MessageResponse> result = chatService.getMessages(chatId, loggedInUserId);
 
         assertEquals(1, result.size());
         assertEquals("Test message", result.get(0).getContent());
         assertEquals(1, result.get(0).getSenderId());
+    }
+
+    /**
+     * Verifies that {@link ChatService#getMessages} throws a {@link SecurityException}
+     * if the targeted chat exists but the requesting user is not a participant.
+     */
+    @Test
+    void getMessages_userNotParticipant_throwsSecurityException() {
+        Integer chatId = 100;
+        Integer loggedInUserId = 999; // 999 is NOT a participant in sampleChat
+
+        when(chatRepository.findById(chatId)).thenReturn(Optional.of(sampleChat));
+
+        assertThrows(SecurityException.class, () -> chatService.getMessages(chatId, loggedInUserId));
     }
 
     /**
@@ -221,9 +238,11 @@ class ChatServiceTest {
     @Test
     void getMessages_chatDoesNotExist_throwsIllegalArgumentException() {
         Integer chatId = 999;
-        when(chatRepository.existsById(chatId)).thenReturn(false);
+        Integer loggedInUserId = 1;
 
-        assertThrows(IllegalArgumentException.class, () -> chatService.getMessages(chatId));
+        when(chatRepository.findById(chatId)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> chatService.getMessages(chatId, loggedInUserId));
     }
 
     // -----------------------------------------------------------------------
@@ -258,7 +277,7 @@ class ChatServiceTest {
     }
 
     /**
-     * Verifies that {@link ChatService#sendMessage} breaks routine operation and drops execution
+     * Verifies that {@link ChatService#sendMessage} drops execution
      * via an {@link IllegalArgumentException} when referencing a non-existent thread instance.
      */
     @Test
@@ -267,6 +286,22 @@ class ChatServiceTest {
         SendMessageRequest request = new SendMessageRequest();
 
         when(chatRepository.findById(chatId)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> chatService.sendMessage(chatId, request));
+    }
+
+    /**
+     * Verifies that {@link ChatService#sendMessage} drops execution
+     * via an {@link IllegalArgumentException} if a user tries to send a message
+     * to a chat they do not belong to.
+     */
+    @Test
+    void sendMessage_senderNotParticipant_throwsIllegalArgumentException() {
+        Integer chatId = 100;
+        SendMessageRequest request = new SendMessageRequest();
+        request.setSenderId(999); // External user tries to inject a message
+
+        when(chatRepository.findById(chatId)).thenReturn(Optional.of(sampleChat));
 
         assertThrows(IllegalArgumentException.class, () -> chatService.sendMessage(chatId, request));
     }

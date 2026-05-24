@@ -458,4 +458,95 @@
             r.setPhoneNumber(phoneNumber);
             return r;
         }
+
+        // -----------------------------------------------------------------------
+        // PUT /api/users/{id}/status
+        // -----------------------------------------------------------------------
+
+        /**
+         * Verifies that the endpoint returns 200 OK and updates the user status
+         * when valid data is provided.
+         */
+        @Test
+        void updateUserStatus_validData_returns200() throws Exception {
+            User user = buildUser(3, "Jan", "Kowalski", "jan@example.com", 1);
+            user.setAccountStatusId(1); // Old status
+
+            when(userRepository.findById(3)).thenReturn(Optional.of(user));
+            when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArguments()[0]);
+
+            mockMvc.perform(put("/api/users/3/status")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"accountStatusId\": 9}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.accountStatusId").value(9));
+        }
+
+        /**
+         * Verifies that the endpoint returns 400 Bad Request when the status ID is missing.
+         */
+        @Test
+        void updateUserStatus_missingStatusId_returns400() throws Exception {
+            mockMvc.perform(put("/api/users/3/status")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        /**
+         * Verifies that the endpoint returns 404 Not Found when the user doesn't exist.
+         */
+        @Test
+        void updateUserStatus_userNotFound_returns404() throws Exception {
+            when(userRepository.findById(999)).thenReturn(Optional.empty());
+
+            mockMvc.perform(put("/api/users/999/status")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"accountStatusId\": 9}"))
+                    .andExpect(status().isNotFound());
+        }
+
+        // -----------------------------------------------------------------------
+        // POST /api/users/{userId}/fcm-token
+        // -----------------------------------------------------------------------
+
+        /**
+         * Verifies that the endpoint returns 200 OK when registering a valid FCM token.
+         */
+        @Test
+        void registerFcmToken_validRequest_returns200() throws Exception {
+            when(userRepository.existsById(5)).thenReturn(true);
+
+            mockMvc.perform(post("/api/users/5/fcm-token")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"fcmToken\": \"dummy-fcm-token-123\"}"))
+                    .andExpect(status().isOk());
+        }
+
+        /**
+         * Verifies that the endpoint returns 400 Bad Request when the FCM token is missing.
+         */
+        @Test
+        void registerFcmToken_missingToken_returns400() throws Exception {
+            when(userRepository.existsById(5)).thenReturn(true);
+
+            mockMvc.perform(post("/api/users/5/fcm-token")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"fcmToken\": \"\"}"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        /**
+         * Verifies that the endpoint returns 404 Not Found when attempting to add
+         * a token for a non-existent user.
+         */
+        @Test
+        void registerFcmToken_userNotFound_returns404() throws Exception {
+            when(userRepository.existsById(999)).thenReturn(false);
+
+            mockMvc.perform(post("/api/users/999/fcm-token")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"fcmToken\": \"dummy-fcm-token-123\"}"))
+                    .andExpect(status().isNotFound());
+        }
     }

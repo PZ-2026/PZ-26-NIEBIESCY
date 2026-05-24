@@ -19,7 +19,6 @@ import com.vectorpeaks.edulink.data.model.user.AdminStatsResponse
 import com.vectorpeaks.edulink.data.model.user.AdminReportsResponse
 import com.vectorpeaks.edulink.data.model.user.GlobalLimitDto
 import com.vectorpeaks.edulink.data.model.user.ReviewResponse
-import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST

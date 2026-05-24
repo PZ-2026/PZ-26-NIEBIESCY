@@ -1,8 +1,8 @@
 /*
  * OfferController.java
  *
- * Version: 1.3
- * Date: 2026-05-22
+ * Version: 1.4
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -17,6 +17,8 @@ import com.vectorpeaks.backend.dto.SlotDto;
 import com.vectorpeaks.backend.entity.*;
 import com.vectorpeaks.backend.repository.*;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -29,14 +31,17 @@ import java.util.stream.Collectors;
 /**
  * Controller for managing tutoring offers.
  * Provides endpoints to retrieve filtered offers with tutor and subject details.
+ * <p>Includes built-in BOLA (Broken Object Level Authorization) protection and security event logging.
  *
- * @version 1.3
+ * @version 1.4
  * @author EduLink Team
  */
 @RestController
 @RequestMapping("/api/offers")
 @CrossOrigin(origins = "*") // For development only – restrict in production
 public class OfferController {
+
+    private static final Logger logger = LoggerFactory.getLogger(OfferController.class);
 
     private final OfferRepository offerRepository;
     private final UserRepository userRepository;
@@ -88,7 +93,6 @@ public class OfferController {
             @RequestParam(required = false) String search
     ) {
         List<Offer> offers = offerRepository.findAll();
-
         if (subject != null && !subject.isEmpty()) {
             offers = offers.stream()
                     .filter(o -> {
@@ -221,7 +225,7 @@ public class OfferController {
      * @return list of OfferDto objects belonging to the tutor
      */
     @GetMapping("/tutor/{tutorId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("(#tutorId == authentication.principal and hasRole('TUTOR')) or hasRole('ADMIN')")
     public List<OfferDto> getOffersByTutor(@PathVariable Integer tutorId) {
         return offerRepository.findAll().stream()
                 .filter(o -> o.getTutorId().equals(tutorId))
@@ -233,12 +237,12 @@ public class OfferController {
      * Creates a new tutoring offer.
      *
      * @param request the offer creation data (tutorId, subjectId, details,
-     *                price, offerType, availabilitySlotIds)
+     * price, offerType, availabilitySlotIds)
      * @return ResponseEntity with status 200 OK on success, or error message
      */
     @PostMapping
     @Transactional
-    @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR')")
+    @PreAuthorize("(#request.tutorId == authentication.principal and hasRole('TUTOR')) or hasRole('ADMIN')")
     public ResponseEntity<?> createOffer(@RequestBody OfferCreateRequest request) {
         Offer offer = new Offer();
         offer.setTutorId(request.getTutorId());
@@ -249,7 +253,6 @@ public class OfferController {
         offer.setStatusId(3);
         offer.setGlobalLimitId(1);
         Offer saved = offerRepository.save(offer);
-
         if (request.getAvailabilitySlotIds() != null) {
             for (Integer slotId : request.getAvailabilitySlotIds()) {
                 OfferSlot offerSlot = new OfferSlot();
@@ -263,44 +266,74 @@ public class OfferController {
     }
 
     /**
-    * Deletes an offer by its ID.
-     * @param id the unique identifier of the offer to delete
+     * Deletes an offer by its ID.
+     * Includes BOLA protection logging.
+     * * @param id the unique identifier of the offer to delete
+     * @param authentication the security context containing the logged-in user's details
      * @return  ResponseEntity with status  200 OK if deletion was successful,
-     *          or 404 Not Found if the offer does not exist
+     * or 404 Not Found if the offer does not exist
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR')")
     @Transactional
-    public ResponseEntity<?> deleteOffer(@PathVariable Integer id) {
-        if (!offerRepository.existsById(id)) {
+    public ResponseEntity<?> deleteOffer(@PathVariable Integer id,
+                                         org.springframework.security.core.Authentication authentication) {
+        Optional<Offer> offerOpt = offerRepository.findById(id);
+        if (offerOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
+
+        Integer loggedInUserId = (Integer) authentication.getPrincipal();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !offerOpt.get().getTutorId().equals(loggedInUserId)) {
+            logger.warn("SECURITY ALERT (BOLA): User ID {} attempted to delete Offer ID {} belonging to Tutor ID {}",
+                    loggedInUserId, id, offerOpt.get().getTutorId());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body("Nie możesz usunąć cudzej oferty.");
+        }
+
         offerRepository.deleteById(id);
         return ResponseEntity.ok().build();
     }
 
     /**
-     *  Updates an existing offer with the given ID.
-     *  @param id      the unique identifier of the offer to update
-     *  @param request the object containing new offer data (tutorId is ignored, statusId is fixed)
-     *  @return ResponseEntity with status  200 OK on successful update,
-     *          or 404 Not Found if the offer does not exist
+     * Updates an existing offer with the given ID.
+     * Includes BOLA protection logging.
+     * * @param id      the unique identifier of the offer to update
+     * @param request the object containing new offer data (tutorId is ignored, statusId is fixed)
+     * @param authentication the security context containing the logged-in user's details
+     * @return ResponseEntity with status  200 OK on successful update,
+     * or 404 Not Found if the offer does not exist
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TUTOR')")
     @Transactional
     public ResponseEntity<?> updateOffer(@PathVariable Integer id,
-                                         @RequestBody OfferCreateRequest request) {
+                                         @RequestBody OfferCreateRequest request,
+                                         org.springframework.security.core.Authentication authentication) {
         Optional<Offer> offerOpt = offerRepository.findById(id);
         if (offerOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         Offer offer = offerOpt.get();
+
+        Integer loggedInUserId = (Integer) authentication.getPrincipal();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !offer.getTutorId().equals(loggedInUserId)) {
+            logger.warn("SECURITY ALERT (BOLA): User ID {} attempted to update Offer ID {} belonging to Tutor ID {}",
+                    loggedInUserId, id, offer.getTutorId());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body("Nie możesz modyfikować cudzej oferty.");
+        }
+
         offer.setSubjectId(request.getSubjectId());
         offer.setDetails(request.getDetails());
         offer.setPrice(request.getPrice());
         offer.setOfferType(request.getOfferType());
         offer.setStatusId(3);
         offerRepository.save(offer);
-
         if (request.getAvailabilitySlotIds() != null) {
             offerSlotRepository.deleteByOfferId(id);
             for (Integer slotId : request.getAvailabilitySlotIds()) {

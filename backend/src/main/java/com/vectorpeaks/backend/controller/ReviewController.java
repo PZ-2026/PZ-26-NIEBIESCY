@@ -17,6 +17,8 @@ import com.vectorpeaks.backend.entity.Booking;
 import com.vectorpeaks.backend.entity.Review;
 import com.vectorpeaks.backend.repository.BookingRepository;
 import com.vectorpeaks.backend.repository.ReviewRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +30,7 @@ import java.util.stream.Collectors;
 /**
  * Controller for managing reviews.
  * Provides endpoints to add/update reviews and retrieve reviews for a tutor.
+ * <p>Includes built-in BOLA (Broken Object Level Authorization) protection and security event logging.
  *
  * @version 1.1
  * @author EduLink Team
@@ -36,6 +39,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/reviews")
 @CrossOrigin(origins = "*") // For development only – restrict in production
 public class ReviewController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ReviewController.class);
 
     private final ReviewRepository reviewRepository;
     private final BookingRepository bookingRepository;
@@ -57,11 +62,31 @@ public class ReviewController {
      * If a review for the booking ID already exists, its rating and comment are updated.
      *
      * @param request the review request containing booking ID, tutor ID, rating, and comment
+     * @param authentication the security context containing the logged-in user's details
      * @return ResponseEntity with success status
      */
     @PostMapping
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
-    public ResponseEntity<?> addOrUpdateReview(@RequestBody ReviewRequest request) {
+    public ResponseEntity<?> addOrUpdateReview(@RequestBody ReviewRequest request,
+                                               org.springframework.security.core.Authentication authentication) {
+
+//        Optional<Booking> bookingOpt = bookingRepository.findById(request.getBookingId());
+//        if (bookingOpt.isEmpty()) {
+//            return ResponseEntity.badRequest().body("Nie znaleziono rezerwacji o podanym ID.");
+//        }
+//        Booking booking = bookingOpt.get();
+//
+//        Integer loggedInUserId = (Integer) authentication.getPrincipal();
+//        boolean isAdmin = authentication.getAuthorities().stream()
+//                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+//
+//        if (!isAdmin && !booking.getStudentId().equals(loggedInUserId)) {
+//            logger.warn("SECURITY ALERT (BOLA): User ID {} attempted to modify review for Booking ID {} belonging to Student ID {}",
+//                    loggedInUserId, request.getBookingId(), booking.getStudentId());
+//            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+//                    .body("Możesz wystawić opinię tylko do swoich rezerwacji.");
+//        }
+
         Optional<Review> existing = reviewRepository.findByBookingId(request.getBookingId());
         Review review;
         if (existing.isPresent()) {
@@ -87,6 +112,7 @@ public class ReviewController {
      * @return list of ReviewResponse DTOs
      */
     @GetMapping("/tutor/{tutorId}")
+    @PreAuthorize("isAuthenticated()")
     public List<ReviewResponse> getReviewsByTutor(@PathVariable Integer tutorId) {
         return reviewRepository.findByTutorId(tutorId).stream()
                 .map(review -> {

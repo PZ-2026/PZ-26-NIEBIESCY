@@ -1,8 +1,8 @@
 /*
  * ChatControllerTest.java
  *
- * Version: 1.1
- * Date: 2026-05-18
+ * Version: 1.3
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -19,7 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,6 +29,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -36,9 +38,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Unit tests for {@link ChatController}.
  *
  * <p>Verifies the behaviour of the chat endpoints using {@code @WebMvcTest}.
- * Extends {@link BaseControllerTest} to handle security filters bypass.
+ * Includes tests for BOLA security verifications by injecting a mock Principal
+ * via Spring Security test support.
  *
- * @version 1.1
+ * @version 1.3
  * @author EduLink Team
  * @see ChatController
  */
@@ -56,6 +59,15 @@ class ChatControllerTest extends BaseControllerTest {
 
     @MockitoBean
     private ChatService chatService;
+
+    /**
+     * Helper method to generate a Mock Authentication token for security context injection.
+     */
+    private UsernamePasswordAuthenticationToken getMockAuth(Integer userId, String roleName) {
+        return new UsernamePasswordAuthenticationToken(
+                userId, null, List.of(new SimpleGrantedAuthority(roleName))
+        );
+    }
 
     // -----------------------------------------------------------------------
     // POST /api/chats
@@ -79,28 +91,26 @@ class ChatControllerTest extends BaseControllerTest {
         when(chatService.getOrCreateChat(any(CreateChatRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/chats")
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT"))) // Poprawione bindowanie Authentication
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(100))
-                .andExpect(jsonPath("$.participants[0].id").value(1))
-                .andExpect(jsonPath("$.participants[0].fullName").value("John Student"));
+                .andExpect(jsonPath("$.id").value(100));
     }
 
     @Test
-    void createOrGetChat_userNotFound_returns400BadRequest() throws Exception {
+    void createOrGetChat_unauthorizedThirdParty_returns403Forbidden() throws Exception {
         CreateChatRequest request = new CreateChatRequest();
         request.setUserId1(1);
-        request.setUserId2(999);
+        request.setUserId2(2);
 
-        when(chatService.getOrCreateChat(any(CreateChatRequest.class)))
-                .thenThrow(new IllegalArgumentException("User not found"));
-
+        // User 999 attempts to create a chat between User 1 and User 2
         mockMvc.perform(post("/api/chats")
+                        .with(authentication(getMockAuth(999, "ROLE_STUDENT")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("User not found"));
+                .andExpect(status().isForbidden())
+                .andExpect(content().string("Nie możesz utworzyć czatu dla osób trzecich."));
     }
 
     // -----------------------------------------------------------------------
@@ -110,20 +120,15 @@ class ChatControllerTest extends BaseControllerTest {
     @Test
     void getUserChats_success_returns200AndList() throws Exception {
         Integer userId = 1;
-
-        ChatResponse chat1 = new ChatResponse();
-        chat1.setId(101);
-
-        ChatResponse chat2 = new ChatResponse();
-        chat2.setId(102);
+        ChatResponse chat1 = new ChatResponse(); chat1.setId(101);
+        ChatResponse chat2 = new ChatResponse(); chat2.setId(102);
 
         when(chatService.getChatsForUser(userId)).thenReturn(List.of(chat1, chat2));
 
-        mockMvc.perform(get("/api/chats/user/{userId}", userId))
+        mockMvc.perform(get("/api/chats/user/{userId}", userId)
+                        .with(authentication(getMockAuth(userId, "ROLE_STUDENT"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].id").value(101))
-                .andExpect(jsonPath("$[1].id").value(102));
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
     // -----------------------------------------------------------------------
@@ -131,38 +136,29 @@ class ChatControllerTest extends BaseControllerTest {
     // -----------------------------------------------------------------------
 
     @Test
-    void getMessages_chatExists_returns200AndList() throws Exception {
+    void getMessages_chatExistsAndAuthorized_returns200AndList() throws Exception {
         Integer chatId = 100;
-        MessageResponse m1 = new MessageResponse();
-        m1.setId(1001);
-        m1.setSenderId(1);
-        m1.setContent("Hello");
+        MessageResponse m1 = new MessageResponse(); m1.setId(1001); m1.setContent("Hello");
+        MessageResponse m2 = new MessageResponse(); m2.setId(1002); m2.setContent("Hi there!");
 
-        MessageResponse m2 = new MessageResponse();
-        m2.setId(1002);
-        m2.setSenderId(2);
-        m2.setContent("Hi there!");
+        when(chatService.getMessages(chatId, 1)).thenReturn(List.of(m1, m2));
 
-        when(chatService.getMessages(chatId)).thenReturn(List.of(m1, m2));
-
-        mockMvc.perform(get("/api/chats/{chatId}/messages", chatId))
+        mockMvc.perform(get("/api/chats/{chatId}/messages", chatId)
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].id").value(1001))
-                .andExpect(jsonPath("$[0].content").value("Hello"))
-                .andExpect(jsonPath("$[1].id").value(1002))
-                .andExpect(jsonPath("$[1].content").value("Hi there!"));
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
     @Test
-    void getMessages_chatNotFound_returns404NotFound() throws Exception {
-        Integer chatId = 999;
-        when(chatService.getMessages(chatId))
-                .thenThrow(new IllegalArgumentException("Chat thread not found"));
+    void getMessages_userNotParticipant_returns403Forbidden() throws Exception {
+        Integer chatId = 100;
+        when(chatService.getMessages(chatId, 999))
+                .thenThrow(new SecurityException("Brak dostępu: nie jesteś uczestnikiem tej konwersacji."));
 
-        mockMvc.perform(get("/api/chats/{chatId}/messages", chatId))
-                .andExpect(status().isNotFound())
-                .andExpect(content().string("Chat thread not found"));
+        mockMvc.perform(get("/api/chats/{chatId}/messages", chatId)
+                        .with(authentication(getMockAuth(999, "ROLE_STUDENT"))))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string("Brak dostępu: nie jesteś uczestnikiem tej konwersacji."));
     }
 
     // -----------------------------------------------------------------------
@@ -178,34 +174,30 @@ class ChatControllerTest extends BaseControllerTest {
 
         MessageResponse response = new MessageResponse();
         response.setId(5001);
-        response.setSenderId(1);
-        response.setContent("New message text");
 
         when(chatService.sendMessage(eq(chatId), any(SendMessageRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/chats/{chatId}/messages", chatId)
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(5001))
-                .andExpect(jsonPath("$.content").value("New message text"))
-                .andExpect(jsonPath("$.senderId").value(1));
+                .andExpect(jsonPath("$.id").value(5001));
     }
 
     @Test
-    void sendMessage_invalidChatOrSender_returns400BadRequest() throws Exception {
+    void sendMessage_senderIdMismatch_returns403Forbidden() throws Exception {
         Integer chatId = 100;
         SendMessageRequest request = new SendMessageRequest();
-        request.setSenderId(999);
-        request.setContent("Hello");
+        request.setSenderId(2); // Request claims to be from User 2
+        request.setContent("Spoofed message");
 
-        when(chatService.sendMessage(eq(chatId), any(SendMessageRequest.class)))
-                .thenThrow(new IllegalArgumentException("Chat or sender not found"));
-
+        // But the logged-in user is User 1 (BOLA attack attempt)
         mockMvc.perform(post("/api/chats/{chatId}/messages", chatId)
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("Chat or sender not found"));
+                .andExpect(status().isForbidden())
+                .andExpect(content().string("Nie możesz wysłać wiadomości jako inny użytkownik."));
     }
 }

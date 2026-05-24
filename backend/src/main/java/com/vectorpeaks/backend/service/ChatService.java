@@ -1,8 +1,8 @@
 /*
  * ChatService.java
  *
- * Version: 1.1
- * Date: 2026-05-12
+ * Version: 1.2
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -33,13 +33,13 @@ import java.util.stream.Collectors;
  *
  * <p>Handles:
  * <ul>
- *   <li>creating new chat threads (with deduplication),</li>
- *   <li>retrieving the list of chats for a given user,</li>
- *   <li>fetching message history for a chat thread,</li>
- *   <li>persisting and broadcasting new messages.</li>
+ * <li>creating new chat threads (with deduplication),</li>
+ * <li>retrieving the list of chats for a given user,</li>
+ * <li>fetching message history (with participant verification),</li>
+ * <li>persisting and broadcasting new messages via FCM.</li>
  * </ul>
  *
- * @version 1.1
+ * @version 1.2
  * @author EduLink Team
  */
 @Service
@@ -120,16 +120,26 @@ public class ChatService {
 
     /**
      * Returns the full message history of a chat thread in chronological order.
+     * Validates if the requesting user is an active participant of the chat.
      *
-     * @param chatId the ID of the chat thread
+     * @param chatId         the ID of the chat thread
+     * @param loggedInUserId the ID of the user requesting the history
      * @return list of {@link MessageResponse} objects ordered oldest-first
      * @throws IllegalArgumentException if no chat exists with the given ID
+     * @throws SecurityException        if the user is not a participant of the chat
      */
     @Transactional(readOnly = true)
-    public List<MessageResponse> getMessages(Integer chatId) {
-        if (!chatRepository.existsById(chatId)) {
-            throw new IllegalArgumentException("Chat not found with id: " + chatId);
+    public List<MessageResponse> getMessages(Integer chatId, Integer loggedInUserId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new IllegalArgumentException("Chat not found with id: " + chatId));
+
+        boolean isParticipant = chat.getParticipants().stream()
+                .anyMatch(p -> p.getId().equals(loggedInUserId));
+
+        if (!isParticipant) {
+            throw new SecurityException("Access denied: You are not a participant in this conversation.");
         }
+
         return messageRepository.findByChat_IdOrderBySentAtAsc(chatId)
                 .stream()
                 .map(this::toMessageResponse)
@@ -142,23 +152,28 @@ public class ChatService {
 
     /**
      * Persists a new message sent by a user in the given chat thread.
-     * After saving, an FCM push notification can be triggered here to
-     * alert the other participant in real time.
+     * Validates if the sender belongs to the chat and triggers FCM push notifications
+     * to alert the other participant in real time.
      *
      * @param chatId  the ID of the target chat thread
      * @param request request containing the sender's ID and message content
      * @return the persisted message as a {@link MessageResponse}
-     * @throws IllegalArgumentException if the chat or sender does not exist
+     * @throws IllegalArgumentException if the chat, sender does not exist, or sender is not a participant
      */
     @Transactional
     public MessageResponse sendMessage(Integer chatId, SendMessageRequest request) {
         Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Chat not found with id: " + chatId));
+                .orElseThrow(() -> new IllegalArgumentException("Chat not found with id: " + chatId));
+
+        boolean isParticipant = chat.getParticipants().stream()
+                .anyMatch(p -> p.getId().equals(request.getSenderId()));
+
+        if (!isParticipant) {
+            throw new IllegalArgumentException("You cannot send messages to a chat you do not belong to.");
+        }
 
         User sender = userRepository.findById(request.getSenderId())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "User not found with id: " + request.getSenderId()));
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + request.getSenderId()));
 
         Message message = new Message();
         message.setChat(chat);
@@ -170,7 +185,6 @@ public class ChatService {
         chat.getParticipants().stream()
                 .filter(p -> !p.getId().equals(sender.getId()))
                 .forEach(recipient -> {
-                    // Pobierz wszystkie tokeny urządzeń odbiorcy (może mieć telefon + tablet)
                     fcmTokenService.getTokensForUser(recipient.getId())
                             .forEach(token -> fcmService.sendNotification(
                                     token,

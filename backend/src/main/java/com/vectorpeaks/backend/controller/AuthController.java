@@ -1,10 +1,12 @@
 /*
  * AuthController.java
  *
- * Version: 1.1
- * Date: 2026-05-17
+ * Version: 1.2
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
+ *
+ * This software is the confidential and proprietary information of EduLink.
  */
 
 package com.vectorpeaks.backend.controller;
@@ -26,83 +28,81 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * Handles authentication: login, token refresh, and logout.
+ * REST controller handling authentication-related HTTP requests.
+ * * <p>Exposes the following endpoints:
+ * <ul>
+ * <li>{@code POST /api/auth/login} – credentials verification, returns access and refresh tokens</li>
+ * <li>{@code POST /api/auth/refresh} – exchanges a refresh token for a new access token</li>
+ * <li>{@code POST /api/auth/logout} – invalidates the refresh token in the database</li>
+ * <li>{@code POST /api/auth/users/{userId}/fcm-token} – registers the device's FCM token</li>
+ * </ul>
  *
- * Endpoints:
- *   POST /api/auth/login   – credentials verification, returns access + refresh token
- *   POST /api/auth/refresh – exchanges a refresh token for a new access token
- *   POST /api/auth/logout  – invalidates the refresh token in the database
- *
- * @version 1.1
+ * @version 1.2
  * @author EduLink Team
  */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final AuthService         authService;
-    private final JwtUtil             jwtUtil;
-    private final RefreshTokenService refreshTokenService;
-    private final LoginAttemptService loginAttemptService;
-    private final UserRepository      userRepository;
-    private final FcmTokenService fcmTokenService;
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    // Spring injects all dependencies via the constructor
+    private final AuthService authService;
+    private final JwtUtil jwtUtil;
+    private final RefreshTokenService refreshTokenService;
+    private final LoginAttemptService loginAttemptService;
+    private final UserRepository userRepository;
+    private final FcmTokenService fcmTokenService;
+
     public AuthController(AuthService authService,
                           JwtUtil jwtUtil,
                           RefreshTokenService refreshTokenService,
                           LoginAttemptService loginAttemptService,
                           UserRepository userRepository,
                           FcmTokenService fcmTokenService) {
-        this.authService         = authService;
-        this.jwtUtil             = jwtUtil;
+        this.authService = authService;
+        this.jwtUtil = jwtUtil;
         this.refreshTokenService = refreshTokenService;
         this.loginAttemptService = loginAttemptService;
-        this.userRepository      = userRepository;
+        this.userRepository = userRepository;
         this.fcmTokenService = fcmTokenService;
     }
 
-
-
     /**
-     * POST /api/auth/login
+     * Authenticates the user and returns access and refresh tokens.
+     * Includes brute-force protection and progressive delay.
      *
-     * 1. Checks brute-force lockout status (email + IP)
-     * 2. Verifies credentials
-     * 3. Creates an access token (15 min) + a refresh token (7 days)
-     * 4. Returns user data along with both tokens
+     * @param request credentials request
+     * @param httpRequest HTTP request context for IP resolution
+     * @return {@code 200 OK} with tokens, or error status
      */
     @PostMapping("/login")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> login(@RequestBody LoginRequest request,
                                    HttpServletRequest httpRequest) {
         String email = request.getEmail() != null ? request.getEmail().trim() : "";
-        String ip    = httpRequest.getRemoteAddr();
+        String ip = httpRequest.getRemoteAddr();
 
-        // Layer 1: brute-force check
         if (loginAttemptService.isBlocked(email, ip)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body("Too many login attempts. Please try again in 15 minutes.");
         }
 
-        // Layer 2: progressive delay (3rd attempt = 2s, 4th attempt = 5s)
         long delayMs = loginAttemptService.getDelayMs(email, ip);
         if (delayMs > 0) {
             try { Thread.sleep(delayMs); } catch (InterruptedException ignored) {}
         }
 
-        // Password verification
         Optional<User> userOpt = authService.authenticate(email, request.getPassword());
-
         if (userOpt.isEmpty()) {
             loginAttemptService.recordFailure(email, ip);
-            // Intentionally identical message to mitigate username enumeration attacks
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid email or password.");
         }
@@ -110,11 +110,7 @@ public class AuthController {
         User user = userOpt.get();
         loginAttemptService.recordSuccess(email, ip);
 
-        // Generate access token (JWT, 15 min)
-        String accessToken = jwtUtil.generateToken(
-                user.getId(), user.getEmail(), user.getRoleName());
-
-        // Generate refresh token (UUID, 7 days, persisted in the database)
+        String accessToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRoleName());
         RefreshToken refresh = refreshTokenService.createRefreshToken(user.getId());
 
         LoginResponse response = new LoginResponse();
@@ -124,24 +120,22 @@ public class AuthController {
         response.setEmail(user.getEmail());
         response.setRole(String.valueOf(user.getRoleId()));
         response.setToken(accessToken);
-        response.setRefreshToken(refresh.getToken()); // UUID string
+        response.setRefreshToken(refresh.getToken());
 
         return ResponseEntity.ok(response);
     }
 
     /**
-     * POST /api/auth/refresh
-     * Body: { "refreshToken": "uuid-string" }
+     * Exchanges a valid refresh token for a new access token.
      *
-     * When the access token expires, the client application sends the refresh token here.
-     * If valid → returns a new access token (without re-authentication).
-     * If expired or revoked → returns 401, triggering the client app to redirect to the login screen.
+     * @param request refresh token request
+     * @return {@code 200 OK} with the new access token, or {@code 401 Unauthorized}
      */
     @PostMapping("/refresh")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> refresh(@RequestBody RefreshRequest request) {
         return refreshTokenService.validateRefreshToken(request.getRefreshToken())
                 .map(rt -> {
-                    // Fetch fresh user data (e.g., user role might have changed in the meantime)
                     User user = userRepository.findById(rt.getUserId())
                             .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -158,31 +152,19 @@ public class AuthController {
     }
 
     /**
-     * POST /api/auth/logout
-     * Revokes the refresh token and removes the FCM token for the specific device.
+     * Logs out the user by revoking the refresh token and removing the FCM token.
+     *
+     * @param request logout request containing tokens
+     * @return {@code 200 OK} upon successful logout
      */
     @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> logout(@RequestBody LogoutRequest request) {
         refreshTokenService.revokeToken(request.getRefreshToken());
-
-        // Remove only this device's token — other devices remain active
         if (request.getFcmToken() != null) {
             fcmTokenService.removeToken(request.getFcmToken());
         }
-
         return ResponseEntity.ok(Map.of("message", "Logged out successfully."));
     }
 
-    /**
-     * POST /api/users/{userId}/fcm-token
-     * Registers the device's FCM token after a successful login.
-     * Replaces the old updateFcmToken() call.
-     */
-    @PostMapping("/users/{userId}/fcm-token")
-    public ResponseEntity<?> registerFcmToken(@PathVariable Integer userId,
-                                              @RequestBody Map<String, String> body) {
-        String fcmToken = body.get("fcmToken");
-        fcmTokenService.registerToken(userId, fcmToken);
-        return ResponseEntity.ok(Map.of("message", "FCM token registered successfully."));
-    }
 }
