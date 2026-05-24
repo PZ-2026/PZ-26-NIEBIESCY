@@ -19,6 +19,11 @@ sealed class NavRoutes(val route: String) {
             "tutor_reviews/$tutorId/${tutorName.replace("/", " ")}"
     }
 
+    object TutorReviewsFromTutor : NavRoutes("tutor_reviews_tutor/{tutorId}/{tutorName}") {
+        fun createRoute(tutorId: Int, tutorName: String) =
+            "tutor_reviews_tutor/$tutorId/${tutorName.replace("/", " ")}"
+    }
+
     // Tutor
     object TutorMain : NavRoutes("tutor_main") {
         fun withTab(tab: Int) = "tutor_main?startTab=$tab"

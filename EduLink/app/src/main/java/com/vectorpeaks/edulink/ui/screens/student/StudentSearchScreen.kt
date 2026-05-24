@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -27,7 +28,7 @@ import com.vectorpeaks.edulink.data.model.user.OffersViewModel
 fun StudentSearchScreen(
     studentId: Int,
     modifier: Modifier = Modifier,
-    onNavigateToReviews: (tutorId: Int, tutorName: String) -> Unit  // ← NOWE
+    onNavigateToReviews: (tutorId: Int, tutorName: String) -> Unit
 ) {
     val viewModel: OffersViewModel = viewModel()
     val offers by viewModel.offers.collectAsState()
@@ -48,7 +49,8 @@ fun StudentSearchScreen(
     var selectedSubject by remember { mutableStateOf<String?>(null) }
     var selectedCity by remember { mutableStateOf<String?>(null) }
     var onlineOnly by remember { mutableStateOf(false) }
-    var selectedOffer by remember { mutableStateOf<Offer?>(null) }
+    var selectedOfferId by rememberSaveable { mutableStateOf<Int?>(null) }
+    val selectedOffer = selectedOfferId?.let { id -> offers.find { it.id == id } }
 
     LaunchedEffect(searchQuery, selectedSubject, selectedCity, onlineOnly) {
         viewModel.loadOffers(
@@ -63,8 +65,8 @@ fun StudentSearchScreen(
         OfferDetailScreen(
             offer = offer,
             studentId = studentId,
-            onBack = { selectedOffer = null },
-            onTutorClick = onNavigateToReviews  // ← NOWE
+            onBack = { selectedOfferId = null },
+            onTutorClick = onNavigateToReviews
         )
     } ?: run {
         Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -192,7 +194,7 @@ fun StudentSearchScreen(
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
                         items(offers) { offer ->
-                            OfferCard(offer = offer, onClick = { selectedOffer = offer })
+                            OfferCard(offer = offer, onClick = { selectedOfferId = offer.id })
                         }
                     }
                 }

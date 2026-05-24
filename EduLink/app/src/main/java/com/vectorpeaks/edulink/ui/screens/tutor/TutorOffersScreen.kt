@@ -123,6 +123,11 @@ fun TutorOffersScreen(
     var editSelectedDay by remember { mutableStateOf<Int?>(null) }
     var editSelectedSlotIds by remember { mutableStateOf<List<Int>>(emptyList()) }
 
+    var priceError by remember { mutableStateOf("") }
+    var descriptionError by remember { mutableStateOf("") }
+    var editPriceError by remember { mutableStateOf("") }
+    var editDescriptionError by remember { mutableStateOf("") }
+
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(user.id) {
@@ -374,8 +379,43 @@ fun TutorOffersScreen(
                         }
                     }
 
-                    OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Opis") }, minLines = 3, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("Cena za godzinę (zł)") }, singleLine = true, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = {
+                            description = it
+                            descriptionError = if (it.isBlank()) "Opis nie może być pusty" else ""
+                        },
+                        label = { Text("Opis") },
+                        minLines = 3,
+                        isError = descriptionError.isNotEmpty(),
+                        supportingText = if (descriptionError.isNotEmpty()) {
+                            { Text(descriptionError, color = Error) }
+                        } else null,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = price,
+                        onValueChange = {
+                            price = it
+                            priceError = when {
+                                it.isBlank() -> ""
+                                it.toDoubleOrNull() == null -> "Cena musi być liczbą"
+                                it.toDouble() <= 0 -> "Cena musi być większa od zera"
+                                it.toDouble() > 200 -> "Cena przekracza limit (200 zł)"
+                                else -> ""
+                            }
+                        },
+                        label = { Text("Cena za godzinę (zł)") },
+                        singleLine = true,
+                        isError = priceError.isNotEmpty(),
+                        supportingText = if (priceError.isNotEmpty()) {
+                            { Text(priceError, color = Error) }
+                        } else null,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
                     var typeExpanded by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(expanded = typeExpanded, onExpandedChange = { typeExpanded = !typeExpanded }) {
@@ -448,8 +488,14 @@ fun TutorOffersScreen(
                             )
                         }
                     },
-                    enabled = selectedSubjectId != null && description.isNotBlank() && price.toDoubleOrNull() != null && !isCreating,
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+
+                    enabled = selectedSubjectId != null
+                            && description.isNotBlank()
+                            && descriptionError.isEmpty()
+                            && price.toDoubleOrNull() != null
+                            && priceError.isEmpty()
+                            && !isCreating,
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
                 ) {
                     if (isCreating) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
                     else Text("Dodaj ofertę")
@@ -486,8 +532,43 @@ fun TutorOffersScreen(
                         }
                     }
 
-                    OutlinedTextField(value = editDescription, onValueChange = { editDescription = it }, label = { Text("Opis") }, minLines = 3, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = editPrice, onValueChange = { editPrice = it }, label = { Text("Cena za godzinę (zł)") }, singleLine = true, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = editDescription,
+                        onValueChange = {
+                            editDescription = it
+                            editDescriptionError = if (it.isBlank()) "Opis nie może być pusty" else ""
+                        },
+                        label = { Text("Opis") },
+                        minLines = 3,
+                        isError = editDescriptionError.isNotEmpty(),
+                        supportingText = if (editDescriptionError.isNotEmpty()) {
+                            { Text(editDescriptionError, color = Error) }
+                        } else null,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = editPrice,
+                        onValueChange = {
+                            editPrice = it
+                            editPriceError = when {
+                                it.isBlank() -> ""
+                                it.toDoubleOrNull() == null -> "Cena musi być liczbą"
+                                it.toDouble() <= 0 -> "Cena musi być większa od zera"
+                                it.toDouble() > 200 -> "Cena przekracza limit administratora (200 zł)"
+                                else -> ""
+                            }
+                        },
+                        label = { Text("Cena za godzinę (zł)") },
+                        singleLine = true,
+                        isError = editPriceError.isNotEmpty(),
+                        supportingText = if (editPriceError.isNotEmpty()) {
+                            { Text(editPriceError, color = Error) }
+                        } else null,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
                     var editTypeExpanded by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(expanded = editTypeExpanded, onExpandedChange = { editTypeExpanded = !editTypeExpanded }) {
@@ -580,8 +661,14 @@ fun TutorOffersScreen(
                             )
                         }
                     },
-                    enabled = editSubjectId != null && editDescription.isNotBlank() && editPrice.toDoubleOrNull() != null && !isCreating,
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+
+                    enabled = editSubjectId != null
+                            && editDescription.isNotBlank()
+                            && editDescriptionError.isEmpty()
+                            && editPrice.toDoubleOrNull() != null
+                            && editPriceError.isEmpty()
+                            && !isCreating,
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
                 ) {
                     if (isCreating) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
                     else Text("Zapisz zmiany")
