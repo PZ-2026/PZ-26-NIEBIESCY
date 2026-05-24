@@ -1,8 +1,8 @@
 /*
  * BookingController.java
  *
- * Version: 1.1
- * Date: 2026-05-22
+ * Version: 1.2
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -15,6 +15,8 @@ import com.vectorpeaks.backend.dto.BookingRequest;
 import com.vectorpeaks.backend.dto.BookingResponse;
 import com.vectorpeaks.backend.entity.*;
 import com.vectorpeaks.backend.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,14 +28,17 @@ import java.util.stream.Collectors;
 /**
  * Controller for managing bookings (lesson reservations).
  * Provides endpoints to create bookings and retrieve bookings for a specific student.
+ * * <p>Includes built-in BOLA (Broken Object Level Authorization) protection and security event logging.
  *
- * @version 1.1
+ * @version 1.2
  * @author EduLink Team
  */
 @RestController
 @RequestMapping("/api/bookings")
 @CrossOrigin(origins = "*") // For development only – restrict in production
 public class BookingController {
+
+    private static final Logger logger = LoggerFactory.getLogger(BookingController.class);
 
     private final BookingRepository bookingRepository;
     private final OfferRepository offerRepository;
@@ -77,7 +82,7 @@ public class BookingController {
      * @return list of BookingResponse objects containing booking details
      */
     @GetMapping("/student/{studentId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("#studentId == authentication.principal and hasRole('STUDENT') or hasRole('ADMIN')")
     public List<BookingResponse> getBookingsForStudent(@PathVariable Integer studentId) {
         List<Booking> bookings = bookingRepository.findByStudentId(studentId);
         return bookings.stream()
@@ -154,7 +159,7 @@ public class BookingController {
      * @return ResponseEntity with success or error message
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
+    @PreAuthorize("(#request.studentId == authentication.principal and hasRole('STUDENT')) or hasRole('ADMIN')")
     public ResponseEntity<?> createBooking(@RequestBody BookingRequest request) {
         if (!offerRepository.existsById(request.getOfferId())) {
             return ResponseEntity.badRequest().body("Offer not found");
@@ -187,7 +192,7 @@ public class BookingController {
      * @return list of BookingResponse objects containing booking details
      */
     @GetMapping("/tutor/{tutorId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("(#tutorId == authentication.principal and hasRole('TUTOR')) or hasRole('ADMIN')")
     public List<BookingResponse> getBookingsForTutor(@PathVariable Integer tutorId) {
         List<Booking> bookings = bookingRepository.findAll().stream()
                 .filter(b -> {
@@ -202,21 +207,41 @@ public class BookingController {
 
     /**
      * Updates the status of a booking.
+     * Logika zabezpieczająca przed IDOR/BOLA znajduje się wewnątrz metody wraz z loggerem.
      *
      * @param bookingId the ID of the booking
      * @param status    new status string (ACCEPTED or REJECTED)
+     * @param authentication the security context containing the logged-in user's details
      * @return ResponseEntity with success or error message
      */
     @PutMapping("/{bookingId}/status")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateBookingStatus(
             @PathVariable Integer bookingId,
-            @RequestParam String status) {
+            @RequestParam String status,
+            org.springframework.security.core.Authentication authentication) {
         Optional<Booking> bookingOpt = bookingRepository.findById(bookingId);
         if (bookingOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
         Booking booking = bookingOpt.get();
+
+        Integer loggedInUserId = (Integer) authentication.getPrincipal();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        Offer offer = offerRepository.findById(booking.getOfferId()).orElse(null);
+        if (offer == null) {
+            return ResponseEntity.badRequest().body("Associated offer not found");
+        }
+
+        if (!isAdmin && !offer.getTutorId().equals(loggedInUserId)) {
+            logger.warn("SECURITY ALERT (BOLA): User ID {} attempted to update booking ID {} belonging to Tutor ID {}",
+                    loggedInUserId, bookingId, offer.getTutorId());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body("Nie masz uprawnień do zmiany statusu tej rezerwacji.");
+        }
+
         switch (status) {
             case "ACCEPTED": booking.setStatusId(6); break;
             case "REJECTED": booking.setStatusId(7); break;

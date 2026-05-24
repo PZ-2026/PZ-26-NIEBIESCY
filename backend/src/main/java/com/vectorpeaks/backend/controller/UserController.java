@@ -1,8 +1,8 @@
 /*
  * UserController.java
  *
- * Version: 1.2
- * Date: 2026-05-17
+ * Version: 1.3
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -22,7 +22,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -42,7 +41,6 @@ import java.util.Map;
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
-
     private final UserRepository userRepository;
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
     private final FcmTokenService fcmTokenService;
@@ -51,6 +49,7 @@ public class UserController {
      * Constructs a new UserController with the given UserRepository.
      *
      * @param userRepository the user repository used for database operations
+     * @param fcmTokenService the service for handling push notification tokens
      */
     public UserController(UserRepository userRepository, FcmTokenService fcmTokenService) {
         this.userRepository   = userRepository;
@@ -63,6 +62,7 @@ public class UserController {
      * @return list of all users in the system
      */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
@@ -74,6 +74,7 @@ public class UserController {
      * @return the saved user (including generated ID)
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public User addUser(@RequestBody User user) {
         return userRepository.save(user);
     }
@@ -85,6 +86,7 @@ public class UserController {
      * @return the user (without sensitive data like password)
      */
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<User> getUserById(@PathVariable Integer id) {
         Optional<User> userOpt = userRepository.findById(id);
         return userOpt.map(ResponseEntity::ok)
@@ -100,6 +102,7 @@ public class UserController {
      * @return updated user or error message if validation fails or user not found
      */
     @PutMapping("/{id}")
+    @PreAuthorize("#id == authentication.principal or hasRole('ADMIN')")
     public ResponseEntity<?> updateUser(@PathVariable Integer id,
                                         @RequestBody User updatedUser) {
         String phone = updatedUser.getPhoneNumber();
@@ -135,6 +138,7 @@ public class UserController {
      * @return ResponseEntity with success or error message
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("#id == authentication.principal or hasRole('ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Integer id) {
         Optional<User> userOpt = userRepository.findById(id);
         if (userOpt.isEmpty()) {
@@ -163,6 +167,7 @@ public class UserController {
      * @return updated user or error if user not found
      */
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateUserStatus(@PathVariable Integer id,
                                               @RequestBody Map<String, Integer> body) {
         Integer newStatusId = body.get("accountStatusId");
@@ -183,6 +188,7 @@ public class UserController {
      * @return ResponseEntity with success or error message
      */
     @PostMapping("/register")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         String email = request.getEmail();
         logger.info("Registration attempt for email: {}", email);
@@ -213,7 +219,6 @@ public class UserController {
 
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         String hashedPassword = encoder.encode(request.getPassword());
-
         User user = new User();
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
@@ -239,7 +244,7 @@ public class UserController {
      * @return 200 OK if registered, 404 if user not found
      */
     @PostMapping("/{userId}/fcm-token")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("#userId == authentication.principal or hasRole('ADMIN')")
     public ResponseEntity<?> registerFcmToken(@PathVariable Integer userId,
                                               @RequestBody Map<String, String> body) {
         if (!userRepository.existsById(userId)) {

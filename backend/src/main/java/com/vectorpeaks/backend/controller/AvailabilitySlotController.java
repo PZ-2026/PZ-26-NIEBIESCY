@@ -1,8 +1,8 @@
 /*
  * AvailabilitySlotController.java
  *
- * Version: 1.1
- * Date: 2026-05-22
+ * Version: 1.2
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -24,13 +24,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Controller for managing availability slots.
- * Provides an endpoint to retrieve all slots (global, defined by admin).
+ * REST controller for managing availability slots.
+ * * <p>Provides endpoints to retrieve global slots defined by the admin,
+ * as well as slots specific to a given tutor or offer.
  *
- * @version 1.1
+ * @version 1.2
  * @author EduLink Team
  */
 @RestController
+@PreAuthorize("isAuthenticated()")
 @RequestMapping("/api/slots")
 @CrossOrigin(origins = "*") // For development only – restrict in production
 public class AvailabilitySlotController {
@@ -40,11 +42,11 @@ public class AvailabilitySlotController {
     private final OfferSlotRepository offerSlotRepository;
 
     /**
-     * Constructs a new AvailabilitySlotController with required repository.
+     * Constructs a new AvailabilitySlotController with required repositories.
      *
      * @param slotRepository repository for availability slots
      * @param offerRepository repository for offers
-     * @param offerSlotRepository repository for offers slots
+     * @param offerSlotRepository repository for offer slots
      */
     public AvailabilitySlotController(AvailabilitySlotRepository slotRepository,
                                       OfferRepository offerRepository,
@@ -55,12 +57,11 @@ public class AvailabilitySlotController {
     }
 
     /**
-     * Retrieves all available slots as DTOs with human-readable labels.
+     * Retrieves all available time slots as DTOs with human-readable labels.
      *
-     * @return list of SlotDto objects
+     * @return list of {@link SlotDto} objects
      */
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
     public List<SlotDto> getAllSlots() {
         return slotRepository.findAll().stream()
                 .map(slot -> new SlotDto(
@@ -71,11 +72,12 @@ public class AvailabilitySlotController {
     }
 
     /**
-     * Retrieves all available time slots for a specific tutor, excluding those already used in any offer.
+     * Retrieves all available time slots for a specific tutor,
+     * excluding those already occupied by any of their active offers.
      *
-     * @return a list of SlotDto objects representing slots that are not yet used by the tutor
+     * @param tutorId the ID of the tutor
+     * @return list of available {@link SlotDto} objects
      */
-
     @GetMapping("/available/{tutorId}")
     public List<SlotDto> getAvailableSlotsForTutor(@PathVariable Integer tutorId) {
         List<Integer> usedSlotIds = offerRepository.findAll().stream()
@@ -94,12 +96,14 @@ public class AvailabilitySlotController {
     }
 
     /**
-     * Retrieves all available time slots for a specific tutor, excluding slots already used in the tutor's other offers.
+     * Retrieves all available time slots for a specific tutor,
+     * excluding slots occupied by their other offers (ignoring the current one).
+     * Useful when updating an existing offer.
      *
-     * @return a list of SlotDto objects representing slots that are available for the tutor,
-     *         excluding those already occupied by the tutor's other offers
+     * @param tutorId the ID of the tutor
+     * @param offerId the ID of the offer to be ignored
+     * @return list of available {@link SlotDto} objects
      */
-
     @GetMapping("/available/{tutorId}/excluding/{offerId}")
     public List<SlotDto> getAvailableSlotsExcludingOffer(
             @PathVariable Integer tutorId,
@@ -121,11 +125,10 @@ public class AvailabilitySlotController {
     }
 
     /**
-     * Formats the slot as a human-readable string,
-     * e.g., "Pon 10:00" .
+     * Formats the slot as a human-readable string (e.g., "Pon 10:00").
      *
      * @param slot the slot entity
-     * @return formatted label
+     * @return formatted label string
      */
     private String formatSlotLabel(AvailabilitySlot slot) {
         String dayName = getDayName(slot.getDayOfWeek());
@@ -134,7 +137,7 @@ public class AvailabilitySlotController {
     }
 
     /**
-     * Converts numeric day-of-week to Polish short name.
+     * Converts a numeric day-of-week representation to a Polish short name.
      *
      * @param dayOfWeek day number (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
      * @return abbreviated day name

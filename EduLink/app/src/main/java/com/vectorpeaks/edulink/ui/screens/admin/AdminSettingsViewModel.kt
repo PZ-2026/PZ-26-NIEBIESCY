@@ -103,7 +103,12 @@ class AdminSettingsViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     loadSubjects()
                 } else {
-                    _error.value = "Błąd usuwania: ${response.code()}"
+                    val errorBody = response.errorBody()?.string()
+                    _error.value = if (errorBody.isNullOrBlank()) {
+                        "Błąd usuwania: ${response.code()}"
+                    } else {
+                        errorBody
+                    }
                 }
             } catch (e: Exception) {
                 _error.value = "Błąd: ${e.message}"

@@ -1,3 +1,14 @@
+/*
+ * AuthControllerTest.java
+ *
+ * Version: 1.3
+ * Date: 2026-05-24
+ *
+ * Copyright (c) 2026 EduLink Team. All rights reserved.
+ *
+ * This software is the confidential and proprietary information of EduLink.
+ */
+
 package com.vectorpeaks.backend.controller;
 
 import org.junit.jupiter.api.DisplayName;
@@ -10,6 +21,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vectorpeaks.backend.dto.LoginRequest;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -27,9 +39,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * (e.g., via database seed scripts or database migrations).
  * </p>
  *
- * @version 1.2
+ * @version 1.3
  * @author EduLink Team
  */
+@Transactional
 @SpringBootTest
 @AutoConfigureMockMvc
 class AuthIntegrationTest {
@@ -79,6 +92,7 @@ class AuthIntegrationTest {
             request.setPassword(CORRECT_PASSWD);
 
             mockMvc.perform(post("/api/auth/login")
+                            .with(req -> { req.setRemoteAddr("192.168.1.100"); return req; })
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -100,9 +114,44 @@ class AuthIntegrationTest {
             request.setPassword("wrongPassword");
 
             mockMvc.perform(post("/api/auth/login")
+                            .with(req -> { req.setRemoteAddr("192.168.1.101"); return req; })
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isUnauthorized());
+        }
+
+        /**
+         * Verifies that multiple consecutive failed login attempts from the same IP address
+         * correctly trigger the Brute-Force protection mechanism, eventually resulting in
+         * a 429 Too Many Requests status.
+         *
+         * @throws Exception if any error occurs during the MockMvc request execution
+         */
+        @Test
+        @DisplayName("Atak Brute-Force → zablokowanie po wielu próbach (429 Too Many Requests)")
+        void login_bruteForce_blocksAccountAndReturns429() throws Exception {
+            LoginRequest request = new LoginRequest();
+            request.setEmail(EXISTING_EMAIL);
+            request.setPassword("wrongPassword");
+
+            String hackerIp = "10.0.0.99";
+
+            // Symulujemy 5 nieudanych prób z rzędu z tego samego IP
+            for (int i = 0; i < 5; i++) {
+                mockMvc.perform(post("/api/auth/login")
+                                .with(req -> { req.setRemoteAddr(hackerIp); return req; })
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                        .andExpect(status().isUnauthorized());
+            }
+
+            // 6-ta próba powinna zostać zablokowana przez błąd 429 Too Many Requests
+            request.setPassword(CORRECT_PASSWD);
+            mockMvc.perform(post("/api/auth/login")
+                            .with(req -> { req.setRemoteAddr(hackerIp); return req; })
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isTooManyRequests());
         }
     }
 }

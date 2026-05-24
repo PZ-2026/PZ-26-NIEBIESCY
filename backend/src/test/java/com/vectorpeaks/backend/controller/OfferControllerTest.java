@@ -1,8 +1,8 @@
 /*
  * OfferControllerTest.java
  *
- * Version: 1.0
- * Date: 2026-05-03
+ * Version: 1.1
+ * Date: 2026-05-23
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -13,6 +13,7 @@ package com.vectorpeaks.backend.controller;
 
 import com.vectorpeaks.backend.entity.AvailabilitySlot;
 import com.vectorpeaks.backend.entity.Offer;
+import com.vectorpeaks.backend.entity.OfferSlot;
 import com.vectorpeaks.backend.entity.Subject;
 import com.vectorpeaks.backend.entity.User;
 import com.vectorpeaks.backend.repository.*;
@@ -47,7 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * All repository dependencies are replaced by Mockito mocks
  * ({@code @MockitoBean}).
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  * @see OfferController
  */
@@ -81,6 +82,12 @@ class OfferControllerTest extends BaseControllerTest {
     @MockitoBean
     private AvailabilitySlotRepository availabilitySlotRepository;
 
+    // FIX: dodany brakujący mock — OfferController używa offerSlotRepository
+    // w convertToDto() żeby pobrać sloty przypisane do oferty.
+    /** Mock of the offer slot repository. */
+    @MockitoBean
+    private OfferSlotRepository offerSlotRepository;
+
     /** Sample online offer used across multiple tests. */
     private Offer onlineOffer;
 
@@ -90,12 +97,12 @@ class OfferControllerTest extends BaseControllerTest {
     /**
      * Sets up shared test fixtures before each test case.
      * Initialises two offers (online and in-person), a tutor, a subject,
-     * a slot, and stubs common repository calls used by {@code convertToDto}.
+     * slots, and stubs common repository calls used by {@code convertToDto}.
      */
     @BeforeEach
     void setUp() {
-        onlineOffer = buildOffer(1, 10, 2, 3, "Online",  BigDecimal.valueOf(80));
-        inPersonOffer = buildOffer(2, 10, 2, 4, "InPerson", BigDecimal.valueOf(60));
+        onlineOffer   = buildOffer(1, 10, 2, "Online",   BigDecimal.valueOf(80));
+        inPersonOffer = buildOffer(2, 10, 2, "InPerson", BigDecimal.valueOf(60));
 
         User tutor = buildUser(10, "Anna", "Kowalska", "Warszawa");
         Subject subject = buildSubject(2, "Mathematics");
@@ -108,6 +115,13 @@ class OfferControllerTest extends BaseControllerTest {
         when(availabilitySlotRepository.findById(4)).thenReturn(Optional.of(slot4));
         when(reviewRepository.getAverageRatingByTutorId(10)).thenReturn(4.5);
         when(reviewRepository.countReviewsByTutorId(10)).thenReturn(12);
+
+        // FIX: offerSlotRepository.findByOfferId jest wołane w convertToDto dla
+        // każdej oferty — bez mocka zwraca null i poleci NPE.
+        OfferSlot offerSlot3 = buildOfferSlot(1, 3);
+        OfferSlot offerSlot4 = buildOfferSlot(2, 4);
+        when(offerSlotRepository.findByOfferId(1)).thenReturn(List.of(offerSlot3));
+        when(offerSlotRepository.findByOfferId(2)).thenReturn(List.of(offerSlot4));
     }
 
     // -----------------------------------------------------------------------
@@ -283,25 +297,25 @@ class OfferControllerTest extends BaseControllerTest {
 
     /**
      * Creates an {@link Offer} with the given data.
+     * Parametr availabilitySlotId usunięty — nie istnieje w encji Offer;
+     * sloty są w tabeli offer_slots.
      *
-     * @param id                 offer identifier
-     * @param tutorId            tutor identifier
-     * @param subjectId          subject identifier
-     * @param availabilitySlotId slot identifier
-     * @param offerType          offer type string (e.g. "Online")
-     * @param price              price per hour
+     * @param id        offer identifier
+     * @param tutorId   tutor identifier
+     * @param subjectId subject identifier
+     * @param offerType offer type string (e.g. "Online")
+     * @param price     price per hour
      * @return populated {@link Offer}
      */
     private Offer buildOffer(Integer id, Integer tutorId, Integer subjectId,
-                             Integer availabilitySlotId, String offerType,
-                             BigDecimal price) {
+                             String offerType, BigDecimal price) {
         Offer o = new Offer();
         o.setId(id);
         o.setTutorId(tutorId);
         o.setSubjectId(subjectId);
-        o.setAvailabilitySlotId(availabilitySlotId);
         o.setOfferType(offerType);
         o.setPrice(price);
+        o.setStatusId(1);
         o.setDetails("Sample description");
         return o;
     }
@@ -352,5 +366,19 @@ class OfferControllerTest extends BaseControllerTest {
         slot.setDayOfWeek(dayOfWeek);
         slot.setStartTime(startTime);
         return slot;
+    }
+
+    /**
+     * Creates an {@link OfferSlot} linking an offer to a slot.
+     *
+     * @param offerId             offer identifier
+     * @param availabilitySlotId  slot identifier
+     * @return populated {@link OfferSlot}
+     */
+    private OfferSlot buildOfferSlot(Integer offerId, Integer availabilitySlotId) {
+        OfferSlot os = new OfferSlot();
+        os.setOfferId(offerId);
+        os.setAvailabilitySlotId(availabilitySlotId);
+        return os;
     }
 }

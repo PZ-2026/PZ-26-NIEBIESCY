@@ -1,8 +1,8 @@
 /*
  * BookingControllerTest.java
  *
- * Version: 1.1
- * Date: 2026-05-17
+ * Version: 1.2
+ * Date: 2026-05-23
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -51,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * All repository dependencies are replaced by Mockito mocks
  * ({@code @MockitoBean}).
  *
- * @version 1.1
+ * @version 1.2
  * @author EduLink Team
  * @see BookingController
  */
@@ -93,6 +93,12 @@ class BookingControllerTest extends BaseControllerTest {
     @MockitoBean
     private ReviewRepository reviewRepository;
 
+    // FIX: dodany brakujący mock — BookingController używa offerSlotRepository
+    // do weryfikacji czy slot należy do oferty (metoda createBooking).
+    /** Mock of the offer slot repository. */
+    @MockitoBean
+    private OfferSlotRepository offerSlotRepository;
+
     /** Sample offer used across multiple tests. */
     private Offer mockOffer;
 
@@ -109,7 +115,8 @@ class BookingControllerTest extends BaseControllerTest {
         mockOffer.setId(1);
         mockOffer.setTutorId(5);
         mockOffer.setSubjectId(2);
-        mockOffer.setAvailabilitySlotId(3);
+        // FIX: usunięto mockOffer.setAvailabilitySlotId(3) — pole nie istnieje
+        // w encji Offer; sloty są w tabeli offer_slots (encja OfferSlot).
         mockOffer.setPrice(BigDecimal.valueOf(80.00));
         mockOffer.setOfferType("Online");
         mockOffer.setDetails("Mathematics tutoring");
@@ -219,8 +226,15 @@ class BookingControllerTest extends BaseControllerTest {
      */
     @Test
     void createBooking_validRequest_returns200() throws Exception {
+        // FIX: dodano mock offerSlotRepository — kontroler woła findByOfferId
+        // żeby sprawdzić czy slot należy do oferty. Bez tego mocka zwróciłby null
+        // i polecielibyśmy NPE zamiast 200.
+        OfferSlot offerSlot = new OfferSlot();
+        offerSlot.setOfferId(1);
+        offerSlot.setAvailabilitySlotId(3);
+
         when(offerRepository.existsById(1)).thenReturn(true);
-        when(offerRepository.findById(1)).thenReturn(Optional.of(mockOffer));
+        when(offerSlotRepository.findByOfferId(1)).thenReturn(List.of(offerSlot));
         when(bookingRepository.save(any(Booking.class))).thenReturn(mockBooking);
 
         BookingRequest request = buildBookingRequest(1, 10, 3);
@@ -260,8 +274,10 @@ class BookingControllerTest extends BaseControllerTest {
      */
     @Test
     void createBooking_slotMismatch_returns400() throws Exception {
+        // FIX: dodano mock offerSlotRepository zwracający pustą listę —
+        // bez tego NPE zamiast 400 Bad Request.
         when(offerRepository.existsById(1)).thenReturn(true);
-        when(offerRepository.findById(1)).thenReturn(Optional.of(mockOffer));
+        when(offerSlotRepository.findByOfferId(1)).thenReturn(List.of());
 
         BookingRequest request = buildBookingRequest(1, 10, 99);
 
