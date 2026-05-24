@@ -10,5 +10,6 @@ data class BookingResponse(
     val price: Double,
     val status: String,
     val rating: Int? = null,
-    val tutorId: Int
+    val tutorId: Int,
+    val reviewComment: String? = null
 )

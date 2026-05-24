@@ -127,6 +127,16 @@ private fun ReviewCard(review: ReviewResponse) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
+            if (!review.subjectName.isNullOrBlank()) {
+                Text(
+                    text = review.subjectName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Primary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

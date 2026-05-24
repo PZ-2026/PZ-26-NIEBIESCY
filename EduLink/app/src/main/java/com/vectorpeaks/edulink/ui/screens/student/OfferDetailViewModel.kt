@@ -18,6 +18,7 @@ class OfferDetailViewModel : ViewModel() {
 
     fun loadOffer(offerId: Int) {
         viewModelScope.launch {
+            _offer.value = null
             _isLoading.value = true
             try {
                 val result = RetrofitClient.apiService.getOfferById(offerId)

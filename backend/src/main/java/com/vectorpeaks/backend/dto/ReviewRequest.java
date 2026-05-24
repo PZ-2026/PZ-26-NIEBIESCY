@@ -1,8 +1,8 @@
 /*
  * ReviewRequest.java
  *
- * Version: 1.0
- * Date: 2026-04-26
+ * Version: 1.1
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -20,7 +20,7 @@ package com.vectorpeaks.backend.dto;
  */
 public class ReviewRequest {
     /** Identifier of the booking being reviewed. */
-    private Long bookingId;
+    private Integer bookingId;
 
     /** Identifier of the tutor receiving the review. */
     private Integer tutorId;
@@ -32,8 +32,8 @@ public class ReviewRequest {
     private String comment;
 
     // Getters and setters
-    public Long getBookingId() { return bookingId; }
-    public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
+    public Integer getBookingId() { return bookingId; }
+    public void setBookingId(Integer bookingId) { this.bookingId = bookingId; }
 
     public Integer getTutorId() { return tutorId; }
     public void setTutorId(Integer tutorId) { this.tutorId = tutorId; }

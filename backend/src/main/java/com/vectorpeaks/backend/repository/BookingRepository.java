@@ -1,8 +1,8 @@
 /*
  * BookingRepository.java
  *
- * Version: 1.0
- * Date: 2026-04-26
+ * Version: 1.1
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -17,7 +17,7 @@ import java.util.List;
 
 /**
  * Repository interface for performing CRUD operations on {@link Booking} entities.
- * Provides a custom query to retrieve all bookings for a specific student.
+ * Provides custom queries to retrieve bookings by student or by offer and slot.
  *
  * @version 1.0
  * @author EduLink Team
@@ -31,4 +31,13 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
      * @return list of bookings belonging to the student
      */
     List<Booking> findByStudentId(Integer studentId);
+
+    /**
+     * Retrieves all bookings for a specific offer and availability slot.
+     *
+     * @param offerId the ID of the offer
+     * @param availabilitySlotId the ID of the availability slot
+     * @return list of bookings matching the given offer and slot
+     */
+    List<Booking> findByOfferIdAndAvailabilitySlotId(Integer offerId, Integer availabilitySlotId);
 }

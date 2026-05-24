@@ -1,8 +1,8 @@
 /*
  * BookingResponse.java
  *
- * Version: 1.0
- * Date: 2026-04-26
+ * Version: 1.1
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -49,6 +49,9 @@ public class BookingResponse {
     /** Identifier of the tutor (used for submitting a review). */
     private Integer tutorId;
 
+    /** Optional comment left by the student in the review. */
+    private String reviewComment;
+
     // Getters and setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -79,4 +82,7 @@ public class BookingResponse {
 
     public Integer getTutorId() { return tutorId; }
     public void setTutorId(Integer tutorId) { this.tutorId = tutorId; }
+
+    public String getReviewComment() { return reviewComment; }
+    public void setReviewComment(String reviewComment) { this.reviewComment = reviewComment; }
 }

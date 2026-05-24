@@ -151,7 +151,7 @@ class BookingControllerTest extends BaseControllerTest {
         when(userRepository.findById(5)).thenReturn(Optional.of(tutor));
         when(subjectRepository.findById(2)).thenReturn(Optional.of(subject));
         when(slotRepository.findById(3)).thenReturn(Optional.of(slot));
-        when(reviewRepository.findByBookingId(100L)).thenReturn(Optional.empty());
+        when(reviewRepository.findByBookingId(100)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/bookings/student/10"))
                 .andExpect(status().isOk())
@@ -206,7 +206,7 @@ class BookingControllerTest extends BaseControllerTest {
             when(userRepository.findById(5)).thenReturn(Optional.of(tutor));
             when(subjectRepository.findById(2)).thenReturn(Optional.of(subject));
             when(slotRepository.findById(3)).thenReturn(Optional.of(slot));
-            when(reviewRepository.findByBookingId((long)(200 + i))).thenReturn(Optional.empty());
+            when(reviewRepository.findByBookingId((200 + i))).thenReturn(Optional.empty());
 
             mockMvc.perform(get("/api/bookings/student/20"))
                     .andExpect(status().isOk())

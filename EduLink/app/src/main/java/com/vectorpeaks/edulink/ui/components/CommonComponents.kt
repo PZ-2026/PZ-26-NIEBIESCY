@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -263,6 +264,7 @@ fun ReservationCard(
     onAccept: (() -> Unit)? = null,
     onReject: (() -> Unit)? = null,
     onRate: (() -> Unit)? = null,
+    onComplete: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -349,15 +351,22 @@ fun ReservationCard(
                     }
                 }
             }
-
-            if (!showActions && reservation.status == ReservationStatus.COMPLETED && reservation.rating == null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { onRate?.invoke() },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+            if (!showActions && reservation.status == ReservationStatus.ACCEPTED && onComplete != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Text("Oceń lekcję")
+                    OutlinedButton(
+                        onClick = { onComplete.invoke() },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Success),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Zakończ lekcję", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
         }

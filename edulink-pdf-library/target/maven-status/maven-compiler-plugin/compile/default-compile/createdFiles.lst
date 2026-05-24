@@ -1,4 +1,11 @@
-com\vectorpeaks\pdf\EduLinkPdfReport$ReportSummaryData.class
-com\vectorpeaks\pdf\EduLinkPdfReport.class
+com\vectorpeaks\pdf\EduLinkSchedulePdfReport.class
+com\vectorpeaks\pdf\EduLinkTutorPdfReport$SummaryData.class
 com\vectorpeaks\pdf\EduLinkPdfReport$TutorReportRow.class
+com\vectorpeaks\pdf\EduLinkPdfReport$ReportSummaryData.class
+com\vectorpeaks\pdf\EduLinkTutorPdfReport$SubjectRow.class
+com\vectorpeaks\pdf\EduLinkTutorPdfReport.class
+com\vectorpeaks\pdf\EduLinkPdfReport.class
 com\vectorpeaks\pdf\EduLinkPdfReport$SubjectReportRow.class
+com\vectorpeaks\pdf\EduLinkTutorPdfReport$ReviewRow.class
+com\vectorpeaks\pdf\EduLinkSchedulePdfReport$ScheduleEntry.class
+com\vectorpeaks\pdf\EduLinkTutorPdfReport$StudentRow.class

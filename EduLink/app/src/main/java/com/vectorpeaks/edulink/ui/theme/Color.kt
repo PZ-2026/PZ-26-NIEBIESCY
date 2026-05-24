@@ -31,7 +31,7 @@ val OnSurface = Color(0xFF1A1C20)
 val OnSurfaceVariant = Color(0xFF5A5E66)
 
 // Status colors
-val Success = Color(0xFF43A047)
+val Success = Color(0xFFE53935)
 val SuccessContainer = Color(0xFFE8F5E9)
 val Warning = Color(0xFFFFA726)
 val WarningContainer = Color(0xFFFFF3E0)

@@ -1,8 +1,8 @@
 /*
  * Review.java
  *
- * Version: 1.0
- * Date: 2026-04-26
+ * Version: 1.1
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -12,6 +12,7 @@
 package com.vectorpeaks.backend.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 /**
  * Entity representing a review given by a student to a tutor.
@@ -41,7 +42,15 @@ public class Review {
 
     /** Identifier of the booking associated with this review. */
     @Column(name = "booking_id")
-    private Long bookingId;
+    private Integer bookingId;
+
+    /** Timestamp when the review was created. */
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    /** Timestamp when the review was last updated. */
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
     // Getters and setters
     public Integer getId() { return id; }
@@ -56,6 +65,12 @@ public class Review {
     public String getComment() { return comment; }
     public void setComment(String comment) { this.comment = comment; }
 
-    public Long getBookingId() { return bookingId; }
-    public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
+    public Integer getBookingId() { return bookingId; }
+    public void setBookingId(Integer bookingId) { this.bookingId = bookingId; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

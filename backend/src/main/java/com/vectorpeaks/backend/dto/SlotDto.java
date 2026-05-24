@@ -1,8 +1,8 @@
 /*
  * SlotDto.java
  *
- * Version: 1.1
- * Date: 2026-05-22
+ * Version: 1.2
+ * Date: 2026-05-24
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -25,21 +25,25 @@ public class SlotDto {
     /** Human-readable label combining day and start time. */
     private String label;
 
-    /** Numeric representation of the day of week (e.g., 1 = Monday, 7 = Sunday).  */
+    /** Numeric representation of the day of week (e.g., 1 = Monday, 7 = Sunday). */
     private Integer dayOfWeek;
 
+    /** Indicates whether the slot is already booked. */
+    private boolean isBooked;
+
     /**
-     * Constructs a new SlotDto with the given ID and label.
+     * Constructs a new SlotDto with the given ID, label, day of week, and booked status.
      *
      * @param id        the slot identifier
      * @param label     the display label
      * @param dayOfWeek the day of week as an integer (1-7)
+     * @param isBooked  true if the slot is already booked
      */
-
-    public SlotDto(Integer id, String label, Integer dayOfWeek) {
+    public SlotDto(Integer id, String label, Integer dayOfWeek, boolean isBooked) {
         this.id = id;
         this.label = label;
         this.dayOfWeek = dayOfWeek;
+        this.isBooked = isBooked;
     }
 
     // Getters and setters
@@ -51,4 +55,7 @@ public class SlotDto {
 
     public Integer getDayOfWeek() { return dayOfWeek; }
     public void setDayOfWeek(Integer dayOfWeek) { this.dayOfWeek = dayOfWeek; }
+
+    public boolean isBooked() { return isBooked; }
+    public void setBooked(boolean booked) { isBooked = booked; }
 }

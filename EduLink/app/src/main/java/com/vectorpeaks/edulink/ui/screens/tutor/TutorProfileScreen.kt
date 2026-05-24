@@ -20,6 +20,16 @@ import com.vectorpeaks.edulink.ui.theme.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.core.content.FileProvider
+import com.vectorpeaks.edulink.network.RetrofitClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
 
 @Composable
 fun TutorProfileScreen(
@@ -38,6 +48,7 @@ fun TutorProfileScreen(
     var phoneError by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     var showScheduleDialog by remember { mutableStateOf(false) }
     var showReportDialog by remember { mutableStateOf(false) }
@@ -49,7 +60,7 @@ fun TutorProfileScreen(
 
     // Dni tygodnia
     var scheduleIncludeDates by remember { mutableStateOf(false) }
-    var scheduleDatesAll by remember { mutableStateOf(true) } // true = wszystkie, false = wybrane dni tygodnia
+    var scheduleDatesAll by remember { mutableStateOf(true) }
     val daysOfWeek = listOf("Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela")
     var scheduleSelectedDays by remember { mutableStateOf(setOf<String>()) }
 
@@ -62,8 +73,9 @@ fun TutorProfileScreen(
 
     // Przedmioty
     var reportIncludeSubjects by remember { mutableStateOf(false) }
-    var reportSubjectsAll by remember { mutableStateOf(true) } // true = wszystkie, false = wybrane
+    var reportSubjectsAll by remember { mutableStateOf(true) }
     val availableSubjects by viewModel.tutorSubjects.collectAsState()
+    val availableSubjectDtos by viewModel.tutorSubjectDtos.collectAsState()
     var reportSelectedSubjects by remember { mutableStateOf(setOf<String>()) }
 
     LaunchedEffect(userId) {
@@ -439,7 +451,6 @@ fun TutorProfileScreen(
                             CheckboxRow("Imiona uczniów", scheduleIncludeStudents) { scheduleIncludeStudents = it }
                             CheckboxRow("Łączna liczba godzin", scheduleIncludeHours) { scheduleIncludeHours = it }
 
-                            // --- Sekcja: Daty ---
                             CheckboxRow("Daty zajęć", scheduleIncludeDates) {
                                 scheduleIncludeDates = it
                                 if (!it) scheduleSelectedDays = setOf()
@@ -501,8 +512,35 @@ fun TutorProfileScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        // TODO: logika generowania planu z wybranymi opcjami
-                        showScheduleDialog = false
+                        scope.launch {
+                            try {
+                                val dayNameToInt = mapOf(
+                                    "Poniedziałek" to 1, "Wtorek" to 2, "Środa" to 3,
+                                    "Czwartek" to 4, "Piątek" to 5, "Sobota" to 6,
+                                    "Niedziela" to 0
+                                )
+                                val selectedDayInts = if (scheduleDatesAll) {
+                                    emptyList()
+                                } else {
+                                    scheduleSelectedDays.mapNotNull { dayNameToInt[it] }
+                                }
+
+                                downloadAndOpenTutorSchedulePdf(
+                                    context           = context,
+                                    tutorId           = userId,
+                                    subjectIds        = if (reportSubjectsAll) emptyList()
+                                    else availableSubjectDtos
+                                        .filter { it.name in reportSelectedSubjects }
+                                        .map { it.id },
+                                    includeStudents   = scheduleIncludeStudents,
+                                    includeTotalHours = scheduleIncludeHours,
+                                    days              = selectedDayInts
+                                )
+                                showScheduleDialog = false
+                            } catch (e: Exception) {
+                                showScheduleDialog = false
+                            }
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                     shape = RoundedCornerShape(10.dp)
@@ -535,9 +573,6 @@ fun TutorProfileScreen(
                                 color = OnSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            CheckboxRow("Liczba prowadzonych korepetycji", reportIncludeLessonsCount) { reportIncludeLessonsCount = it }
-                            CheckboxRow("Liczba zakończonych korepetycji", reportIncludeLessonsCount) { reportIncludeLessonsCount = it }
-                            CheckboxRow("Lista uczniów", reportIncludeStudents) { reportIncludeStudents = it }
                             CheckboxRow("Przedmioty", reportIncludeSubjects) {
                                 reportIncludeSubjects = it
                                 if (!it) reportSelectedSubjects = setOf()
@@ -601,6 +636,9 @@ fun TutorProfileScreen(
                                     }
                                 }
                             }
+                            CheckboxRow("Liczba prowadzonych korepetycji", reportIncludeLessonsCount) { reportIncludeLessonsCount = it }
+                            CheckboxRow("Liczba zakończonych korepetycji", reportIncludeLessonsCount) { reportIncludeLessonsCount = it }
+                            CheckboxRow("Lista uczniów", reportIncludeStudents) { reportIncludeStudents = it }
                             CheckboxRow("Opinie uczniów", reportIncludeRatings) { reportIncludeRatings = it }
                             if (reportIncludeRatings) {
                                 Column(
@@ -642,8 +680,30 @@ fun TutorProfileScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        // TODO: logika generowania raportu
-                        showReportDialog = false
+                        scope.launch {
+                            try {
+                                downloadAndOpenTutorPdf(
+                                    context         = context,
+                                    tutorId         = userId,
+                                    from            = java.time.LocalDate.now().minusDays(30).toString(),
+                                    to              = java.time.LocalDate.now().toString(),
+                                    includeStudents = reportIncludeStudents,
+                                    includeSubjects = reportIncludeSubjects,
+                                    subjectIds = if (reportSubjectsAll) {
+                                        emptyList()
+                                    } else {
+                                        availableSubjectDtos
+                                            .filter { it.name in reportSelectedSubjects }
+                                            .map { it.id }
+                                    },
+                                    includeReviews  = reportIncludeRatings,
+                                    reviewsN        = reportRatingsCount.toIntOrNull() ?: 5
+                                )
+                                showReportDialog = false
+                            } catch (e: Exception) {
+                                showReportDialog = false
+                            }
+                        }
                     },
                     enabled = !reportIncludeRatings || reportRatingsCountError == null && reportRatingsCount.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
@@ -702,4 +762,94 @@ private fun CheckboxRow(
         Spacer(modifier = Modifier.width(8.dp))
         Text(text = label, style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+suspend fun downloadAndOpenTutorPdf(
+    context         : Context,
+    tutorId         : Int,
+    from            : String,
+    to              : String,
+    includeStudents : Boolean,
+    includeSubjects : Boolean,
+    subjectIds      : List<Int>,
+    includeReviews  : Boolean,
+    reviewsN        : Int
+) = withContext(Dispatchers.IO) {
+
+    val response = RetrofitClient.apiService.downloadTutorReportPdf(
+        tutorId         = tutorId,
+        from            = from,
+        to              = to,
+        includeStudents = includeStudents,
+        includeSubjects = includeSubjects,
+        subjectIds      = subjectIds,
+        includeReviews  = includeReviews,
+        reviewsN        = reviewsN
+    )
+
+    val cacheFile = File(
+        context.cacheDir,
+        "edulink_raport_korepetytor_${tutorId}_${from}_${to}.pdf"
+    )
+    val inputStream = response.byteStream()
+    val outputStream = cacheFile.outputStream()
+    inputStream.copyTo(outputStream)
+    inputStream.close()
+    outputStream.close()
+
+    val uri: Uri = FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        cacheFile
+    )
+
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, "application/pdf")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    context.startActivity(intent)
+}
+
+suspend fun downloadAndOpenTutorSchedulePdf(
+    context           : Context,
+    tutorId           : Int,
+    subjectIds        : List<Int>,
+    includeStudents   : Boolean,
+    includeTotalHours : Boolean,
+    days              : List<Int>
+) = withContext(Dispatchers.IO) {
+
+    val response = RetrofitClient.apiService.downloadTutorSchedulePdf(
+        tutorId           = tutorId,
+        subjectIds        = subjectIds,
+        includeStudents   = includeStudents,
+        includeTotalHours = includeTotalHours,
+        days              = days
+    )
+
+    val cacheFile = File(
+        context.cacheDir,
+        "edulink_plan_zajec_${tutorId}_${java.time.LocalDate.now()}.pdf"
+    )
+    val inputStream = response.byteStream()
+    val outputStream = cacheFile.outputStream()
+    inputStream.copyTo(outputStream)
+    inputStream.close()
+    outputStream.close()
+
+    val uri: Uri = FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        cacheFile
+    )
+
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, "application/pdf")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    context.startActivity(intent)
 }

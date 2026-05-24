@@ -11,7 +11,7 @@ INSERT INTO statuses (id, status) VALUES
 INSERT INTO global_limits (id, hourly_price_limit, message) VALUES 
 (1, 200.00, 'Tutor hour price limit');
 
--- 4. AvailabilitySlots 
+-- 4. AvailabilitySlots
 DO $$
 DECLARE
     day_num INTEGER;
@@ -33,7 +33,7 @@ INSERT INTO subjects (id, name, status_id) VALUES
 (4, 'Biologia', 1), (5, 'Chemia', 1), (6, 'Historia', 1), 
 (7, 'Informatyka', 1), (8, 'Geografia', 1);
 
--- 6. Users 
+-- 6. Users
 INSERT INTO users (id, role_id, password, first_name, last_name, email, account_status_id, address, phone_number, fcm_token, created_at) VALUES 
 (1,  1, 'hash1',  'Jan',    'Kowalski',    'admin@edulink.com',   1, 'Warszawa',  '111222333', NULL, '2026-05-01 08:00:00'),
 (2,  2, 'hash2',  'Anna',   'Nowak',       'tutor@edulink.com',   1, 'Kraków',    '222333444', NULL, '2026-05-01 09:00:00'),
@@ -57,7 +57,7 @@ INSERT INTO offers (id, tutor_id, price, details, subject_id, status_id, global_
 (7, 1, 65.00, 'Python dla początkujących',         7, 1, 1, 'Stacjonarne', '2026-05-08 16:00:00'),
 (8, 5, 90.00, 'Fizyka podstawowa',                 2, 1, 1, 'Online',       '2026-05-08 17:00:00');
 
--- 8. Offer_slots 
+-- 8. Offer_slots
 INSERT INTO offer_slots (offer_id, availability_slot_id) VALUES
 (1, 1), (2, 2), (3, 3), (4, 4),
 (5, 5), (6, 6), (7, 7), (8, 8);
@@ -73,16 +73,16 @@ INSERT INTO bookings (id, availability_slot_id, status_id, offer_id, student_id,
 (7, 7, 4, 7, 4,  '2026-05-13 10:00:00'),
 (8, 8, 3, 8, 6,  '2026-05-14 18:00:00');
 
--- 10. Reviews
-INSERT INTO reviews (id, rating, tutor_id, comment, booking_id) VALUES 
-(1, 5, 1, 'Bardzo dobry nauczyciel!',                     1),
-(2, 4, 1, 'Bardzo pomocny.',                              2),
-(3, 5, 2, 'Excellent English lesson.',                    6),
-(4, 3, 8, 'Trochę przynudza, ale uczy dobrze.',          5),
-(5, 5, 1, 'Dobrze tłumaczy zawiłości w programowaniu.', 7),
-(6, 2, 5, 'Zbyt skomplikowane dla mnie.',                 4),
-(7, 5, 2, 'Super friendly!',                              3),
-(8, 4, 5, 'Bardzo kompetentny.',                          8);
+-- 10. Reviews (z created_at i updated_at)
+INSERT INTO reviews (id, rating, tutor_id, comment, booking_id, created_at, updated_at) VALUES 
+(1, 5, 1, 'Bardzo dobry nauczyciel!',                     1, '2026-05-09 11:00:00', '2026-05-09 11:00:00'),
+(2, 4, 1, 'Bardzo pomocny.',                              2, '2026-05-10 12:00:00', '2026-05-10 12:00:00'),
+(3, 5, 2, 'Excellent English lesson.',                    6, '2026-05-13 09:00:00', '2026-05-13 09:00:00'),
+(4, 3, 8, 'Trochę przynudza, ale uczy dobrze.',          5, '2026-05-12 10:00:00', '2026-05-14 15:00:00'),
+(5, 5, 1, 'Dobrze tłumaczy zawiłości w programowaniu.', 7, '2026-05-14 11:00:00', '2026-05-14 11:00:00'),
+(6, 2, 5, 'Zbyt skomplikowane dla mnie.',                 4, '2026-05-11 13:00:00', '2026-05-13 08:00:00'),
+(7, 5, 2, 'Super friendly!',                              3, '2026-05-11 16:00:00', '2026-05-11 16:00:00'),
+(8, 4, 5, 'Bardzo kompetentny.',                          8, '2026-05-15 10:00:00', '2026-05-15 10:00:00');
 
 -- 11. Chats
 INSERT INTO chats (id, created_at) VALUES 
@@ -121,6 +121,6 @@ SELECT setval(pg_get_serial_sequence('reviews',            'id'), (SELECT MAX(id
 SELECT setval(pg_get_serial_sequence('chats',              'id'), (SELECT MAX(id) FROM chats));
 SELECT setval(pg_get_serial_sequence('messages',           'id'), (SELECT MAX(id) FROM messages));
 
--- Hashowanie haseł 
+-- Hashowanie haseł
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 UPDATE users SET password = crypt(password, gen_salt('bf')) WHERE password NOT LIKE '$2a$%';
