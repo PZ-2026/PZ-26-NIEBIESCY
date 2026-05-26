@@ -22,6 +22,7 @@ import com.vectorpeaks.backend.security.JwtUtil;
 import com.vectorpeaks.backend.service.AuthService;
 import com.vectorpeaks.backend.service.FcmTokenService;
 import com.vectorpeaks.backend.service.LoginAttemptService;
+import com.vectorpeaks.backend.service.MaintenanceService;
 import com.vectorpeaks.backend.service.RefreshTokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -60,19 +61,22 @@ public class AuthController {
     private final LoginAttemptService loginAttemptService;
     private final UserRepository userRepository;
     private final FcmTokenService fcmTokenService;
+    private final MaintenanceService maintenanceService;
 
     public AuthController(AuthService authService,
                           JwtUtil jwtUtil,
                           RefreshTokenService refreshTokenService,
                           LoginAttemptService loginAttemptService,
                           UserRepository userRepository,
-                          FcmTokenService fcmTokenService) {
+                          FcmTokenService fcmTokenService,
+                          MaintenanceService maintenanceService) {
         this.authService = authService;
         this.jwtUtil = jwtUtil;
         this.refreshTokenService = refreshTokenService;
         this.loginAttemptService = loginAttemptService;
         this.userRepository = userRepository;
         this.fcmTokenService = fcmTokenService;
+        this.maintenanceService = maintenanceService;
     }
 
     /**
@@ -108,6 +112,17 @@ public class AuthController {
         }
 
         User user = userOpt.get();
+
+        if (maintenanceService.isFullyActive() && !"ADMIN".equalsIgnoreCase(user.getRoleName())) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body("Trwają prace serwisowe");
+        }
+
+        if (user.getAccountStatusId() == null || user.getAccountStatusId() != 1) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Twoje konto jest zablokowane");
+        }
+
         loginAttemptService.recordSuccess(email, ip);
 
         String accessToken = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRoleName());

@@ -90,8 +90,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.value = LoginUiState.Success(user)
 
             } catch (e: HttpException) {
-                val errorMsg = if (e.code() == 401) "Nieprawidłowy email lub hasło"
-                else "Błąd serwera (${e.code()})"
+                val errorMsg = when (e.code()) {
+                    401 -> "Nieprawidłowy email lub hasło"
+                    403 -> "Twoje konto jest zablokowane"
+                    503 -> "Trwają prace serwisowe"
+                    else -> "Błąd serwera (${e.code()})"
+                }
                 _uiState.value = LoginUiState.Error(errorMsg)
             } catch (e: IOException) {
                 _uiState.value = LoginUiState.Error("Błąd sieci – sprawdź połączenie")

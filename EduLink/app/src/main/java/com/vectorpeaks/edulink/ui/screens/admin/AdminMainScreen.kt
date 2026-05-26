@@ -63,7 +63,11 @@ fun AdminMainScreen(
         }
     ) { innerPadding ->
         when (selectedTab) {
-            0 -> AdminDashboardScreen(user = user, modifier = Modifier.padding(innerPadding))
+            0 -> AdminDashboardScreen(
+                user = user,
+                modifier = Modifier.padding(innerPadding),
+                onNavigateToTab = { selectedTab = it }
+            )
             1 -> AdminUsersScreen(modifier = Modifier.padding(innerPadding))
             2 -> AdminReportsScreen(modifier = Modifier.padding(innerPadding))
             3 -> AdminSettingsScreen(user = user, onLogout = onLogout, modifier = Modifier.padding(innerPadding))

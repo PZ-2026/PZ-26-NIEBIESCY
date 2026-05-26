@@ -31,17 +31,19 @@ fun AdminSettingsScreen(
     val error by viewModel.error.collectAsState()
     val saveSuccess by viewModel.saveSuccess.collectAsState()
 
-    var maintenanceMode by remember { mutableStateOf(false) }
+    val maintenanceStatus by viewModel.maintenanceStatus.collectAsState()
     var maxPricePerHour by remember { mutableStateOf("200") }
     var globalMessage by remember { mutableStateOf("") }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showAddSubjectDialog by remember { mutableStateOf(false) }
     var newSubjectName by remember { mutableStateOf("") }
+    var subjectsExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.loadSettings()
         viewModel.loadSubjects()
+        viewModel.loadMaintenanceStatus()
     }
 
     // When settings arrive, populate edit fields
@@ -147,13 +149,31 @@ fun AdminSettingsScreen(
                                 )
                             }
                             Switch(
-                                checked = maintenanceMode,
-                                onCheckedChange = { maintenanceMode = it },
+                                checked = maintenanceStatus.active,
+                                onCheckedChange = { viewModel.toggleMaintenance(it) },
                                 colors = SwitchDefaults.colors(
                                     checkedTrackColor = Warning
-
                                 )
                             )
+                        }
+                        if (maintenanceStatus.active && maintenanceStatus.startsAt != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "⏱ Prace serwisowe zaplanowane. Użytkownicy widzą odliczanie.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Warning,
+                                fontWeight = FontWeight.Medium
+                            )
+                            if (!maintenanceStatus.fullyActive) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(
+                                    onClick = { viewModel.shortenMaintenanceTime() },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Warning)
+                                ) {
+                                    Text("Skróć do 1 minuty", color = androidx.compose.ui.graphics.Color.White)
+                                }
+                            }
                         }
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
@@ -210,26 +230,63 @@ fun AdminSettingsScreen(
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Zarządzanie przedmiotami",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Zarządzanie przedmiotami",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "${subjects.size}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = OnSurfaceVariant
+                            )
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
-                        subjects.forEach { subject ->
+
+                        val visibleSubjects = if (subjectsExpanded) subjects else subjects.take(5)
+                        visibleSubjects.forEach { subject ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(text = subject.name, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    text = subject.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+
                                 IconButton(onClick = { viewModel.deleteSubject(subject.id) }) {
                                     Icon(Icons.Default.Close, contentDescription = "Usuń", tint = Error, modifier = Modifier.size(18.dp))
                                 }
                             }
                         }
+
+                        // Show more / less button
+                        if (subjects.size > 5) {
+                            TextButton(
+                                onClick = { subjectsExpanded = !subjectsExpanded },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = if (subjectsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (subjectsExpanded) "Pokaż mniej" else "Pokaż więcej (${subjects.size - 5})",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(
                             onClick = {

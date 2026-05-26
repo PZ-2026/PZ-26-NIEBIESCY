@@ -80,6 +80,7 @@ fun TutorOffersScreen(
 ) {
     val offers by viewModel.offers.collectAsState()
     val subjects by viewModel.subjects.collectAsState()
+    val maxPriceLimit by viewModel.maxPriceLimit.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val isCreating by viewModel.isCreating.collectAsState()
@@ -403,7 +404,7 @@ fun TutorOffersScreen(
                                 it.isBlank() -> ""
                                 it.toDoubleOrNull() == null -> "Cena musi być liczbą"
                                 it.toDouble() <= 0 -> "Cena musi być większa od zera"
-                                it.toDouble() > 200 -> "Cena przekracza limit (200 zł)"
+                                it.toDouble() > maxPriceLimit -> "Cena przekracza limit (${maxPriceLimit.toInt()} zł)"
                                 else -> ""
                             }
                         },
@@ -556,7 +557,7 @@ fun TutorOffersScreen(
                                 it.isBlank() -> ""
                                 it.toDoubleOrNull() == null -> "Cena musi być liczbą"
                                 it.toDouble() <= 0 -> "Cena musi być większa od zera"
-                                it.toDouble() > 200 -> "Cena przekracza limit administratora (200 zł)"
+                                it.toDouble() > maxPriceLimit -> "Cena przekracza limit administratora (${maxPriceLimit.toInt()} zł)"
                                 else -> ""
                             }
                         },
