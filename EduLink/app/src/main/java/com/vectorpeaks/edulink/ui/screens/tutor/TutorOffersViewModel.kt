@@ -40,6 +40,9 @@ class TutorOffersViewModel : ViewModel() {
     private val _currentOfferSlots = MutableStateFlow<List<Slot>>(emptyList())
     val currentOfferSlots: StateFlow<List<Slot>> = _currentOfferSlots
 
+    private val _maxPriceLimit = MutableStateFlow(200.0)
+    val maxPriceLimit: StateFlow<Double> = _maxPriceLimit
+
     fun loadData(tutorId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -47,8 +50,11 @@ class TutorOffersViewModel : ViewModel() {
             try {
                 val offersDeferred = async { RetrofitClient.apiService.getOffersByTutor(tutorId) }
                 val subjectsDeferred = async { RetrofitClient.apiService.getSubjectsWithId() }
+                val settingsDeferred = async { RetrofitClient.apiService.getAdminSettings() }
+                
                 _offers.value = offersDeferred.await()
                 _subjects.value = subjectsDeferred.await()
+                _maxPriceLimit.value = settingsDeferred.await().maxPricePerHour
             } catch (e: HttpException) {
                 _error.value = "HTTP error: ${e.code()}"
             } catch (e: IOException) {

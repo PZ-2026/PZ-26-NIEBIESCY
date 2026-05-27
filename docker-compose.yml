@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: edulink-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-EduLink_Database}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-student}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - edulink-pgdata:/var/lib/postgresql/data
+      - ./Skrypty SQL/skrypt_baza.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./Skrypty SQL/seeder.sql:/docker-entrypoint-initdb.d/02-seeder.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-EduLink_Database}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edulink-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-EduLink_Database}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-student}
+      JWT_SECRET: ${JWT_SECRET:-7KW4H59C9BRR54yXgel4v4PrZvJ1MbEu/U8QtHb7S7stuNCAwlIu/8lZJOXRCCfqMPGOem70ppeUXddDrWjnfQ==}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-900000}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
+
+volumes:
+  edulink-pgdata:

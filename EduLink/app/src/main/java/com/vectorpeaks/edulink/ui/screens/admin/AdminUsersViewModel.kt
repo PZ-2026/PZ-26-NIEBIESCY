@@ -2,6 +2,7 @@ package com.vectorpeaks.edulink.ui.screens.admin
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vectorpeaks.edulink.data.model.RegisterRequest
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.network.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,4 +58,40 @@ class AdminUsersViewModel : ViewModel() {
             }
         }
     }
+
+    /**
+     * Creates a new user account via the existing register endpoint.
+     */
+    fun createUser(
+        firstName: String,
+        lastName: String,
+        email: String,
+        password: String,
+        roleId: Int,
+        city: String,
+        phoneNumber: String
+    ) {
+        viewModelScope.launch {
+            try {
+                val request = RegisterRequest(
+                    firstName = firstName,
+                    lastName = lastName,
+                    email = email,
+                    password = password,
+                    roleId = roleId,
+                    city = city,
+                    phoneNumber = phoneNumber
+                )
+                val response = RetrofitClient.apiService.register(request)
+                if (response.isSuccessful) {
+                    loadUsers()
+                } else {
+                    _error.value = "Błąd tworzenia: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Błąd: ${e.message}"
+            }
+        }
+    }
 }
+

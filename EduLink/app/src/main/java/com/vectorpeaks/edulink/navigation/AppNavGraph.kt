@@ -16,6 +16,7 @@ import com.vectorpeaks.edulink.data.model.user.RoleID
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.security.AuthPreferencesManager
 import com.vectorpeaks.edulink.security.SessionManager
+import com.vectorpeaks.edulink.ui.components.MaintenanceBannerWrapper
 import com.vectorpeaks.edulink.ui.screens.admin.AdminMainScreen
 import com.vectorpeaks.edulink.ui.screens.login.AutoLoginScreen
 import com.vectorpeaks.edulink.ui.screens.login.LoginScreen
@@ -98,20 +99,22 @@ fun AppNavGraph() {
         // ── Student ──────────────────────────────────────────────
         composable(NavRoutes.StudentMain.route) {
             currentUser?.let { user ->
-                StudentMainScreen(
-                    user = user,
-                    onLogout = {
-                        currentUser = null
-                        navController.navigate(NavRoutes.Login.route) {
-                            popUpTo(0) { inclusive = true }
+                MaintenanceBannerWrapper {
+                    StudentMainScreen(
+                        user = user,
+                        onLogout = {
+                            currentUser = null
+                            navController.navigate(NavRoutes.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        },
+                        onNavigateToReviews = { tutorId, tutorName ->
+                            navController.navigate(
+                                NavRoutes.TutorReviews.createRoute(tutorId, tutorName)
+                            )
                         }
-                    },
-                    onNavigateToReviews = { tutorId, tutorName ->
-                        navController.navigate(
-                            NavRoutes.TutorReviews.createRoute(tutorId, tutorName)
-                        )
-                    }
-                )
+                    )
+                }
             }
         }
 
@@ -127,21 +130,23 @@ fun AppNavGraph() {
         ) { backStackEntry ->
             val startTab = backStackEntry.arguments?.getInt("startTab") ?: 0
             currentUser?.let { user ->
-                TutorMainScreen(
-                    user = user,
-                    startTab = startTab,
-                    onLogout = {
-                        currentUser = null
-                        navController.navigate(NavRoutes.Login.route) {
-                            popUpTo(0) { inclusive = true }
+                MaintenanceBannerWrapper {
+                    TutorMainScreen(
+                        user = user,
+                        startTab = startTab,
+                        onLogout = {
+                            currentUser = null
+                            navController.navigate(NavRoutes.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        },
+                        onNavigateToReviews = { tutorId, tutorName ->
+                            navController.navigate(
+                                NavRoutes.TutorReviewsFromTutor.createRoute(tutorId, tutorName)
+                            )
                         }
-                    },
-                    onNavigateToReviews = { tutorId, tutorName ->
-                        navController.navigate(
-                            NavRoutes.TutorReviewsFromTutor.createRoute(tutorId, tutorName)
-                        )
-                    }
-                )
+                    )
+                }
             }
         }
 

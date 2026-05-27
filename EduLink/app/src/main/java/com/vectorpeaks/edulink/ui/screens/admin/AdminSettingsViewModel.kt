@@ -2,6 +2,7 @@ package com.vectorpeaks.edulink.ui.screens.admin
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vectorpeaks.edulink.data.model.MaintenanceStatus
 import com.vectorpeaks.edulink.data.model.SubjectDto
 import com.vectorpeaks.edulink.data.model.user.GlobalLimitDto
 import com.vectorpeaks.edulink.network.RetrofitClient
@@ -26,6 +27,9 @@ class AdminSettingsViewModel : ViewModel() {
 
     private val _saveSuccess = MutableStateFlow(false)
     val saveSuccess: StateFlow<Boolean> = _saveSuccess
+
+    private val _maintenanceStatus = MutableStateFlow(MaintenanceStatus())
+    val maintenanceStatus: StateFlow<MaintenanceStatus> = _maintenanceStatus
 
     fun loadSettings() {
         viewModelScope.launch {
@@ -76,12 +80,13 @@ class AdminSettingsViewModel : ViewModel() {
     }
 
     /**
-     * Adds a new subject with the given name.
+     * Adds a new subject with the given name and optional max price.
      */
     fun addSubject(name: String) {
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.apiService.addSubject(mapOf("name" to name))
+                val body = mapOf("name" to name)
+                val response = RetrofitClient.apiService.addSubject(body)
                 if (response.isSuccessful) {
                     loadSubjects()
                 } else {
@@ -116,6 +121,7 @@ class AdminSettingsViewModel : ViewModel() {
         }
     }
 
+
     /**
      * Sends logout request to backend (invalidates refresh token + clears FCM),
      * then clears local session data.
@@ -148,6 +154,56 @@ class AdminSettingsViewModel : ViewModel() {
                 timber.log.Timber.d("LOGOUT: czyszczę authPrefs")
                 authPrefs.clearAll()
                 onComplete()
+            }
+        }
+    }
+
+    /**
+     * Loads current maintenance mode status from the backend.
+     */
+    fun loadMaintenanceStatus() {
+        viewModelScope.launch {
+            try {
+                val result = RetrofitClient.apiService.getMaintenanceStatus()
+                _maintenanceStatus.value = result
+            } catch (_: Exception) {
+                // Silently ignore – maintenance status is non-critical
+            }
+        }
+    }
+
+    /**
+     * Toggles maintenance mode on or off.
+     */
+    fun toggleMaintenance(active: Boolean) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.toggleMaintenance(mapOf("active" to active))
+                if (response.isSuccessful) {
+                    response.body()?.let { _maintenanceStatus.value = it }
+                } else {
+                    _error.value = "Błąd: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Błąd: ${e.message}"
+            }
+        }
+    }
+
+    /**
+     * Shortens the maintenance mode cooldown to 1 minute.
+     */
+    fun shortenMaintenanceTime() {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.apiService.toggleMaintenance(mapOf("force" to true))
+                if (response.isSuccessful) {
+                    response.body()?.let { _maintenanceStatus.value = it }
+                } else {
+                    _error.value = "Błąd: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Błąd: ${e.message}"
             }
         }
     }

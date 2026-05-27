@@ -35,6 +35,8 @@ public class Subject {
     @Column(name = "status_id")
     private Integer statusId;
 
+
+
     // Getters and setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -44,4 +46,5 @@ public class Subject {
 
     public Integer getStatusId() { return statusId; }
     public void setStatusId(Integer statusId) { this.statusId = statusId; }
+
 }

@@ -27,13 +27,18 @@ import com.vectorpeaks.edulink.ui.theme.*
 fun AdminDashboardScreen(
     user: User,
     modifier: Modifier = Modifier,
-    viewModel: AdminDashboardViewModel = viewModel()
+    onNavigateToTab: (Int) -> Unit = {},
+    viewModel: AdminDashboardViewModel = viewModel(),
+    settingsViewModel: AdminSettingsViewModel = viewModel()
 ) {
     val stats by viewModel.stats.collectAsState()
     val pendingBookings by viewModel.pendingBookings.collectAsState()
     val pendingOffers by viewModel.pendingOffers.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+
+    var showAddSubjectDialog by remember { mutableStateOf(false) }
+    var newSubjectName by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.loadDashboard()
@@ -137,20 +142,7 @@ fun AdminDashboardScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Pending bookings
-                if (pendingBookings.isNotEmpty()) {
-                    SectionHeader(title = "Oczekujące rezerwacje")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    pendingBookings.forEach { booking ->
-                        ReservationCard(
-                            reservation = convertBookingToReservation(booking),
-                            showActions = true,
-                            onAccept = { viewModel.approveBooking(booking.id) },
-                            onReject = { viewModel.rejectBooking(booking.id) }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
+
 
                 // Pending offers
                 if (pendingOffers.isNotEmpty()) {
@@ -177,6 +169,7 @@ fun AdminDashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Card(
+                        onClick = { onNavigateToTab(1) },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = Surface),
@@ -192,6 +185,10 @@ fun AdminDashboardScreen(
                         }
                     }
                     Card(
+                        onClick = {
+                            newSubjectName = ""
+                            showAddSubjectDialog = true
+                        },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(containerColor = Surface),
@@ -210,6 +207,42 @@ fun AdminDashboardScreen(
             }
         }
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    // Add subject dialog
+    if (showAddSubjectDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddSubjectDialog = false },
+            title = { Text("Dodaj przedmiot") },
+            text = {
+                OutlinedTextField(
+                    value = newSubjectName,
+                    onValueChange = { newSubjectName = it },
+                    label = { Text("Nazwa przedmiotu") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newSubjectName.isNotBlank()) {
+                            settingsViewModel.addSubject(newSubjectName.trim())
+                            showAddSubjectDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
+                    Text("Dodaj")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddSubjectDialog = false }) {
+                    Text("Anuluj")
+                }
+            }
+        )
     }
 }
 

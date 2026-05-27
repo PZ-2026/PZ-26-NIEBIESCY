@@ -1,4 +1,5 @@
 package com.vectorpeaks.edulink.network
+import com.vectorpeaks.edulink.data.model.MaintenanceStatus
 
 import com.vectorpeaks.edulink.data.model.BookingRequest
 import com.vectorpeaks.edulink.data.model.user.BookingResponse
@@ -276,4 +277,12 @@ interface ApiService {
         @Query("includeTotalHours") includeTotalHours: Boolean,
         @Query("days")             days             : List<Int>
     ): ResponseBody
+
+    // ==================== Maintenance ====================
+
+    @GET("api/maintenance/status")
+    suspend fun getMaintenanceStatus(): MaintenanceStatus
+
+    @PUT("api/admin/maintenance")
+    suspend fun toggleMaintenance(@Body body: Map<String, Boolean>): Response<MaintenanceStatus>
 }

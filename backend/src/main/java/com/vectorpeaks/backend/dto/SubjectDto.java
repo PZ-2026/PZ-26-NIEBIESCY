@@ -25,6 +25,7 @@ public class SubjectDto {
     /** Name of the subject (e.g., "Mathematics", "English"). */
     private String name;
 
+
     /**
      * Constructs a new SubjectDto with the given ID and name.
      *
@@ -42,4 +43,6 @@ public class SubjectDto {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+
 }
