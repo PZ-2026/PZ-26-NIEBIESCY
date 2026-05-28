@@ -124,6 +124,8 @@ interface ApiService {
     @GET("api/slots/available/{tutorId}")
     suspend fun getAvailableSlotsForTutor(@Path("tutorId") tutorId: Int): List<Slot>
 
+    @GET("api/data/price-limit")
+    suspend fun getPriceLimit(): Double
     @GET("api/slots/available/{tutorId}/excluding/{offerId}")
     suspend fun getAvailableSlotsExcludingOffer(
         @Path("tutorId") tutorId: Int,

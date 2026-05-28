@@ -557,7 +557,7 @@ fun TutorOffersScreen(
                                 it.isBlank() -> ""
                                 it.toDoubleOrNull() == null -> "Cena musi być liczbą"
                                 it.toDouble() <= 0 -> "Cena musi być większa od zera"
-                                it.toDouble() > maxPriceLimit -> "Cena przekracza limit administratora (${maxPriceLimit.toInt()} zł)"
+                                it.toDouble() > maxPriceLimit -> "Cena przekracza limit (${maxPriceLimit.toInt()} zł)"
                                 else -> ""
                             }
                         },

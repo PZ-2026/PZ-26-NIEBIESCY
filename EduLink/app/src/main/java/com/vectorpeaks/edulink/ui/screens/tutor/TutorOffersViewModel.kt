@@ -50,11 +50,11 @@ class TutorOffersViewModel : ViewModel() {
             try {
                 val offersDeferred = async { RetrofitClient.apiService.getOffersByTutor(tutorId) }
                 val subjectsDeferred = async { RetrofitClient.apiService.getSubjectsWithId() }
-                val settingsDeferred = async { RetrofitClient.apiService.getAdminSettings() }
-                
+                val settingsDeferred = async { RetrofitClient.apiService.getPriceLimit() }
+
                 _offers.value = offersDeferred.await()
                 _subjects.value = subjectsDeferred.await()
-                _maxPriceLimit.value = settingsDeferred.await().maxPricePerHour
+                _maxPriceLimit.value = settingsDeferred.await()
             } catch (e: HttpException) {
                 _error.value = "HTTP error: ${e.code()}"
             } catch (e: IOException) {
