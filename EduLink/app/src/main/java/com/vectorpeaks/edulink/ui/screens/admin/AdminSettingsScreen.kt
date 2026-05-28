@@ -1,5 +1,7 @@
 package com.vectorpeaks.edulink.ui.screens.admin
 
+import androidx.compose.animation.AnimatedVisibility
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +36,7 @@ fun AdminSettingsScreen(
     val maintenanceStatus by viewModel.maintenanceStatus.collectAsState()
     var maxPricePerHour by remember { mutableStateOf("200") }
     var globalMessage by remember { mutableStateOf("") }
+    var isMessageEnabled by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showAddSubjectDialog by remember { mutableStateOf(false) }
     var newSubjectName by remember { mutableStateOf("") }
@@ -51,6 +54,7 @@ fun AdminSettingsScreen(
         settings?.let {
             maxPricePerHour = it.maxPricePerHour.toInt().toString()
             globalMessage = it.globalMessage
+            isMessageEnabled = it.globalMessage.isNotBlank()
         }
     }
 
@@ -187,29 +191,11 @@ fun AdminSettingsScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                        // Global message
-                        Text("Globalny komunikat", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                        Text(
-                            "Wyświetlany wszystkim użytkownikom",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = OnSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = globalMessage,
-                            onValueChange = { globalMessage = it },
-                            placeholder = { Text("Wpisz komunikat...") },
-                            minLines = 2,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = {
                                 val price = maxPricePerHour.toDoubleOrNull() ?: 200.0
-                                viewModel.saveSettings(price, globalMessage)
+                                viewModel.saveSettings(price, if (isMessageEnabled) globalMessage else "")
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -217,7 +203,59 @@ fun AdminSettingsScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Zapisz ustawienia")
+                            Text("Zapisz limit cenowy")
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                        // Global message
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Globalny komunikat", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                                Text(
+                                    "Wyświetlany wszystkim użytkownikom",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = OnSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = isMessageEnabled,
+                                onCheckedChange = { isMessageEnabled = it },
+                                colors = SwitchDefaults.colors(checkedTrackColor = Primary)
+                            )
+                        }
+
+                        AnimatedVisibility(visible = isMessageEnabled) {
+                            Column {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedTextField(
+                                    value = globalMessage,
+                                    onValueChange = { globalMessage = it },
+                                    placeholder = { Text("Wpisz komunikat...") },
+                                    minLines = 2,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                val price = maxPricePerHour.toDoubleOrNull() ?: 200.0
+                                viewModel.saveSettings(price, if (isMessageEnabled) globalMessage else "")
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Zapisz komunikat")
                         }
                     }
                 }

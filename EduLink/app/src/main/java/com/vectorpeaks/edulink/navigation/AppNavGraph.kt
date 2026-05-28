@@ -153,15 +153,17 @@ fun AppNavGraph() {
         // ── Admin ────────────────────────────────────────────────
         composable(NavRoutes.AdminMain.route) {
             currentUser?.let { user ->
-                AdminMainScreen(
-                    user = user,
-                    onLogout = {
-                        currentUser = null
-                        navController.navigate(NavRoutes.Login.route) {
-                            popUpTo(0) { inclusive = true }
+                MaintenanceBannerWrapper {
+                    AdminMainScreen(
+                        user = user,
+                        onLogout = {
+                            currentUser = null
+                            navController.navigate(NavRoutes.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
 
