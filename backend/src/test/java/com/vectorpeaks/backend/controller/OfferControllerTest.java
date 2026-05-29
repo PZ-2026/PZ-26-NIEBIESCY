@@ -66,10 +66,6 @@ class OfferControllerTest extends BaseControllerTest {
     @MockitoBean
     private OfferRepository offerRepository;
 
-    /** Mock of the user repository. */
-    @MockitoBean
-    private UserRepository userRepository;
-
     /** Mock of the subject repository. */
     @MockitoBean
     private SubjectRepository subjectRepository;
@@ -82,11 +78,13 @@ class OfferControllerTest extends BaseControllerTest {
     @MockitoBean
     private AvailabilitySlotRepository availabilitySlotRepository;
 
-    // FIX: dodany brakujący mock — OfferController używa offerSlotRepository
-    // w convertToDto() żeby pobrać sloty przypisane do oferty.
     /** Mock of the offer slot repository. */
     @MockitoBean
     private OfferSlotRepository offerSlotRepository;
+
+    @MockitoBean
+    private BookingRepository bookingRepository;
+
 
     /** Sample online offer used across multiple tests. */
     private Offer onlineOffer;
@@ -116,8 +114,6 @@ class OfferControllerTest extends BaseControllerTest {
         when(reviewRepository.getAverageRatingByTutorId(10)).thenReturn(4.5);
         when(reviewRepository.countReviewsByTutorId(10)).thenReturn(12);
 
-        // FIX: offerSlotRepository.findByOfferId jest wołane w convertToDto dla
-        // każdej oferty — bez mocka zwraca null i poleci NPE.
         OfferSlot offerSlot3 = buildOfferSlot(1, 3);
         OfferSlot offerSlot4 = buildOfferSlot(2, 4);
         when(offerSlotRepository.findByOfferId(1)).thenReturn(List.of(offerSlot3));

@@ -11,8 +11,10 @@
 
 package com.vectorpeaks.backend.controller;
 
+import com.vectorpeaks.backend.repository.GlobalLimitRepository;
 import com.vectorpeaks.backend.repository.SubjectRepository;
 import com.vectorpeaks.backend.repository.UserRepository;
+import com.vectorpeaks.backend.service.MaintenanceService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
@@ -58,9 +60,8 @@ class DataControllerTest extends BaseControllerTest {
     @MockitoBean
     private SubjectRepository subjectRepository;
 
-    /** Mock of the user repository – replaces the database layer. */
     @MockitoBean
-    private UserRepository userRepository;
+    private GlobalLimitRepository globalLimitRepository;
 
     // -----------------------------------------------------------------------
     // GET /api/data/subjects

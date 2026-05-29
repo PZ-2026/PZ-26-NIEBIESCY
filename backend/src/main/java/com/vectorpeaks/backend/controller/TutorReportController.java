@@ -18,6 +18,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -80,6 +81,7 @@ public class TutorReportController {
      * @throws IOException if PDF generation fails
      */
     @GetMapping("/{tutorId}/reports/pdf")
+    @PreAuthorize("(#tutorId == authentication.principal and hasRole('TUTOR')) or hasRole('ADMIN')")
     public ResponseEntity<byte[]> generateTutorPdfReport(
             @PathVariable Integer tutorId,
             @RequestParam(required = false)

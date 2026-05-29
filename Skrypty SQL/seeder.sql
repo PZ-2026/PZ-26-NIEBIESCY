@@ -97,15 +97,15 @@ INSERT INTO chat_participants (chat_id, user_id) VALUES
 (5, 8), (5, 10), (6, 2), (6, 3), (7, 1), (7, 4), (8, 5), (8, 6);
 
 -- 13. Messages
-INSERT INTO messages (id, chat_id, content, sent_at, user_id) VALUES 
-(1, 1, 'Hello, I want to book a lesson',  '2026-05-08 12:05:00', 3),
-(2, 1, 'Sure, what time?',                '2026-05-08 12:10:00', 1),
-(3, 2, 'Is the offer still active?',      '2026-05-09 13:05:00', 4),
-(4, 3, 'I will be 5 minutes late',        '2026-05-10 14:05:00', 6),
-(5, 4, 'Can we move to Zoom?',            '2026-05-10 15:05:00', 5),
-(6, 5, 'Thanks for the history lesson!',  '2026-05-11 16:05:00', 10),
-(7, 6, 'Do you have materials for B2?',   '2026-05-12 17:05:00', 3),
-(8, 7, 'Yes, check your email.',          '2026-05-13 18:05:00', 1);
+INSERT INTO messages (id, chat_id, content, sent_at, user_id, is_read) VALUES
+(1, 1, 'Hello, I would like to ask about your availability for mathematics.', '2026-05-10 10:00:00', 3, TRUE),
+(2, 1, 'Hi! Sure, you can find all my available time slots directly on my profile.', '2026-05-10 10:15:00', 2, TRUE),
+(3, 2, 'Do you prepare students for advanced level physics exams?', '2026-05-11 14:20:00', 3, TRUE),
+(4, 2, 'Yes, absolutely. Most of my current students are preparing for their finals.', '2026-05-11 14:35:00', 2, TRUE),
+(5, 3, 'Thank you for today''s lesson, it helped me a lot.', '2026-05-12 16:00:00', 3, TRUE),
+(6, 3, 'It was my absolute pleasure! See you next week.', '2026-05-12 16:10:00', 2, TRUE),
+(7, 4, 'Do I need to purchase a specific textbook for our English classes?', '2026-05-12 17:00:00', 3, TRUE),
+(8, 7, 'Yes, check your email.', '2026-05-13 18:05:00', 1, TRUE);
 
 -- Aktualizacja sekwencji
 SELECT setval(pg_get_serial_sequence('roles',              'id'), (SELECT MAX(id) FROM roles));

@@ -17,6 +17,7 @@ import com.vectorpeaks.backend.repository.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -75,6 +76,7 @@ public class TutorScheduleController {
      * @throws IOException if PDF generation fails
      */
     @GetMapping("/{tutorId}/schedule/pdf")
+    @PreAuthorize("(#tutorId == authentication.principal and hasRole('TUTOR')) or hasRole('ADMIN')")
     public ResponseEntity<byte[]> generateSchedulePdf(
             @PathVariable Integer tutorId,
             @RequestParam(required = false, defaultValue = "") List<Integer> subjectIds,

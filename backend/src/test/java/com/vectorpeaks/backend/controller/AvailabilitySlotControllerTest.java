@@ -1,8 +1,8 @@
 /*
  * AvailabilitySlotControllerTest.java
  *
- * Version: 1.0
- * Date: 2026-05-23
+ * Version: 1.2
+ * Date: 2026-05-28
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -11,7 +11,6 @@
 
 package com.vectorpeaks.backend.controller;
 
-import com.vectorpeaks.backend.dto.SlotDto;
 import com.vectorpeaks.backend.entity.AvailabilitySlot;
 import com.vectorpeaks.backend.entity.Offer;
 import com.vectorpeaks.backend.entity.OfferSlot;
@@ -23,6 +22,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -30,6 +31,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -46,10 +48,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * <p>Uses {@code @WebMvcTest} with {@link MockMvc} – only the controller layer
  * is loaded; no full Spring context or database is required.
- * All repository dependencies are replaced by Mockito mocks
- * ({@code @MockitoBean}).
+ * All repository dependencies are replaced by Mockito mocks ({@code @MockitoBean}).
  *
- * @version 1.0
+ * <p>{@code MaintenanceService} and {@link com.vectorpeaks.backend.repository.UserRepository}
+ * are mocked and stubbed in {@link BaseControllerTest} – no redeclaration needed here.
+ *
+ * @version 1.2
  * @author EduLink Team
  * @see AvailabilitySlotController
  */
@@ -84,11 +88,33 @@ class AvailabilitySlotControllerTest extends BaseControllerTest {
     /**
      * Sets up shared test fixtures before each test case:
      * two availability slots for Monday and Wednesday.
+     * The {@code AccessInterceptor} bypass is handled by
+     * {@link BaseControllerTest#setUpInterceptorBypass()}.
      */
     @BeforeEach
     void setUp() {
         slotMon10 = buildSlot(1, (short) 1, LocalTime.of(10, 0));
         slotWed14 = buildSlot(2, (short) 3, LocalTime.of(14, 0));
+    }
+
+    // -----------------------------------------------------------------------
+    // Helper: authenticated request
+    // -----------------------------------------------------------------------
+
+    /**
+     * Creates a {@link UsernamePasswordAuthenticationToken} for injecting into
+     * MockMvc requests. The controller class is annotated with
+     * {@code @PreAuthorize("isAuthenticated()")}, so all endpoints require
+     * an authenticated principal; without it every request returns 401.
+     *
+     * @param userId   the authenticated user's ID (used as the principal)
+     * @param roleName the Spring Security role name, e.g. {@code "ROLE_STUDENT"}
+     * @return a fully populated authentication token
+     */
+    private UsernamePasswordAuthenticationToken getMockAuth(Integer userId, String roleName) {
+        return new UsernamePasswordAuthenticationToken(
+                userId, null, List.of(new SimpleGrantedAuthority(roleName))
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -105,7 +131,8 @@ class AvailabilitySlotControllerTest extends BaseControllerTest {
     void getAllSlots_slotsExist_returns200AndList() throws Exception {
         when(slotRepository.findAll()).thenReturn(List.of(slotMon10, slotWed14));
 
-        mockMvc.perform(get("/api/slots"))
+        mockMvc.perform(get("/api/slots")
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].id").value(1))
@@ -126,7 +153,8 @@ class AvailabilitySlotControllerTest extends BaseControllerTest {
     void getAllSlots_noSlots_returns200AndEmptyList() throws Exception {
         when(slotRepository.findAll()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/slots"))
+        mockMvc.perform(get("/api/slots")
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
@@ -146,7 +174,8 @@ class AvailabilitySlotControllerTest extends BaseControllerTest {
             AvailabilitySlot slot = buildSlot(10 + i, days[i], LocalTime.of(9, 0));
             when(slotRepository.findAll()).thenReturn(List.of(slot));
 
-            mockMvc.perform(get("/api/slots"))
+            mockMvc.perform(get("/api/slots")
+                            .with(authentication(getMockAuth(1, "ROLE_STUDENT"))))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].label").value(expectedPrefixes[i] + " 09:00"));
         }
@@ -167,7 +196,8 @@ class AvailabilitySlotControllerTest extends BaseControllerTest {
         when(slotRepository.findAll()).thenReturn(List.of(slotMon10, slotWed14));
         when(offerRepository.findAll()).thenReturn(List.of());
 
-        mockMvc.perform(get("/api/slots/available/5"))
+        mockMvc.perform(get("/api/slots/available/5")
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
     }
@@ -181,13 +211,14 @@ class AvailabilitySlotControllerTest extends BaseControllerTest {
     @Test
     void getAvailableSlotsForTutor_oneSlotUsed_returnsRemainingSlots() throws Exception {
         Offer offer = buildOffer(10, 5);
-        OfferSlot usedOfferSlot = buildOfferSlot(10, 1); // slot ID 1 (Pon 10:00) jest zajęty
+        OfferSlot usedOfferSlot = buildOfferSlot(10, 1); // slot ID 1 (Pon 10:00) is occupied
 
         when(slotRepository.findAll()).thenReturn(List.of(slotMon10, slotWed14));
         when(offerRepository.findAll()).thenReturn(List.of(offer));
         when(offerSlotRepository.findByOfferId(10)).thenReturn(List.of(usedOfferSlot));
 
-        mockMvc.perform(get("/api/slots/available/5"))
+        mockMvc.perform(get("/api/slots/available/5")
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(2))
@@ -209,8 +240,9 @@ class AvailabilitySlotControllerTest extends BaseControllerTest {
         when(offerRepository.findAll()).thenReturn(List.of(otherTutorOffer));
         when(offerSlotRepository.findByOfferId(20)).thenReturn(List.of(otherOfferSlot));
 
-        // tutor 5 ma brak ofert, więc oba sloty powinny być dostępne
-        mockMvc.perform(get("/api/slots/available/5"))
+        // tutor 5 has no offers, so both slots should be available
+        mockMvc.perform(get("/api/slots/available/5")
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
     }
@@ -221,26 +253,26 @@ class AvailabilitySlotControllerTest extends BaseControllerTest {
 
     /**
      * Verifies that the endpoint excludes slots used by the tutor's OTHER offers,
-     * but includes slots used by the excluded offer itself (so they can be re-selected
-     * when editing that offer).
+     * but includes slots used by the excluded offer itself (so they can be
+     * re-selected when editing that offer).
      *
      * @throws Exception if the MockMvc request execution fails
      */
     @Test
     void getAvailableSlotsExcludingOffer_excludesOtherOffersSlots() throws Exception {
-        Offer currentOffer = buildOffer(10, 5);  // edytowana oferta — slot 1
-        Offer otherOffer   = buildOffer(11, 5);  // inna oferta tego tutora — slot 2
+        Offer currentOffer = buildOffer(10, 5);  // offer being edited – uses slot 1
+        Offer otherOffer   = buildOffer(11, 5);  // another offer of the same tutor – uses slot 2
 
-        OfferSlot currentOfferSlot = buildOfferSlot(10, 1);
-        OfferSlot otherOfferSlot   = buildOfferSlot(11, 2);
+        OfferSlot otherOfferSlot = buildOfferSlot(11, 2);
 
         when(slotRepository.findAll()).thenReturn(List.of(slotMon10, slotWed14));
         when(offerRepository.findAll()).thenReturn(List.of(currentOffer, otherOffer));
         when(offerSlotRepository.findByOfferId(11)).thenReturn(List.of(otherOfferSlot));
 
-        // Slot 2 (Śr 14:00) jest zajęty przez inną ofertę → nie powinien się pojawić.
-        // Slot 1 (Pon 10:00) należy do edytowanej oferty → powinien być dostępny.
-        mockMvc.perform(get("/api/slots/available/5/excluding/10"))
+        // Slot 2 (Śr 14:00) is used by another offer → must not appear.
+        // Slot 1 (Pon 10:00) belongs to the excluded offer → must be available.
+        mockMvc.perform(get("/api/slots/available/5/excluding/10")
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(1))
@@ -260,7 +292,8 @@ class AvailabilitySlotControllerTest extends BaseControllerTest {
         when(slotRepository.findAll()).thenReturn(List.of(slotMon10, slotWed14));
         when(offerRepository.findAll()).thenReturn(List.of(currentOffer));
 
-        mockMvc.perform(get("/api/slots/available/5/excluding/10"))
+        mockMvc.perform(get("/api/slots/available/5/excluding/10")
+                        .with(authentication(getMockAuth(1, "ROLE_STUDENT"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
     }

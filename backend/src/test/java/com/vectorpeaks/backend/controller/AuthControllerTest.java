@@ -18,10 +18,7 @@ import com.vectorpeaks.backend.entity.RefreshToken;
 import com.vectorpeaks.backend.entity.User;
 import com.vectorpeaks.backend.repository.UserRepository;
 import com.vectorpeaks.backend.security.JwtUtil;
-import com.vectorpeaks.backend.service.AuthService;
-import com.vectorpeaks.backend.service.FcmTokenService;
-import com.vectorpeaks.backend.service.LoginAttemptService;
-import com.vectorpeaks.backend.service.RefreshTokenService;
+import com.vectorpeaks.backend.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -93,11 +90,6 @@ class AuthControllerTest extends BaseControllerTest {
     @MockitoBean
     private LoginAttemptService loginAttemptService;
 
-    /**
-     * Mocked core repository providing application user account access.
-     */
-    @MockitoBean
-    private UserRepository userRepository;
 
     /**
      * Mocked service managing registration identifiers for Firebase Cloud Messaging.

@@ -1,5 +1,6 @@
 package com.vectorpeaks.edulink.ui.screens.student
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -36,6 +37,7 @@ fun OfferDetailScreen(
     val offerDetailViewModel: OfferDetailViewModel = viewModel()
     val refreshedOffer by offerDetailViewModel.offer.collectAsState()
     val displayOffer = refreshedOffer ?: offer
+    val bookingUiState by bookingViewModel.uiState.collectAsState()
 
     LaunchedEffect(offer.id) {
         offerDetailViewModel.loadOffer(offer.id)
@@ -46,6 +48,10 @@ fun OfferDetailScreen(
         selectedSlot = null
         bookingConfirmed = false
         bookingViewModel.resetUiState()
+    }
+
+    BackHandler {
+        onBack()
     }
 
     Scaffold(
@@ -316,7 +322,7 @@ fun OfferDetailScreen(
         )
     }
 
-    when (val state = bookingViewModel.uiState.value) {
+    when (val state = bookingUiState) {
         is BookingUiState.Success -> {
             LaunchedEffect(Unit) {
                 if (!bookingConfirmed) bookingConfirmed = true

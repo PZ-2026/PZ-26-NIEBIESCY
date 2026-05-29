@@ -80,6 +80,7 @@ public class AvailabilitySlotController {
      * @return list of available {@link SlotDto} objects
      */
     @GetMapping("/available/{tutorId}")
+    @PreAuthorize("isAuthenticated()")
     public List<SlotDto> getAvailableSlotsForTutor(@PathVariable Integer tutorId) {
         List<Integer> usedSlotIds = offerRepository.findAll().stream()
                 .filter(o -> o.getTutorId().equals(tutorId))
@@ -107,6 +108,7 @@ public class AvailabilitySlotController {
      * @return list of available {@link SlotDto} objects
      */
     @GetMapping("/available/{tutorId}/excluding/{offerId}")
+    @PreAuthorize("isAuthenticated()")
     public List<SlotDto> getAvailableSlotsExcludingOffer(
             @PathVariable Integer tutorId,
             @PathVariable Integer offerId) {

@@ -196,6 +196,17 @@ interface ApiService {
         @Path("userId") userId: Int,
         @Body token: Map<String, String>
     ): Response<Unit>
+
+    /**
+     * Marks all unread messages in the given chat thread as read for the logged-in user.
+     *
+     * @param chatId the ID of the chat thread
+     * @return Response with no body (Unit)
+     */
+    @POST("api/chats/{chatId}/read")
+    suspend fun markChatAsRead(
+        @Path("chatId") chatId: Int
+    ): retrofit2.Response<Unit>
   
     // ==================== Admin: Offers ====================
 

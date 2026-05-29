@@ -27,6 +27,8 @@ import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModel
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModelFactory
 import com.vectorpeaks.edulink.utils.DateUtils
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 
 /**
  * Student chat screen showing the list of conversations with tutors.
@@ -160,6 +162,9 @@ private fun StudentConversationItem(
     // Find the other participant (not the current user)
     val otherParticipant = chat.participants.find { it.id != currentUserId }
 
+    // Check if there are unread messages
+    val hasUnread = chat.unreadCount > 0
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -185,19 +190,30 @@ private fun StudentConversationItem(
                     Text(
                         text = otherParticipant?.fullName ?: "Unknown User",
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = if (hasUnread) FontWeight.ExtraBold else FontWeight.SemiBold
+
                     )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (hasUnread) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
                     Text(
                         text = DateUtils.formatChatTimestamp(chat.lastMessage?.sentAt ?: chat.createdAt),
                         style = MaterialTheme.typography.labelMedium,
-                        color = OnSurfaceVariant
+                        color = if (hasUnread) MaterialTheme.colorScheme.primary else OnSurfaceVariant
                     )
-                }
+                }}
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = chat.lastMessage?.content ?: "Brak wiadomości",
                     style = MaterialTheme.typography.bodySmall,
-                    color = OnSurfaceVariant,
+                    color = if (hasUnread) MaterialTheme.colorScheme.onSurface else OnSurfaceVariant,
+                    fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -238,6 +254,7 @@ private fun StudentChatDetailView(
     // Load message history when entering the detail view
     LaunchedEffect(chat.id) {
         viewModel.fetchMessages(chat.id)
+        viewModel.markChatAsRead(chat.id, currentUserId)
     }
 
     BackHandler {

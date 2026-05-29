@@ -50,7 +50,8 @@ public class AuthService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             boolean matches = passwordEncoder.matches(rawPassword, user.getPassword());
-            if (matches) {
+
+            if (matches && user.getAccountStatusId() != null && user.getAccountStatusId() == 1) {
                 return Optional.of(user);
             }
         }

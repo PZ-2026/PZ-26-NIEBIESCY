@@ -154,6 +154,11 @@ public class AuthController {
                     User user = userRepository.findById(rt.getUserId())
                             .orElseThrow(() -> new RuntimeException("User not found"));
 
+                    if (user.getAccountStatusId() == null || user.getAccountStatusId() != 1) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(Map.of("error", "Konto zostało zablokowane lub jest nieaktywne."));
+                    }
+
                     String newAccessToken = jwtUtil.generateToken(
                             user.getId(),
                             user.getEmail(),

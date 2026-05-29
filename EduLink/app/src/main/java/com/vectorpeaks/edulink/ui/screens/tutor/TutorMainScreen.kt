@@ -9,8 +9,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vectorpeaks.edulink.data.model.user.User
+import com.vectorpeaks.edulink.network.RetrofitClient
 import com.vectorpeaks.edulink.ui.theme.*
+import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModel
+import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModelFactory
 
 data class TutorTab(
     val title: String,
@@ -25,6 +29,20 @@ fun TutorMainScreen(
     onNavigateToReviews: (tutorId: Int, tutorName: String) -> Unit,
     startTab: Int = 0
 ) {
+
+    val chatViewModel: ChatViewModel = viewModel(
+        factory = ChatViewModelFactory(RetrofitClient.apiService)
+    )
+    val chats by chatViewModel.chats.collectAsState()
+
+    LaunchedEffect(user.id) {
+        chatViewModel.fetchChats(user.id)
+    }
+
+    val totalUnreadCount = chats.sumOf { chat -> chat.unreadCount ?: 0 }
+    val hasUnreadMessages = totalUnreadCount > 0
+
+
     val tabs = listOf(
         TutorTab("Pulpit",     Icons.Filled.Dashboard,    Icons.Outlined.Dashboard),
         TutorTab("Oferty",     Icons.Filled.LocalOffer,   Icons.Outlined.LocalOffer),
@@ -45,16 +63,30 @@ fun TutorMainScreen(
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
                             icon = {
-                                Icon(
-                                    imageVector = if (selectedTab == index) tab.selectedIcon else tab.unselectedIcon,
-                                    contentDescription = tab.title
-                                )
+                                if (tab.title == "Rozmowy" && hasUnreadMessages) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge {
+                                                Text(if (totalUnreadCount > 99) "99+" else totalUnreadCount.toString())
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = if (selectedTab == index) tab.selectedIcon else tab.unselectedIcon,
+                                            contentDescription = tab.title
+                                        )
+                                    }
+                                } else {
+                                    Icon(
+                                        imageVector = if (selectedTab == index) tab.selectedIcon else tab.unselectedIcon,
+                                        contentDescription = tab.title
+                                    )
+                                }
                             },
                             label = {
                                 Text(
                                     text = tab.title,
-                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal,
-                                    style = MaterialTheme.typography.labelSmall
+                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(

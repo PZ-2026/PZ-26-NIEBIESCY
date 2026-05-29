@@ -16,6 +16,7 @@
     import com.vectorpeaks.backend.entity.User;
     import com.vectorpeaks.backend.repository.UserRepository;
     import com.vectorpeaks.backend.service.FcmTokenService;
+    import com.vectorpeaks.backend.service.MaintenanceService;
     import org.junit.jupiter.api.Test;
     import org.springframework.beans.factory.annotation.Autowired;
     import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
@@ -63,10 +64,6 @@
         /** HTTP client used to perform requests in web-layer tests. */
         @Autowired
         private MockMvc mockMvc;
-
-        /** Mock of the user repository – replaces the database layer. */
-        @MockitoBean
-        private UserRepository userRepository;
 
         /** JSON mapper used to serialize request objects. */
         @Autowired
