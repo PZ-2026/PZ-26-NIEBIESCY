@@ -1,8 +1,8 @@
 /*
  * AuthController.java
  *
- * Version: 1.2
- * Date: 2026-05-24
+ * Version: 1.3
+ * Date: 2026-06-06
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -30,9 +30,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
+import com.vectorpeaks.backend.service.JwtBlacklistService;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
@@ -46,7 +47,7 @@ import java.util.Optional;
  * <li>{@code POST /api/auth/users/{userId}/fcm-token} – registers the device's FCM token</li>
  * </ul>
  *
- * @version 1.2
+ * @version 1.3
  * @author EduLink Team
  */
 @RestController
@@ -62,6 +63,7 @@ public class AuthController {
     private final UserRepository userRepository;
     private final FcmTokenService fcmTokenService;
     private final MaintenanceService maintenanceService;
+    private final JwtBlacklistService jwtBlacklistService;
 
     public AuthController(AuthService authService,
                           JwtUtil jwtUtil,
@@ -69,7 +71,8 @@ public class AuthController {
                           LoginAttemptService loginAttemptService,
                           UserRepository userRepository,
                           FcmTokenService fcmTokenService,
-                          MaintenanceService maintenanceService) {
+                          MaintenanceService maintenanceService,
+                          JwtBlacklistService jwtBlacklistService) {
         this.authService = authService;
         this.jwtUtil = jwtUtil;
         this.refreshTokenService = refreshTokenService;
@@ -77,6 +80,7 @@ public class AuthController {
         this.userRepository = userRepository;
         this.fcmTokenService = fcmTokenService;
         this.maintenanceService = maintenanceService;
+        this.jwtBlacklistService = jwtBlacklistService;
     }
 
     /**
@@ -179,11 +183,22 @@ public class AuthController {
      */
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> logout(@RequestBody LogoutRequest request) {
+    public ResponseEntity<?> logout(
+            @RequestBody LogoutRequest request,
+            HttpServletRequest httpRequest
+    ) {
         refreshTokenService.revokeToken(request.getRefreshToken());
         if (request.getFcmToken() != null) {
             fcmTokenService.removeToken(request.getFcmToken());
         }
+
+        String authHeader = httpRequest.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String jwt = authHeader.substring(7);
+            Instant expiresAt = jwtUtil.extractExpiration(jwt).toInstant();
+            jwtBlacklistService.blacklistToken(jwt, expiresAt);
+        }
+
         return ResponseEntity.ok(Map.of("message", "Logged out successfully."));
     }
 

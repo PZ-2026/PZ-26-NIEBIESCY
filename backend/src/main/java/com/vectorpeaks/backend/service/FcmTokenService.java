@@ -24,15 +24,20 @@ public class FcmTokenService {
 
     /**
      * Registers an FCM token for a user's device.
-     * If the token already exists (e.g. same device re-login) — skips insert.
-     * If a different user had this token — updates ownership (device changed hands).
+     * To prevent duplicate tokens or mixed notifications when a device changes hands
+     * or a different user logs in, any existing entry with this token is first removed
+     * before saving the new user association.
+     *
+     * @param userId   the ID of the user registering the token
+     * @param fcmToken the Firebase Cloud Messaging token string
      */
     public void registerToken(Integer userId, String fcmToken) {
         if (fcmToken == null || fcmToken.isBlank()) return;
 
-        // If the token already exists in the database — do not duplicate
-        if (fcmTokenRepository.existsByFcmToken(fcmToken)) return;
+        // Clean up any existing association with this token (ownership update / re-login cleanup)
+        fcmTokenRepository.deleteByFcmToken(fcmToken);
 
+        // Save a fresh entry for the currently logged-in user
         UserFcmToken token = new UserFcmToken();
         token.setUserId(userId);
         token.setFcmToken(fcmToken);
