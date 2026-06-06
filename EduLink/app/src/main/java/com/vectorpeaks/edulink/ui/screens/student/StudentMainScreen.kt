@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vectorpeaks.edulink.data.model.user.OffersViewModel
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.network.RetrofitClient
 import com.vectorpeaks.edulink.ui.theme.*
@@ -33,8 +34,12 @@ data class StudentTab(
 fun StudentMainScreen(
     user: User,
     onLogout: () -> Unit,
+    onNavigateToOfferDetail: (Int) -> Unit,
     onNavigateToReviews: (tutorId: Int, tutorName: String) -> Unit
 ) {
+    // OffersViewModel lives here so it survives tab switches and back navigation
+    val offersViewModel: OffersViewModel = viewModel()
+
     val chatViewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(RetrofitClient.apiService)
     )
@@ -48,10 +53,10 @@ fun StudentMainScreen(
     val hasUnreadMessages = totalUnreadCount > 0
 
     val tabs = listOf(
-        StudentTab("Szukaj", Icons.Filled.Search, Icons.Outlined.Search),
-        StudentTab("Historia", Icons.Filled.History, Icons.Outlined.History),
-        StudentTab("Rozmowy", Icons.Filled.ChatBubble, Icons.Outlined.ChatBubbleOutline),
-        StudentTab("Profil", Icons.Filled.Person, Icons.Outlined.Person)
+        StudentTab("Szukaj",   Icons.Filled.Search,      Icons.Outlined.Search),
+        StudentTab("Historia", Icons.Filled.History,     Icons.Outlined.History),
+        StudentTab("Rozmowy",  Icons.Filled.ChatBubble,  Icons.Outlined.ChatBubbleOutline),
+        StudentTab("Profil",   Icons.Filled.Person,      Icons.Outlined.Person)
     )
     var selectedTab by remember { mutableIntStateOf(0) }
     var isChatDetailOpen by remember { mutableStateOf(false) }
@@ -64,7 +69,7 @@ fun StudentMainScreen(
                     tabs.forEachIndexed { index, tab ->
                         NavigationBarItem(
                             selected = selectedTab == index,
-                            onClick = { selectedTab = index },
+                            onClick  = { selectedTab = index },
                             icon = {
                                 if (tab.title == "Rozmowy" && hasUnreadMessages) {
                                     BadgedBox(
@@ -95,7 +100,7 @@ fun StudentMainScreen(
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = Primary,
                                 selectedTextColor = Primary,
-                                indicatorColor = PrimaryContainer
+                                indicatorColor    = PrimaryContainer
                             )
                         )
                     }
@@ -107,19 +112,21 @@ fun StudentMainScreen(
             0 -> StudentSearchScreen(
                 studentId = user.id,
                 modifier = Modifier.padding(innerPadding),
-                onNavigateToReviews = onNavigateToReviews
+                onNavigateToOfferDetail = onNavigateToOfferDetail,
+                onNavigateToReviews = onNavigateToReviews,
+                offersViewModel = offersViewModel
             )
             1 -> StudentHistoryScreen(
                 studentId = user.id,
-                modifier = Modifier.padding(innerPadding)
+                modifier  = Modifier.padding(innerPadding)
             )
             2 -> StudentChatScreen(
-                user = user,
+                user     = user,
                 modifier = Modifier.padding(innerPadding),
                 onChatOpen = { isOpen -> isChatDetailOpen = isOpen }
             )
             3 -> StudentProfileScreen(
-                userId = user.id,
+                userId   = user.id,
                 onLogout = onLogout,
                 modifier = Modifier.padding(innerPadding)
             )

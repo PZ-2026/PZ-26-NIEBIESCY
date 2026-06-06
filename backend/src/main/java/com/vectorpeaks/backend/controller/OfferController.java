@@ -23,9 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -140,6 +138,100 @@ public class OfferController {
         return offers.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Paginated version of getOffers with sorting support.
+     */
+    @GetMapping("/paged")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Object>> getOffersPaged(
+            @RequestParam(required = false) String subject,
+            @RequestParam(required = false) String city,
+            @RequestParam(required = false) Boolean onlineOnly,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0")         int page,
+            @RequestParam(defaultValue = "10")        int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc")      String sortDir
+    ) {
+        // 1. dowlnoad all
+        List<Offer> offers = offerRepository.findAll().stream()
+                .filter(o -> o.getStatusId() == 1)
+                .collect(Collectors.toList());
+
+        // 2. the same filters as original endpoint
+        if (subject != null && !subject.isEmpty()) {
+            offers = offers.stream()
+                    .filter(o -> {
+                        Subject s = subjectRepository.findById(o.getSubjectId()).orElse(null);
+                        return s != null && s.getName().equalsIgnoreCase(subject);
+                    })
+                    .collect(Collectors.toList());
+        }
+        if (city != null && !city.isEmpty()) {
+            offers = offers.stream()
+                    .filter(o -> {
+                        User tutor = userRepository.findById(o.getTutorId()).orElse(null);
+                        String tutorCity = tutor != null ? tutor.getAddress() : "";
+                        return tutorCity.equalsIgnoreCase(city);
+                    })
+                    .collect(Collectors.toList());
+        }
+        if (onlineOnly != null && onlineOnly) {
+            offers = offers.stream()
+                    .filter(o -> "Online".equalsIgnoreCase(o.getOfferType()))
+                    .collect(Collectors.toList());
+        }
+        if (search != null && !search.isEmpty()) {
+            String lowerSearch = search.toLowerCase();
+            offers = offers.stream()
+                    .filter(o -> {
+                        Subject s = subjectRepository.findById(o.getSubjectId()).orElse(null);
+                        User tutor = userRepository.findById(o.getTutorId()).orElse(null);
+                        String subjectName = s != null ? s.getName().toLowerCase() : "";
+                        String tutorName = tutor != null
+                                ? (tutor.getFirstName() + " " + tutor.getLastName()).toLowerCase()
+                                : "";
+                        return subjectName.contains(lowerSearch) || tutorName.contains(lowerSearch);
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        // 3. conversion to DTO
+        List<OfferDto> allDtos = offers.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+
+        // 4. sorting
+        Comparator<OfferDto> comparator = switch (sortBy) {
+            case "rating" -> Comparator.comparing(
+                    o -> o.getRating() != null ? o.getRating() : 0f,
+                    Comparator.naturalOrder()
+            );
+            default -> Comparator.comparing(
+                    o -> o.getId() != null ? o.getId() : 0,
+                    Comparator.naturalOrder()
+            );
+        };
+        if ("desc".equalsIgnoreCase(sortDir)) comparator = comparator.reversed();
+        allDtos.sort(comparator);
+
+        // 5. paginacja ręcznie
+        int total = allDtos.size();
+        int fromIndex = Math.min(page * size, total);
+        int toIndex   = Math.min(fromIndex + size, total);
+        List<OfferDto> pageContent = allDtos.subList(fromIndex, toIndex);
+
+        // 6. odpowiedź w formacie którego oczekuje Kotlin
+        Map<String, Object> response = new HashMap<>();
+        response.put("content",       pageContent);
+        response.put("totalElements", total);
+        response.put("totalPages",    (int) Math.ceil((double) total / size));
+        response.put("number",        page);
+        response.put("last",          toIndex >= total);
+
+        return ResponseEntity.ok(response);
     }
 
     /**
