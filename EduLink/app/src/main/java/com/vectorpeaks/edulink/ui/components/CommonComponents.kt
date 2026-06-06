@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Chat
 
 // ==================== SEARCH BAR ====================
 
@@ -265,6 +266,7 @@ fun ReservationCard(
     onReject: (() -> Unit)? = null,
     onRate: (() -> Unit)? = null,
     onComplete: (() -> Unit)? = null,
+    onChat: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -355,8 +357,27 @@ fun ReservationCard(
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    if (onChat != null) {
+                        OutlinedButton(
+                            onClick = { onChat.invoke() },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Primary),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Chat,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Napisz", style = MaterialTheme.typography.labelMedium)
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+
                     OutlinedButton(
                         onClick = { onComplete.invoke() },
                         shape = RoundedCornerShape(8.dp),

@@ -39,6 +39,8 @@ fun TutorReservationsScreen(
     // Pager state to control the horizontal swipe gesture and active tab index
     val pagerState = rememberPagerState(pageCount = { statusFilters.size })
     val coroutineScope = rememberCoroutineScope()
+    var showCompleteDialog by remember { mutableStateOf(false) }
+    var completingBooking by remember { mutableStateOf<BookingResponse?>(null) }
 
 
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -127,19 +129,22 @@ fun TutorReservationsScreen(
                                     reservation = convertToReservation(booking),
                                     showActions = booking.status == "PENDING",
                                     onAccept = {
-                                        viewModel.updateStatus(
-                                            booking.id,
-                                            "ACCEPTED",
-                                            tutorId
-                                        )
+                                        viewModel.updateStatus(booking.id, "ACCEPTED", tutorId)
                                     },
                                     onReject = {
-                                        viewModel.updateStatus(
-                                            booking.id,
-                                            "REJECTED",
-                                            tutorId
-                                        )
-                                    }
+                                        viewModel.updateStatus(booking.id, "REJECTED", tutorId)
+                                    },
+                                    onComplete = if (booking.status == "ACCEPTED") {
+                                        {
+                                            completingBooking = booking
+                                            showCompleteDialog = true
+                                        }
+                                    } else null,
+                                    onChat = if (booking.status == "ACCEPTED") {
+                                        {
+                                            // TODO: nawigacja do chatu ze studentem
+                                        }
+                                    } else null
                                 )
                             }
                         }
@@ -147,6 +152,43 @@ fun TutorReservationsScreen(
                 }
             }
         }
+    }
+    if (showCompleteDialog && completingBooking != null) {
+        AlertDialog(
+            onDismissRequest = { showCompleteDialog = false },
+            title = { Text("Zakończ lekcję") },
+            text = {
+                Text(
+                    "Czy na pewno chcesz oznaczyć lekcję " +
+                            "${completingBooking!!.subject} ze studentem " +
+                            "${completingBooking!!.tutorName} jako zakończoną?"
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updateStatus(
+                            completingBooking!!.id,
+                            "COMPLETED",
+                            tutorId
+                        )
+                        showCompleteDialog = false
+                        completingBooking = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Success)
+                ) {
+                    Text("Zakończ")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showCompleteDialog = false
+                    completingBooking = null
+                }) {
+                    Text("Anuluj")
+                }
+            }
+        )
     }
 }
 

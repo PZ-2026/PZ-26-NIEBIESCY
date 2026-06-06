@@ -153,6 +153,11 @@ fun StudentHistoryScreen(
                                             completingBooking = booking
                                             showCompleteDialog = true
                                         }
+                                    } else null,
+                                    onChat = if (booking.status == "ACCEPTED") {
+                                        {
+                                            // TODO: nawigacja do chatu z tutorem booking.tutorId
+                                        }
                                     } else null
                                 )
                             }

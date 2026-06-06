@@ -51,4 +51,8 @@ class TutorReservationsViewModel : ViewModel() {
             }
         }
     }
+
+    fun completeBooking(bookingId: Int, tutorId: Int) {
+        updateStatus(bookingId, "COMPLETED", tutorId)
+    }
 }
