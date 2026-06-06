@@ -15,6 +15,7 @@ import com.vectorpeaks.edulink.network.RetrofitClient
 import com.vectorpeaks.edulink.ui.theme.*
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModel
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModelFactory
+import androidx.compose.ui.text.style.TextOverflow
 
 data class TutorTab(
     val title: String,
@@ -86,7 +87,10 @@ fun TutorMainScreen(
                             label = {
                                 Text(
                                     text = tab.title,
-                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
+                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis           
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(

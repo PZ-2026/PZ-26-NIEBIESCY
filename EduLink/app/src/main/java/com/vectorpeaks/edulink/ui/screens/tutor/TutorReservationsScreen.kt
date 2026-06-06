@@ -15,7 +15,12 @@ import com.vectorpeaks.edulink.data.model.ReservationStatus
 import com.vectorpeaks.edulink.data.model.user.BookingResponse
 import com.vectorpeaks.edulink.ui.components.ReservationCard
 import com.vectorpeaks.edulink.ui.theme.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TutorReservationsScreen(
     tutorId: Int,
@@ -26,20 +31,15 @@ fun TutorReservationsScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    var selectedFilter by remember { mutableIntStateOf(0) }
-
     LaunchedEffect(tutorId) {
         viewModel.loadBookings(tutorId)
     }
 
     val statusFilters = listOf("Wszystkie", "Oczekujące", "Zaakceptowane", "Zakończone", "Odrzucone")
-    val filteredBookings = when (selectedFilter) {
-        1 -> bookings.filter { it.status == "PENDING" }
-        2 -> bookings.filter { it.status == "ACCEPTED" }
-        3 -> bookings.filter { it.status == "COMPLETED" }
-        4 -> bookings.filter { it.status == "REJECTED" }
-        else -> bookings
-    }
+    // Pager state to control the horizontal swipe gesture and active tab index
+    val pagerState = rememberPagerState(pageCount = { statusFilters.size })
+    val coroutineScope = rememberCoroutineScope()
+
 
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Spacer(modifier = Modifier.height(16.dp))
@@ -52,19 +52,23 @@ fun TutorReservationsScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         ScrollableTabRow(
-            selectedTabIndex = selectedFilter,
+            selectedTabIndex = pagerState.currentPage,
             containerColor = Background,
             edgePadding = 0.dp,
             divider = {}
         ) {
             statusFilters.forEachIndexed { index, label ->
                 Tab(
-                    selected = selectedFilter == index,
-                    onClick = { selectedFilter = index },
+                    selected = pagerState.currentPage == index,
+                    onClick = {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(index)
+                        }
+                    },
                     text = {
                         Text(
                             text = label,
-                            fontWeight = if (selectedFilter == index) FontWeight.SemiBold else FontWeight.Normal
+                            fontWeight = if (pagerState.currentPage == index) FontWeight.SemiBold else FontWeight.Normal
                         )
                     },
                     selectedContentColor = Primary,
@@ -80,28 +84,65 @@ fun TutorReservationsScreen(
                     CircularProgressIndicator()
                 }
             }
+
             error != null -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Błąd: $error", color = Error)
                 }
             }
-            filteredBookings.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Brak rezerwacji", style = MaterialTheme.typography.bodyLarge, color = OnSurfaceVariant)
-                }
-            }
+
             else -> {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(filteredBookings) { booking ->
-                        ReservationCard(
-                            reservation = convertToReservation(booking),
-                            showActions = booking.status == "PENDING",
-                            onAccept = { viewModel.updateStatus(booking.id, "ACCEPTED", tutorId) },
-                            onReject = { viewModel.updateStatus(booking.id, "REJECTED", tutorId) }
-                        )
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { pageIndex ->
+
+                    val pageFilteredBookings = when (pageIndex) {
+                        1 -> bookings.filter { it.status == "PENDING" }
+                        2 -> bookings.filter { it.status == "ACCEPTED" }
+                        3 -> bookings.filter { it.status == "COMPLETED" }
+                        4 -> bookings.filter { it.status == "REJECTED" }
+                        else -> bookings
+                    }
+
+                    if (pageFilteredBookings.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "Brak rezerwacji",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = OnSurfaceVariant
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(bottom = 16.dp),
+                            modifier = Modifier.fillMaxSize() // Ważne, aby LazyColumn wypełniał stronę
+                        ) {
+                            items(pageFilteredBookings) { booking ->
+                                ReservationCard(
+                                    reservation = convertToReservation(booking),
+                                    showActions = booking.status == "PENDING",
+                                    onAccept = {
+                                        viewModel.updateStatus(
+                                            booking.id,
+                                            "ACCEPTED",
+                                            tutorId
+                                        )
+                                    },
+                                    onReject = {
+                                        viewModel.updateStatus(
+                                            booking.id,
+                                            "REJECTED",
+                                            tutorId
+                                        )
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
