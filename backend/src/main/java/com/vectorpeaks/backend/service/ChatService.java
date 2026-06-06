@@ -1,8 +1,8 @@
 /*
  * ChatService.java
  *
- * Version: 1.2
- * Date: 2026-05-24
+ * Version: 1.3
+ * Date: 2026-05-29
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -37,9 +37,10 @@ import java.util.stream.Collectors;
  * <li>retrieving the list of chats for a given user,</li>
  * <li>fetching message history (with participant verification),</li>
  * <li>persisting and broadcasting new messages via FCM.</li>
+ * <li>marking messages as read.</li>
  * </ul>
  *
- * @version 1.2
+ * @version 1.3
  * @author EduLink Team
  */
 @Service
@@ -77,8 +78,11 @@ public class ChatService {
         // Return the existing chat if one already exists between these two users
         Optional<Chat> existing = chatRepository.findDirectChat(
                 request.getUserId1(), request.getUserId2());
+
+        // Since we are creating/initiating, we can pass either user ID for the initial unread mapping,
+        // usually 0 unread on creation. We'll pass the initiator's ID.
         if (existing.isPresent()) {
-            return toResponse(existing.get());
+            return toResponse(existing.get(), request.getUserId1());
         }
 
         User user1 = userRepository.findById(request.getUserId1())
@@ -92,7 +96,7 @@ public class ChatService {
         chat.setParticipants(Set.of(user1, user2));
         chatRepository.save(chat);
 
-        return toResponse(chat);
+        return toResponse(chat, request.getUserId1());
     }
 
     // -----------------------------------------------------------------------
@@ -101,16 +105,16 @@ public class ChatService {
 
     /**
      * Returns all chat threads in which the specified user participates,
-     * ordered by most recent activity.
+     * ordered by most recent activity. Calculates unread message counts.
      *
-     * @param userId the ID of the user
+     * @param userId the ID of the user requesting their chats
      * @return list of {@link ChatResponse} objects
      */
     @Transactional(readOnly = true)
     public List<ChatResponse> getChatsForUser(Integer userId) {
         return chatRepository.findByParticipants_IdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(this::toResponse)
+                .map(chat -> toResponse(chat, userId))
                 .collect(Collectors.toList());
     }
 
@@ -179,6 +183,7 @@ public class ChatService {
         message.setChat(chat);
         message.setSender(sender);
         message.setContent(request.getContent());
+        // isRead is false by default from the entity definition
         messageRepository.save(message);
 
         String senderName = sender.getFirstName() + " " + sender.getLastName();
@@ -197,17 +202,53 @@ public class ChatService {
     }
 
     // -----------------------------------------------------------------------
+    // Mark as Read
+    // -----------------------------------------------------------------------
+
+    /**
+     * Marks all unread messages in a given chat as read, targeting only the messages
+     * that were sent by the OTHER participant.
+     *
+     * @param chatId         the ID of the chat thread
+     * @param loggedInUserId the ID of the user reading the messages
+     */
+    @Transactional
+    public void markChatAsRead(Integer chatId, Integer loggedInUserId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new IllegalArgumentException("Chat not found"));
+
+        boolean isParticipant = chat.getParticipants().stream()
+                .anyMatch(p -> p.getId().equals(loggedInUserId));
+
+        if (!isParticipant) {
+            throw new IllegalArgumentException("You are not a participant of this chat.");
+        }
+
+        // Fetch messages where this user is NOT the sender and isRead is false
+        List<Message> unreadMessages = messageRepository
+                .findByChat_IdAndSender_IdNotAndIsReadFalse(chatId, loggedInUserId);
+
+        // Safe, JPA-managed update
+        for (Message message : unreadMessages) {
+            message.setRead(true);
+        }
+
+        // Hibernate will auto-update these entities upon transaction commit
+    }
+
+    // -----------------------------------------------------------------------
     // Entity → DTO mapping
     // -----------------------------------------------------------------------
 
     /**
      * Converts a {@link Chat} entity to a {@link ChatResponse} DTO,
-     * including participant info and the most recent message preview.
+     * including participant info, the most recent message preview, and unread counts.
      *
-     * @param chat the chat entity to convert
+     * @param chat   the chat entity to convert
+     * @param userId the ID of the user retrieving the data (used for calculating unread messages)
      * @return the corresponding {@link ChatResponse}
      */
-    private ChatResponse toResponse(Chat chat) {
+    private ChatResponse toResponse(Chat chat, Integer userId) {
         ChatResponse dto = new ChatResponse();
         dto.setId(chat.getId());
         dto.setCreatedAt(chat.getCreatedAt());
@@ -223,6 +264,10 @@ public class ChatService {
                 })
                 .collect(Collectors.toList());
         dto.setParticipants(participants);
+
+        // Calculate unread messages
+        long unreadCount = messageRepository.countByChat_IdAndSender_IdNotAndIsReadFalse(chat.getId(), userId);
+        dto.setUnreadCount((int) unreadCount);
 
         // Attach the most recent message as a preview for the conversation list
         messageRepository.findByChat_IdOrderBySentAtAsc(chat.getId())
@@ -247,6 +292,7 @@ public class ChatService {
         dto.setSenderId(message.getSender().getId());
         dto.setSenderName(message.getSender().getFirstName()
                 + " " + message.getSender().getLastName());
+        dto.setIsRead(message.isRead());
         return dto;
     }
 }

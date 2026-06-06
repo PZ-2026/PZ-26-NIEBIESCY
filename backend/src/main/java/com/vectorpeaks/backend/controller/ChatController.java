@@ -161,4 +161,26 @@ public class ChatController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    /**
+     * Marks all unread messages in the specified chat thread as read for the logged-in user.
+     *
+     * @param chatId         the ID of the chat thread to mark as read
+     * @param authentication the security context containing the logged-in user's details
+     * @return {@code 200 OK} on success, or error status
+     */
+    @PostMapping("/{chatId}/read")
+    public ResponseEntity<?> markChatAsRead(
+            @PathVariable Integer chatId,
+            Authentication authentication) {
+
+        Integer loggedInUserId = (Integer) authentication.getPrincipal();
+
+        try {
+            chatService.markChatAsRead(chatId, loggedInUserId);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

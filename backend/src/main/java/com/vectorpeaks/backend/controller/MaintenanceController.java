@@ -11,6 +11,7 @@ package com.vectorpeaks.backend.controller;
 
 import com.vectorpeaks.backend.service.MaintenanceService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -45,6 +46,7 @@ public class MaintenanceController {
      * @return JSON with active flag, startsAt timestamp, and fullyActive flag
      */
     @GetMapping("/api/maintenance/status")
+    @PreAuthorize("isAuthenticated()")
     public Map<String, Object> getMaintenanceStatus() {
         Map<String, Object> result = new HashMap<>();
         result.put("active", maintenanceService.isActive());
@@ -61,6 +63,7 @@ public class MaintenanceController {
      * @return 200 OK with updated status
      */
     @PutMapping("/api/admin/maintenance")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> toggleMaintenance(@RequestBody Map<String, Boolean> body) {
         Boolean active = body.get("active");
         Boolean force = body.get("force");

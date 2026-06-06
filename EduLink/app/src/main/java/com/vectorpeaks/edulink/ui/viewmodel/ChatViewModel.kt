@@ -176,6 +176,31 @@ class ChatViewModel(private val apiService: ApiService) : ViewModel() {
     }
 
     /**
+     * Marks all messages within a chat thread as read by the specified user.
+     * The backend will reset the unread message counter for this participant.
+     *
+     * @param chatId the unique identifier of the chat thread
+     * @param userId the unique identifier of the logged-in user who is reading the messages
+     */
+    fun markChatAsRead(chatId: Int, userId: Int) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.markChatAsRead(chatId)
+
+                if (response.isSuccessful) {
+                    Timber.d("Successfully marked chat $chatId as read.")
+                    fetchChats(userId)
+                } else {
+                    Timber.e("Failed to mark chat as read: HTTP ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to mark chat $chatId as read")
+            }
+        }
+    }
+
+
+    /**
      * Resets the send message state to [SendMessageState.Idle].
      * Call this after successfully sending a message to clear the UI feedback.
      */

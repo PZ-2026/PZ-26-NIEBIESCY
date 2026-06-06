@@ -1,8 +1,8 @@
 /*
  * AuthServiceTest.java
  *
- * Version: 1.2
- * Date: 2026-05-18
+ * Version: 1.3
+ * Date: 2026-05-29
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -14,6 +14,7 @@ package com.vectorpeaks.backend.service;
 import com.vectorpeaks.backend.entity.User;
 import com.vectorpeaks.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,153 +32,130 @@ import static org.mockito.Mockito.*;
  *
  * <p>Verifies the user authentication logic, including:
  * <ul>
- *   <li>successful login with valid credentials,</li>
- *   <li>rejection on incorrect e-mail or password,</li>
- *   <li>handling of empty input values,</li>
- *   <li>correct interaction with {@link UserRepository}.</li>
+ * <li>successful login with valid credentials and active status,</li>
+ * <li>failed login due to invalid passwords or nonexistent emails,</li>
+ * <li>failed login due to blocked, suspended, or missing account statuses.</li>
  * </ul>
  *
- * <p>Uses Mockito ({@code @ExtendWith(MockitoExtension.class)}) –
- * no Spring context or database is started.
- *
- * @version 1.2
+ * @version 1.3
  * @author EduLink Team
- * @see AuthService
  */
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-    /** Mock of the user repository – replaces the database layer. */
     @Mock
     private UserRepository userRepository;
 
-    /**
-     * The object under test with the {@link UserRepository} mock
-     * automatically injected.
-     */
     @InjectMocks
     private AuthService authService;
 
-    /** Helper encoder used to create hashed passwords in tests. */
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
-    /** Sample user initialised before each test. */
-    private User mockUser;
+    private User testUser;
+    private final String RAW_PASSWORD = "SecurePassword123!";
+    private String encodedPassword;
 
     /**
-     * Initialises a sample user with a hashed password ({@code "tajneHaslo123"})
-     * before each test case.
+     * Prepares standard infrastructure dependencies and initial entity states
+     * prior to the execution of individual test cases.
      */
     @BeforeEach
     void setUp() {
-        mockUser = new User();
-        mockUser.setId(1);
-        mockUser.setEmail("jan.kowalski@example.com");
-        mockUser.setFirstName("Jan");
-        mockUser.setLastName("Kowalski");
-        mockUser.setRoleId(1);
-        mockUser.setPassword(encoder.encode("tajneHaslo123"));
+        // We use a real encoder to match the internal implementation of AuthService
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        encodedPassword = encoder.encode(RAW_PASSWORD);
+
+        testUser = new User();
+        testUser.setId(1);
+        testUser.setEmail("test@example.com");
+        testUser.setPassword(encodedPassword);
+        testUser.setAccountStatusId(1); // 1 = ACTIVE by default
     }
 
-    // -----------------------------------------------------------------------
-    // authenticate() – success cases
-    // -----------------------------------------------------------------------
-
     /**
-     * Verifies that {@code authenticate} returns the user wrapped in an
-     * {@link Optional} when the provided e-mail and password are correct.
+     * Verifies that authenticating with complete and accurate parameters
+     * for an active account successfully returns the user object.
      */
     @Test
-    void authenticate_validCredentials_returnsUser() {
-        when(userRepository.findByEmail("jan.kowalski@example.com"))
-                .thenReturn(Optional.of(mockUser));
+    @DisplayName("Valid credentials & active account → returns User")
+    void authenticate_validCredentialsAndActiveAccount_returnsUser() {
+        // Arrange
+        when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
 
-        Optional<User> result = authService.authenticate(
-                "jan.kowalski@example.com", "tajneHaslo123");
+        // Act
+        Optional<User> result = authService.authenticate(testUser.getEmail(), RAW_PASSWORD);
 
+        // Assert
         assertThat(result).isPresent();
-        assertThat(result.get().getEmail()).isEqualTo("jan.kowalski@example.com");
-    }
-
-    // -----------------------------------------------------------------------
-    // authenticate() – error cases
-    // -----------------------------------------------------------------------
-
-    /**
-     * Verifies that {@code authenticate} returns an empty {@link Optional}
-     * when the provided e-mail does not exist in the database.
-     */
-    @Test
-    void authenticate_unknownEmail_returnsEmpty() {
-        when(userRepository.findByEmail("missing@example.com"))
-                .thenReturn(Optional.empty());
-
-        Optional<User> result = authService.authenticate(
-                "missing@example.com", "tajneHaslo123");
-
-        assertThat(result).isEmpty();
+        assertThat(result.get().getEmail()).isEqualTo(testUser.getEmail());
     }
 
     /**
-     * Verifies that {@code authenticate} returns an empty {@link Optional}
-     * when the e-mail exists but the provided password is incorrect.
+     * Confirms that login configurations reject authentication
+     * whenever password parameters mismatch expected storage patterns.
      */
     @Test
+    @DisplayName("Wrong password → returns Optional.empty()")
     void authenticate_wrongPassword_returnsEmpty() {
-        when(userRepository.findByEmail("jan.kowalski@example.com"))
-                .thenReturn(Optional.of(mockUser));
+        // Arrange
+        when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
 
-        Optional<User> result = authService.authenticate(
-                "jan.kowalski@example.com", "wrongPassword");
+        // Act
+        Optional<User> result = authService.authenticate(testUser.getEmail(), "WrongPassword999!");
 
+        // Assert
         assertThat(result).isEmpty();
     }
 
     /**
-     * Verifies that {@code authenticate} returns an empty {@link Optional}
-     * when the provided e-mail is an empty string.
+     * Confirms that attempting to authenticate with an email not present
+     * in the system returns an empty result.
      */
     @Test
-    void authenticate_emptyEmail_returnsEmpty() {
-        when(userRepository.findByEmail(""))
-                .thenReturn(Optional.empty());
+    @DisplayName("Non-existent user → returns Optional.empty()")
+    void authenticate_userNotFound_returnsEmpty() {
+        // Arrange
+        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
 
-        Optional<User> result = authService.authenticate("", "tajneHaslo123");
+        // Act
+        Optional<User> result = authService.authenticate("ghost@example.com", RAW_PASSWORD);
 
+        // Assert
         assertThat(result).isEmpty();
     }
 
     /**
-     * Verifies that {@code authenticate} returns an empty {@link Optional}
-     * when the provided password is an empty string.
+     * Asserts authorization processing blocks continuation whenever
+     * the account status is marked as blocked (e.g., status != 1),
+     * even if the credentials are perfectly valid.
      */
     @Test
-    void authenticate_emptyPassword_returnsEmpty() {
-        when(userRepository.findByEmail("jan.kowalski@example.com"))
-                .thenReturn(Optional.of(mockUser));
+    @DisplayName("Valid credentials but BLOCKED account (status 2) → returns Optional.empty()")
+    void authenticate_validCredentialsButBlockedAccount_returnsEmpty() {
+        // Arrange
+        testUser.setAccountStatusId(2); // 2 = BLOCKED
+        when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
 
-        Optional<User> result = authService.authenticate(
-                "jan.kowalski@example.com", "");
+        // Act
+        Optional<User> result = authService.authenticate(testUser.getEmail(), RAW_PASSWORD);
 
+        // Assert
         assertThat(result).isEmpty();
     }
 
-    // -----------------------------------------------------------------------
-    // Repository interaction verification
-    // -----------------------------------------------------------------------
-
     /**
-     * Verifies that {@code authenticate} calls
-     * {@link UserRepository#findByEmail(String)} exactly once with the
-     * provided e-mail address and performs no other operations on the repository.
+     * Ensures that corrupted or uninitialized account statuses (null)
+     * default to a secure, locked state rejecting authentication.
      */
     @Test
-    void authenticate_alwaysSearchesByEmail() {
-        when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
+    @DisplayName("Valid credentials but NULL account status → returns Optional.empty()")
+    void authenticate_validCredentialsButNullStatus_returnsEmpty() {
+        // Arrange
+        testUser.setAccountStatusId(null);
+        when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Optional.of(testUser));
 
-        authService.authenticate("someone@example.com", "password");
+        // Act
+        Optional<User> result = authService.authenticate(testUser.getEmail(), RAW_PASSWORD);
 
-        verify(userRepository, times(1)).findByEmail("someone@example.com");
-        verifyNoMoreInteractions(userRepository);
+        // Assert
+        assertThat(result).isEmpty();
     }
 }

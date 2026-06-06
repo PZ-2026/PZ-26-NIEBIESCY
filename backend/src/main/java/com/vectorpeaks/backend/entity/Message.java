@@ -1,8 +1,8 @@
 /*
  * Message.java
  *
- * Version: 1.0
- * Date: 2026-05-09
+ * Version: 1.1
+ * Date: 2026-05-29
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * Entity representing a single message sent within a chat thread.
  * Mapped to the {@code messages} table in the database.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 @Entity
@@ -54,6 +54,10 @@ public class Message {
     @JoinColumn(name = "user_id", nullable = false)
     private User sender;
 
+    /** Indicator whether the message has been read by the recipient. */
+    @Column(name = "is_read", nullable = false)
+    private boolean isRead = false;
+
     /** Sets {@code sentAt} to the current timestamp before the first persist if not already set. */
     @PrePersist
     protected void onSend() {
@@ -78,4 +82,7 @@ public class Message {
 
     public User getSender() { return sender; }
     public void setSender(User sender) { this.sender = sender; }
+
+    public boolean isRead() { return isRead; }
+    public void setRead(boolean read) { this.isRead = read; }
 }

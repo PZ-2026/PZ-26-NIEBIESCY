@@ -38,11 +38,17 @@ public class ChatDtos {
         /** The ID of the second participant (e.g. the tutor being contacted). */
         private Integer userId2;
 
+        /** The initial number of unread messages in the chat, defaults to 0. */
+        private Integer unreadCount = 0;
+
         public Integer getUserId1() { return userId1; }
         public void setUserId1(Integer userId1) { this.userId1 = userId1; }
 
         public Integer getUserId2() { return userId2; }
         public void setUserId2(Integer userId2) { this.userId2 = userId2; }
+
+        public Integer getUnreadCount() { return unreadCount; }
+        public void setUnreadCount(Integer unreadCount) { this.unreadCount = unreadCount; }
     }
 
     /**
@@ -87,6 +93,9 @@ public class ChatDtos {
         /** Timestamp indicating when the message was sent. */
         private LocalDateTime sentAt;
 
+        /** Indicator whether this specific message has been read by the recipient. */
+        private Boolean isRead = false;
+
         public Integer getId() { return id; }
         public void setId(Integer id) { this.id = id; }
 
@@ -101,6 +110,9 @@ public class ChatDtos {
 
         public LocalDateTime getSentAt() { return sentAt; }
         public void setSentAt(LocalDateTime sentAt) { this.sentAt = sentAt; }
+
+        public Boolean getIsRead() { return isRead; }
+        public void setIsRead(Boolean isRead) { this.isRead = isRead; }
     }
 
     /**
@@ -121,6 +133,9 @@ public class ChatDtos {
         /** The most recent message in this chat, used as a preview in the list view. */
         private MessageResponse lastMessage;
 
+        /** The number of unread messages in this chat thread for the current user. */
+        private Integer unreadCount = 0;
+
         public Integer getId() { return id; }
         public void setId(Integer id) { this.id = id; }
 
@@ -132,6 +147,9 @@ public class ChatDtos {
 
         public MessageResponse getLastMessage() { return lastMessage; }
         public void setLastMessage(MessageResponse lastMessage) { this.lastMessage = lastMessage; }
+
+        public Integer getUnreadCount() { return unreadCount; }
+        public void setUnreadCount(Integer unreadCount) { this.unreadCount = unreadCount; }
     }
 
     /**

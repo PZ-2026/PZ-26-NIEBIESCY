@@ -1,14 +1,3 @@
-/*
- * MessageRepository.java
- *
- * Version: 1.0
- * Date: 2026-05-09
- *
- * Copyright (c) 2026 EduLink Team. All rights reserved.
- *
- * This software is the confidential and proprietary information of EduLink.
- */
-
 package com.vectorpeaks.backend.repository;
 
 import com.vectorpeaks.backend.entity.Message;
@@ -21,17 +10,38 @@ import java.util.List;
  * Extends Spring Data JPA's {@link JpaRepository} to provide standard database
  * access methods.
  *
- * @version 1.0
+ * @version 1.1
  * @author EduLink Team
  */
 public interface MessageRepository extends JpaRepository<Message, Integer> {
 
     /**
-     * Returns all messages belonging to the given chat thread,
-     * ordered chronologically by send time ascending (oldest first).
+     * Retrieves all messages belonging to a specific chat thread,
+     * ordered chronologically by their creation time in ascending order (oldest first).
      *
      * @param chatId the ID of the chat thread
-     * @return list of messages in chronological order
+     * @return a list of messages ordered by sent time
      */
     List<Message> findByChat_IdOrderBySentAtAsc(Integer chatId);
+
+    /**
+     * Counts the number of unread messages in a specific chat thread
+     * that were sent by a user other than the specified sender.
+     *
+     * @param chatId   the ID of the chat thread
+     * @param senderId the ID of the current user (to exclude their own messages)
+     * @return the total count of unread messages from other users
+     */
+    long countByChat_IdAndSender_IdNotAndIsReadFalse(Integer chatId, Integer senderId);
+
+    /**
+     * Retrieves a list of unread messages in a specific chat thread
+     * that were sent by a user other than the specified sender.
+     * This is typically used to fetch messages for batch-updating their read status in Java.
+     *
+     * @param chatId   the ID of the chat thread
+     * @param senderId the ID of the current user (to exclude their own messages)
+     * @return a list of unread messages from other users
+     */
+    List<Message> findByChat_IdAndSender_IdNotAndIsReadFalse(Integer chatId, Integer senderId);
 }

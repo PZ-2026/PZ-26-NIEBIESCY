@@ -1,8 +1,11 @@
 package com.vectorpeaks.edulink.security
 
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import java.io.File
 
 /**
  * Secure storage for authentication credentials using EncryptedSharedPreferences.
@@ -17,14 +20,38 @@ class AuthPreferencesManager(context: Context) {
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
-    // Jedna prywatna referencja — używana wszędzie niżej
-    private val encryptedPrefs = EncryptedSharedPreferences.create(
-        context,
-        "auth_prefs_secure",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val encryptedPrefs: SharedPreferences = try {
+        createEncryptedPrefs(context)
+    } catch (e: Exception) {
+        deleteCorruptedPrefs(context)
+        createEncryptedPrefs(context)
+    }
+
+    private fun createEncryptedPrefs(context: Context): SharedPreferences {
+        return EncryptedSharedPreferences.create(
+            context,
+            "auth_prefs_secure",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
+    private fun deleteCorruptedPrefs(context: Context) {
+        try {
+            context.getSharedPreferences("auth_prefs_secure", Context.MODE_PRIVATE).edit {
+                clear()
+            }
+
+            val dir = File(context.filesDir.parent + "/shared_prefs/")
+            val file = File(dir, "auth_prefs_secure.xml")
+            if (file.exists()) {
+                file.delete()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     // ── Access token (JWT, 15 min) ───────────────────────────────
 

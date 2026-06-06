@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vectorpeaks.backend.dto.BookingRequest;
 import com.vectorpeaks.backend.entity.*;
 import com.vectorpeaks.backend.repository.*;
+import com.vectorpeaks.backend.service.MaintenanceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,10 +82,6 @@ class BookingControllerTest extends BaseControllerTest {
     @MockitoBean
     private SubjectRepository subjectRepository;
 
-    /** Mock of the user repository. */
-    @MockitoBean
-    private UserRepository userRepository;
-
     /** Mock of the availability slot repository. */
     @MockitoBean
     private AvailabilitySlotRepository slotRepository;
@@ -93,8 +90,6 @@ class BookingControllerTest extends BaseControllerTest {
     @MockitoBean
     private ReviewRepository reviewRepository;
 
-    // FIX: dodany brakujący mock — BookingController używa offerSlotRepository
-    // do weryfikacji czy slot należy do oferty (metoda createBooking).
     /** Mock of the offer slot repository. */
     @MockitoBean
     private OfferSlotRepository offerSlotRepository;
@@ -104,6 +99,7 @@ class BookingControllerTest extends BaseControllerTest {
 
     /** Sample booking used across multiple tests. */
     private Booking mockBooking;
+
 
     /**
      * Sets up shared test fixtures before each test case:
@@ -115,8 +111,6 @@ class BookingControllerTest extends BaseControllerTest {
         mockOffer.setId(1);
         mockOffer.setTutorId(5);
         mockOffer.setSubjectId(2);
-        // FIX: usunięto mockOffer.setAvailabilitySlotId(3) — pole nie istnieje
-        // w encji Offer; sloty są w tabeli offer_slots (encja OfferSlot).
         mockOffer.setPrice(BigDecimal.valueOf(80.00));
         mockOffer.setOfferType("Online");
         mockOffer.setDetails("Mathematics tutoring");

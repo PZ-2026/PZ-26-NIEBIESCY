@@ -69,8 +69,11 @@ import com.vectorpeaks.edulink.ui.theme.PrimaryContainer
 import com.vectorpeaks.edulink.ui.theme.Success
 import com.vectorpeaks.edulink.ui.theme.Surface
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TutorOffersScreen(
     user: User,
@@ -93,14 +96,8 @@ fun TutorOffersScreen(
         4 to "Czwartek", 5 to "Piątek", 6 to "Sobota", 0 to "Niedziela"
     )
 
-    var selectedFilter by remember { mutableIntStateOf(0) }
     val statusFilters = listOf("Wszystkie", "Aktywne", "Oczekujące", "Odrzucone")
-    val filteredOffers = when (selectedFilter) {
-        1 -> offers.filter { it.status == "ACTIVE" }
-        2 -> offers.filter { it.status == "PENDING" }
-        3 -> offers.filter { it.status == "REJECTED" }
-        else -> offers
-    }
+    val pagerState = rememberPagerState(pageCount = { statusFilters.size })
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingOffer by remember { mutableStateOf<Offer?>(null) }
@@ -162,21 +159,24 @@ fun TutorOffersScreen(
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
-
         ScrollableTabRow(
-            selectedTabIndex = selectedFilter,
+            selectedTabIndex = pagerState.currentPage,
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
             edgePadding = 0.dp,
             divider = {}
         ) {
             statusFilters.forEachIndexed { index, label ->
                 Tab(
-                    selected = selectedFilter == index,
-                    onClick = { selectedFilter = index },
+                    selected = pagerState.currentPage == index,
+                    onClick = {
+                        scope.launch {
+                            pagerState.animateScrollToPage(index)
+                        }
+                    },
                     text = {
                         Text(
                             text = label,
-                            fontWeight = if (selectedFilter == index) FontWeight.SemiBold else FontWeight.Normal
+                            fontWeight = if (pagerState.currentPage == index) FontWeight.SemiBold else FontWeight.Normal
                         )
                     },
                     selectedContentColor = Primary,
@@ -203,46 +203,61 @@ fun TutorOffersScreen(
                     }
                 }
             }
-            filteredOffers.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = when (selectedFilter) {
-                            1 -> "Brak aktywnych ofert"
-                            2 -> "Brak ofert oczekujących na akceptację"
-                            3 -> "Brak odrzuconych ofert"
-                            else -> "Nie masz jeszcze ofert.\nDodaj swoją pierwszą ofertę!"
-                        },
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = OnSurfaceVariant
-                    )
-                }
-            }
             else -> {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(filteredOffers) { offer ->
-                        OfferCard(
-                            offer = offer,
-                            onClick = { },
-                            onEdit = {
-                                editingOffer = offer
-                                editSubjectId = subjects.find { it.name == offer.subject }?.id
-                                editDescription = offer.description
-                                editPrice = offer.pricePerHour.toInt().toString()
-                                editIsOnline = offer.isOnline
-                                editSelectedDay = null
-                                editSelectedSlotIds = offer.availableSlots.map { it.id }
-                                viewModel.loadCurrentOfferSlots(offer)
-                            },
-                            onDelete = { viewModel.deleteOffer(offer.id, user.id) },
-                            onDetail = { detailOffer = offer }
-                        )
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { pageIndex ->
+
+                    val pageFilteredOffers = when (pageIndex) {
+                        1 -> offers.filter { it.status == "ACTIVE" }
+                        2 -> offers.filter { it.status == "PENDING" }
+                        3 -> offers.filter { it.status == "REJECTED" }
+                        else -> offers
+                    }
+
+                    if (pageFilteredOffers.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = when (pageIndex) {
+                                    1 -> "Brak aktywnych ofert"
+                                    2 -> "Brak ofert oczekujących na akceptację"
+                                    3 -> "Brak odrzuconych ofert"
+                                    else -> "Nie masz jeszcze ofert.\nDodaj swoją pierwszą ofertę!"
+                                },
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = OnSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(bottom = 16.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(pageFilteredOffers) { offer ->
+                                OfferCard(
+                                    offer = offer,
+                                    onClick = { },
+                                    onEdit = {
+                                        editingOffer = offer
+                                        editSubjectId = subjects.find { it.name == offer.subject }?.id
+                                        editDescription = offer.description
+                                        editPrice = offer.pricePerHour.toInt().toString()
+                                        editIsOnline = offer.isOnline
+                                        editSelectedDay = null
+                                        editSelectedSlotIds = offer.availableSlots.map { it.id }
+                                        viewModel.loadCurrentOfferSlots(offer)
+                                    },
+                                    onDelete = { viewModel.deleteOffer(offer.id, user.id) },
+                                    onDetail = { detailOffer = offer }
+                                )
+                            }
+                        }
                     }
                 }
             }
-        }
     }
 
     detailOffer?.let { offer ->
@@ -746,4 +761,5 @@ fun TutorOffersScreen(
             }
         )
     }
+}
 }

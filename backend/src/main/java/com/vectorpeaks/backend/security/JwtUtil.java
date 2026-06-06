@@ -143,4 +143,23 @@ public class JwtUtil {
             return null;
         }
     }
+
+    /**
+     * Extracts the expiration date from a valid JWT token.
+     *
+     * @param token the JWT token string
+     * @return the expiration date
+     */
+    public Date extractExpiration(String token) {
+        try {
+            return Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload()
+                    .getExpiration();
+        } catch (JwtException | NullPointerException e) {
+            return new Date(0); // if found some problems returns old date
+        }
+    }
 }

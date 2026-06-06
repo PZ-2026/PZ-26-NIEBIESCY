@@ -2,10 +2,12 @@ package com.vectorpeaks.edulink.ui.screens.tutor
 
 import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -56,7 +58,6 @@ fun TutorChatScreen(
     val chats by viewModel.chats.collectAsState()
     var selectedChat by remember { mutableStateOf<ChatResponse?>(null) }
 
-    // Load chats when the screen is first composed
     LaunchedEffect(user.id) {
         viewModel.fetchChats(user.id)
     }
@@ -132,7 +133,7 @@ fun TutorChatScreen(
                         }
                     }
                 }
-                else -> {} // Idle state
+                else -> {}
             }
         }
     }
@@ -146,6 +147,7 @@ fun TutorChatScreen(
  * - Name of the student
  * - Preview of the last message
  * - Timestamp of the last message
+ * - Unread badge (if applicable)
  *
  * @param chat the ChatResponse containing conversation details
  * @param currentUserId the ID of the logged-in tutor
@@ -157,8 +159,8 @@ private fun TutorConversationItem(
     currentUserId: Int,
     onClick: () -> Unit
 ) {
-    // Find the student participant (not the tutor)
     val studentParticipant = chat.participants.find { it.id != currentUserId }
+    val hasUnread = chat.unreadCount > 0
 
     Card(
         modifier = Modifier
@@ -185,19 +187,30 @@ private fun TutorConversationItem(
                     Text(
                         text = studentParticipant?.fullName ?: "Unknown Student",
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = if (hasUnread) FontWeight.ExtraBold else FontWeight.SemiBold
                     )
-                    Text(
-                        text = DateUtils.formatChatTimestamp(chat.lastMessage?.sentAt ?: chat.createdAt),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = OnSurfaceVariant
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (hasUnread) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
+                        Text(
+                            text = DateUtils.formatChatTimestamp(chat.lastMessage?.sentAt ?: chat.createdAt),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (hasUnread) MaterialTheme.colorScheme.primary else OnSurfaceVariant
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = chat.lastMessage?.content ?: "Brak wiadomości",
                     style = MaterialTheme.typography.bodySmall,
-                    color = OnSurfaceVariant,
+                    color = if (hasUnread) MaterialTheme.colorScheme.onSurface else OnSurfaceVariant,
+                    fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -235,9 +248,9 @@ private fun TutorChatDetailView(
     val sendMessageState by viewModel.sendMessageState.collectAsState()
     var newMessage by remember { mutableStateOf("") }
 
-    // Load message history when entering the detail view
     LaunchedEffect(chat.id) {
         viewModel.fetchMessages(chat.id)
+        viewModel.markChatAsRead(chat.id, currentUserId)
     }
 
     BackHandler {
@@ -257,7 +270,6 @@ private fun TutorChatDetailView(
         }
     }
 
-    // Clear text after successful send
     LaunchedEffect(sendMessageState) {
         if (sendMessageState is ChatViewModel.SendMessageState.Success) {
             newMessage = ""
@@ -351,7 +363,7 @@ private fun TutorChatDetailView(
                             .padding(horizontal = 16.dp),
                         contentPadding = PaddingValues(vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        reverseLayout = false  // Messages flow from top to bottom
+                        reverseLayout = false
                     ) {
                         items(messages) { message ->
                             TutorMessageBubble(
@@ -361,10 +373,9 @@ private fun TutorChatDetailView(
                         }
                     }
                 }
-                else -> {} // Idle state
+                else -> {}
             }
 
-            // Show error for send message state
             if (sendMessageState is ChatViewModel.SendMessageState.Error) {
                 Snackbar(
                     modifier = Modifier

@@ -1,8 +1,11 @@
 package com.vectorpeaks.edulink.ui.screens.student
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -19,7 +22,9 @@ import com.vectorpeaks.edulink.data.model.ReservationStatus
 import com.vectorpeaks.edulink.ui.components.ClickableRatingBar
 import com.vectorpeaks.edulink.ui.components.ReservationCard
 import com.vectorpeaks.edulink.ui.theme.*
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StudentHistoryScreen(
     studentId: Int,
@@ -30,7 +35,13 @@ fun StudentHistoryScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    var selectedFilter by remember { mutableIntStateOf(0) }
+    // Define filters at the beginning as we need their size for PagerState
+    val statusFilters = listOf("Wszystkie", "Oczekujące", "Zaakceptowane", "Zakończone", "Odrzucone")
+
+    // PagerState manages the current page and swipe gestures
+    val pagerState = rememberPagerState(pageCount = { statusFilters.size })
+    val coroutineScope = rememberCoroutineScope()
+
     var showRatingDialog by remember { mutableStateOf(false) }
     var ratingBooking by remember { mutableStateOf<BookingResponse?>(null) }
     var ratingValue by remember { mutableStateOf(0) }
@@ -43,16 +54,6 @@ fun StudentHistoryScreen(
         viewModel.loadBookings(studentId)
     }
 
-    val statusFilters =
-        listOf("Wszystkie", "Oczekujące", "Zaakceptowane", "Zakończone", "Odrzucone")
-    val filteredBookings = when (selectedFilter) {
-        1 -> bookings.filter { it.status == "PENDING" }
-        2 -> bookings.filter { it.status == "ACCEPTED" }
-        3 -> bookings.filter { it.status == "COMPLETED" }
-        4 -> bookings.filter { it.status == "REJECTED" }
-        else -> bookings
-    }
-
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(
@@ -63,20 +64,26 @@ fun StudentHistoryScreen(
         )
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Tabs now track the pagerState.currentPage state
         ScrollableTabRow(
-            selectedTabIndex = selectedFilter,
+            selectedTabIndex = pagerState.currentPage,
             containerColor = Background,
             edgePadding = 0.dp,
             divider = {}
         ) {
             statusFilters.forEachIndexed { index, label ->
                 Tab(
-                    selected = selectedFilter == index,
-                    onClick = { selectedFilter = index },
+                    selected = pagerState.currentPage == index,
+                    onClick = {
+                        // Clicking a tab animates the transition to the corresponding page
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(index)
+                        }
+                    },
                     text = {
                         Text(
                             text = label,
-                            fontWeight = if (selectedFilter == index) FontWeight.SemiBold else FontWeight.Normal
+                            fontWeight = if (pagerState.currentPage == index) FontWeight.SemiBold else FontWeight.Normal
                         )
                     },
                     selectedContentColor = Primary,
@@ -99,47 +106,64 @@ fun StudentHistoryScreen(
                 }
             }
 
-            filteredBookings.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        "Brak rezerwacji",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = OnSurfaceVariant
-                    )
-                }
-            }
-
             else -> {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(filteredBookings) { booking ->
-                        ReservationCard(
-                            reservation = convertToReservation(booking),
-                            showActions = false,
-                            onClick = {
-                                if (booking.status == "COMPLETED") {
-                                    ratingBooking = booking
-                                    ratingValue = booking.rating ?: 0
-                                    ratingComment = booking.reviewComment ?: ""
-                                    showRatingDialog = true
-                                }
-                            },
-                            onComplete = if (booking.status == "ACCEPTED") {
-                                {
-                                    completingBooking = booking
-                                    showCompleteDialog = true
-                                }
-                            } else null
-                        )
+                // HorizontalPager enables swiping content horizontally (left/right)
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { pageIndex ->
+
+                    // Filter the list locally for each page of the pager
+                    val filteredBookings = when (pageIndex) {
+                        1 -> bookings.filter { it.status == "PENDING" }
+                        2 -> bookings.filter { it.status == "ACCEPTED" }
+                        3 -> bookings.filter { it.status == "COMPLETED" }
+                        4 -> bookings.filter { it.status == "REJECTED" }
+                        else -> bookings
+                    }
+
+                    if (filteredBookings.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                "Brak rezerwacji",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = OnSurfaceVariant
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(bottom = 16.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(filteredBookings) { booking ->
+                                ReservationCard(
+                                    reservation = convertToReservation(booking),
+                                    showActions = false,
+                                    onClick = {
+                                        if (booking.status == "COMPLETED") {
+                                            ratingBooking = booking
+                                            ratingValue = booking.rating ?: 0
+                                            ratingComment = booking.reviewComment ?: ""
+                                            showRatingDialog = true
+                                        }
+                                    },
+                                    onComplete = if (booking.status == "ACCEPTED") {
+                                        {
+                                            completingBooking = booking
+                                            showCompleteDialog = true
+                                        }
+                                    } else null
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    // Rating dialog
+    // --- Dialogs (Rating and Complete) ---
     if (showRatingDialog && ratingBooking != null) {
         AlertDialog(
             onDismissRequest = { showRatingDialog = false },

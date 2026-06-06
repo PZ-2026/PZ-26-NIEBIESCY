@@ -8,6 +8,7 @@ import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.data.model.user.UserResponse
 import com.vectorpeaks.edulink.data.model.Offer
 import com.vectorpeaks.edulink.data.model.OfferCreateRequest
+import com.vectorpeaks.edulink.data.model.PagedResponse
 import com.vectorpeaks.edulink.data.model.user.ReviewRequest
 import com.vectorpeaks.edulink.data.model.RegisterRequest
 import com.vectorpeaks.edulink.data.model.Slot
@@ -49,6 +50,32 @@ interface ApiService {
         @Query("onlineOnly") onlineOnly: Boolean? = null,
         @Query("search") search: String? = null
     ): List<Offer>
+
+    /**
+     * Fetches a paginated and sorted list of offers.
+     * Mirrors the same filters as [getOffers] but returns a [PagedResponse]
+     * instead of a flat list, enabling lazy loading in the UI.
+     *
+     * @param subject   optional subject name filter
+     * @param city      optional city filter
+     * @param onlineOnly if true, returns only online offers
+     * @param search    optional search text matched against tutor name and subject
+     * @param page      zero-based page index (default 0)
+     * @param size      number of items per page (default 10)
+     * @param sortBy    field to sort by: "createdAt" or "rating" (default "createdAt")
+     * @param sortDir   sort direction: "asc" or "desc" (default "desc")
+     */
+    @GET("api/offers/paged")
+    suspend fun getOffersPaged(
+        @Query("subject")    subject:    String?  = null,
+        @Query("city")       city:       String?  = null,
+        @Query("onlineOnly") onlineOnly: Boolean? = null,
+        @Query("search")     search:     String?  = null,
+        @Query("page")       page:       Int      = 0,
+        @Query("size")       size:       Int      = 10,
+        @Query("sortBy")     sortBy:     String   = "createdAt",
+        @Query("sortDir")    sortDir:    String   = "desc"
+    ): PagedResponse<Offer>
 
     @GET("api/data/subjects")
     suspend fun getSubjects(): List<String>
@@ -196,6 +223,17 @@ interface ApiService {
         @Path("userId") userId: Int,
         @Body token: Map<String, String>
     ): Response<Unit>
+
+    /**
+     * Marks all unread messages in the given chat thread as read for the logged-in user.
+     *
+     * @param chatId the ID of the chat thread
+     * @return Response with no body (Unit)
+     */
+    @POST("api/chats/{chatId}/read")
+    suspend fun markChatAsRead(
+        @Path("chatId") chatId: Int
+    ): retrofit2.Response<Unit>
   
     // ==================== Admin: Offers ====================
 

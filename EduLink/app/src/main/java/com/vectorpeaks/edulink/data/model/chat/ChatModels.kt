@@ -21,13 +21,15 @@ data class ParticipantInfo(
  * @property senderName full name of the sender displayed in the UI
  * @property content    text content of the message
  * @property sentAt     ISO-8601 timestamp of when the message was sent
+ * @property isRead     indicates if the recipient has read this message
  */
 data class MessageResponse(
     val id: Int,
     val senderId: Int,
     val senderName: String,
     val content: String,
-    val sentAt: String
+    val sentAt: String,
+    val isRead: Boolean = false
 )
 
 /**
@@ -37,12 +39,14 @@ data class MessageResponse(
  * @property createdAt    ISO-8601 timestamp of when the chat was created
  * @property participants list of users participating in this chat
  * @property lastMessage  most recent message preview, or null if no messages yet
+ * @property unreadCount  number of unread messages for the logged-in user
  */
 data class ChatResponse(
     val id: Int,
     val createdAt: String,
     val participants: List<ParticipantInfo>,
-    val lastMessage: MessageResponse?
+    val lastMessage: MessageResponse?,
+    val unreadCount: Int = 0
 )
 
 /**

@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vectorpeaks.edulink.data.model.Offer
 import com.vectorpeaks.edulink.data.model.Slot
 import com.vectorpeaks.edulink.ui.components.RatingBar
 import com.vectorpeaks.edulink.ui.components.UserAvatar
@@ -23,356 +22,385 @@ import com.vectorpeaks.edulink.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OfferDetailScreen(
-    offer: Offer,
+    offerId: Int, // Teraz przyjmuje tylko ID
     studentId: Int,
     onBack: () -> Unit,
     onTutorClick: (tutorId: Int, tutorName: String) -> Unit,
+    detailViewModel: OfferDetailViewModel = viewModel(),
     bookingViewModel: BookingViewModel = viewModel()
 ) {
     var showBookingDialog by remember { mutableStateOf(false) }
     var selectedSlot by remember { mutableStateOf<Slot?>(null) }
     var bookingConfirmed by remember { mutableStateOf(false) }
     var showSlotTakenDialog by remember { mutableStateOf(false) }
-    val offerDetailViewModel: OfferDetailViewModel = viewModel()
-    val refreshedOffer by offerDetailViewModel.offer.collectAsState()
-    val displayOffer = refreshedOffer ?: offer
 
-    LaunchedEffect(offer.id) {
-        offerDetailViewModel.loadOffer(offer.id)
+    // Obserwacja stanu z ViewModels
+    val offer by detailViewModel.offer.collectAsState()
+    val isLoading by detailViewModel.isLoading.collectAsState()
+    val error by detailViewModel.error.collectAsState()
+    val bookingUiState by bookingViewModel.uiState.collectAsState()
+
+    // Ładowanie danych po wejściu na ekran
+    LaunchedEffect(offerId) {
+        detailViewModel.loadOffer(offerId)
     }
 
-    LaunchedEffect(offer.id, studentId) {
+    // Resetowanie stanu okienek rezerwacji, gdy oferta się ładuje/zmienia
+    LaunchedEffect(offer?.id, studentId) {
         showBookingDialog = false
         selectedSlot = null
         bookingConfirmed = false
         bookingViewModel.resetUiState()
     }
 
-    Scaffold(
-        containerColor = Background,
-        topBar = {
-            TopAppBar(
-                title = { Text("Szczegóły oferty") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            isLoading -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+            error != null -> {
+                Text(
+                    text = "Błąd: $error",
+                    color = Error,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+            offer != null -> {
+                // Skrót do pobranej oferty
+                val displayOffer = offer!!
+
+                Scaffold(
+                    containerColor = Background,
+                    topBar = {
+                        TopAppBar(
+                            title = { Text("Szczegóły oferty") },
+                            navigationIcon = {
+                                IconButton(onClick = onBack) {
+                                    Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(containerColor = Surface)
+                        )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Surface)
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
-            // Subject & Price
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Surface),
-                elevation = CardDefaults.cardElevation(2.dp)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                ) { innerPadding ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp)
                     ) {
-                        Text(
-                            text = displayOffer.subject,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Primary
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = PrimaryContainer
+                        // Karta: Przedmiot i Cena
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Surface),
+                            elevation = CardDefaults.cardElevation(2.dp)
                         ) {
-                            Text(
-                                text = "${displayOffer.pricePerHour.toInt()} zł/h",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = OnPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
+                            Column(modifier = Modifier.padding(20.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = displayOffer.subject,
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Primary
+                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = PrimaryContainer
+                                    ) {
+                                        Text(
+                                            text = "${displayOffer.pricePerHour.toInt()} zł/h",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = OnPrimaryContainer,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    RatingBar(rating = displayOffer.rating, starSize = 20f)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "${displayOffer.rating} (${displayOffer.reviewCount} opinii)",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = OnSurfaceVariant
+                                    )
+                                }
+                            }
                         }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RatingBar(rating = displayOffer.rating, starSize = 20f)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "${displayOffer.rating} (${displayOffer.reviewCount} opinii)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = OnSurfaceVariant
-                        )
-                    }
-                }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-            // Tutor card
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Surface),
-                elevation = CardDefaults.cardElevation(2.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onTutorClick(displayOffer.tutorId, displayOffer.tutorName) }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    UserAvatar(name = displayOffer.tutorName, size = 56)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = displayOffer.tutorName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = OnSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = displayOffer.city,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = OnSurfaceVariant
-                            )
-                        }
-                        if (displayOffer.isOnline) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Karta: Korepetytor
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Surface),
+                            elevation = CardDefaults.cardElevation(2.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onTutorClick(displayOffer.tutorId, displayOffer.tutorName) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                UserAvatar(name = displayOffer.tutorName, size = 56)
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = displayOffer.tutorName,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.LocationOn,
+                                            contentDescription = null,
+                                            tint = OnSurfaceVariant,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = displayOffer.city,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = OnSurfaceVariant
+                                        )
+                                    }
+                                    if (displayOffer.isOnline) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.Laptop,
+                                                contentDescription = null,
+                                                tint = Tertiary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "Dostępne online",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = Tertiary
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Zobacz opinie →",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Primary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                                 Icon(
-                                    Icons.Default.Laptop,
-                                    contentDescription = null,
-                                    tint = Tertiary,
-                                    modifier = Modifier.size(16.dp)
+                                    Icons.Default.ChevronRight,
+                                    contentDescription = "Zobacz opinie",
+                                    tint = OnSurfaceVariant
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Karta: Opis
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Surface),
+                            elevation = CardDefaults.cardElevation(2.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "Dostępne online",
+                                    text = "Opis",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = displayOffer.description,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Tertiary
+                                    color = OnSurfaceVariant
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Zobacz opinie →",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = "Zobacz opinie",
-                        tint = OnSurfaceVariant
-                    )
-                }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-            // Description
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Surface),
-                elevation = CardDefaults.cardElevation(2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Opis",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = displayOffer.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = OnSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Available slots
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Surface),
-                elevation = CardDefaults.cardElevation(2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Dostępne terminy",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    displayOffer.availableSlots.forEach { slot ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        // Karta: Dostępne terminy
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Surface),
+                            elevation = CardDefaults.cardElevation(2.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Schedule,
-                                    contentDescription = null,
-                                    tint = Primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = slot.label,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    text = "Dostępne terminy",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
                                 )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                displayOffer.availableSlots.forEach { slot ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.Schedule,
+                                                contentDescription = null,
+                                                tint = Primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = slot.label,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        }
+                                        Button(
+                                            onClick = {
+                                                selectedSlot = slot
+                                                showBookingDialog = true
+                                            },
+                                            enabled = !slot.isBooked,
+                                            shape = RoundedCornerShape(8.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Primary,
+                                                disabledContainerColor = OnSurfaceVariant.copy(alpha = 0.3f)
+                                            )
+                                        ) {
+                                            Text(
+                                                if (slot.isBooked) "Zajęty" else "Rezerwuj",
+                                                color = if (slot.isBooked) OnSurfaceVariant else MaterialTheme.colorScheme.onPrimary
+                                            )
+                                        }
+                                    }
+                                    if (slot != displayOffer.availableSlots.last()) {
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                    }
+                                }
                             }
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+                }
+
+                // --- Sekcja Dialogów ---
+
+                // Okno potwierdzenia rezerwacji
+                if (showBookingDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showBookingDialog = false },
+                        title = { Text("Potwierdź rezerwację") },
+                        text = {
+                            Column {
+                                Text("Przedmiot: ${displayOffer.subject}")
+                                Text("Korepetytor: ${displayOffer.tutorName}")
+                                if (selectedSlot != null) {
+                                    Text("Termin: ${selectedSlot!!.label}")
+                                }
+                                Text("Cena: ${displayOffer.pricePerHour.toInt()} zł/h")
+                            }
+                        },
+                        confirmButton = {
                             Button(
                                 onClick = {
-                                    selectedSlot = slot
-                                    showBookingDialog = true
+                                    bookingViewModel.createBooking(
+                                        offerId = displayOffer.id,
+                                        studentId = studentId,
+                                        slotId = selectedSlot!!.id,
+                                        onSuccess = {
+                                            showBookingDialog = false
+                                            bookingConfirmed = true
+                                        },
+                                        onSlotTaken = {
+                                            showBookingDialog = false
+                                            showSlotTakenDialog = true
+                                            detailViewModel.loadOffer(displayOffer.id)
+                                        }
+                                    )
                                 },
-                                enabled = !slot.isBooked,
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Primary,
-                                    disabledContainerColor = OnSurfaceVariant.copy(alpha = 0.3f)
-                                )
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
                             ) {
-                                Text(
-                                    if (slot.isBooked) "Zajęty" else "Rezerwuj",
-                                    color = if (slot.isBooked) OnSurfaceVariant else MaterialTheme.colorScheme.onPrimary
-                                )
+                                Text("Rezerwuj")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showBookingDialog = false }) {
+                                Text("Anuluj")
                             }
                         }
-                        if (slot != displayOffer.availableSlots.last()) {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    )
+                }
+
+                // Obsługa zmiany stanu z viewModelu rezerwacji
+                when (val state = bookingUiState) {
+                    is BookingUiState.Success -> {
+                        LaunchedEffect(Unit) {
+                            if (!bookingConfirmed) bookingConfirmed = true
                         }
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-
-    // Booking confirmation dialog
-    if (showBookingDialog) {
-        AlertDialog(
-            onDismissRequest = { showBookingDialog = false },
-            title = { Text("Potwierdź rezerwację") },
-            text = {
-                Column {
-                    Text("Przedmiot: ${displayOffer.subject}")
-                    Text("Korepetytor: ${displayOffer.tutorName}")
-                    if (selectedSlot != null) {
-                        Text("Termin: ${selectedSlot!!.label}")
+                    is BookingUiState.Error -> {
+                        LaunchedEffect(state.message) {
+                            bookingConfirmed = false
+                        }
                     }
-                    Text("Cena: ${displayOffer.pricePerHour.toInt()} zł/h")
+                    else -> {}
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        bookingViewModel.createBooking(
-                            offerId = displayOffer.id,
-                            studentId = studentId,
-                            slotId = selectedSlot!!.id,
-                            onSuccess = {
-                                showBookingDialog = false
-                                bookingConfirmed = true
-                            },
-                            onSlotTaken = {
-                                showBookingDialog = false
-                                showSlotTakenDialog = true
-                                offerDetailViewModel.loadOffer(displayOffer.id)
+
+                // Dialog sukcesu
+                if (bookingConfirmed) {
+                    AlertDialog(
+                        onDismissRequest = {
+                            bookingConfirmed = false
+                            bookingViewModel.resetUiState()
+                            onBack()
+                        },
+                        title = { Text("Sukces!", color = Success) },
+                        text = { Text("Rezerwacja została złożona. Korepetytor otrzyma powiadomienie.") },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    bookingConfirmed = false
+                                    bookingViewModel.resetUiState()
+                                    onBack()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Success)
+                            ) {
+                                Text("OK")
                             }
-                        )
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
-                ) {
-                    Text("Rezerwuj")
+                        }
+                    )
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBookingDialog = false }) {
-                    Text("Anuluj")
-                }
-            }
-        )
-    }
 
-    when (val state = bookingViewModel.uiState.value) {
-        is BookingUiState.Success -> {
-            LaunchedEffect(Unit) {
-                if (!bookingConfirmed) bookingConfirmed = true
+                // Dialog zajętego terminu
+                if (showSlotTakenDialog) {
+                    AlertDialog(
+                        onDismissRequest = {
+                            showSlotTakenDialog = false
+                            bookingViewModel.resetUiState()
+                        },
+                        title = { Text("Termin niedostępny", color = Error) },
+                        text = { Text("Ten termin został właśnie zarezerwowany przez kogoś innego. Wybierz inny termin.") },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showSlotTakenDialog = false
+                                    bookingViewModel.resetUiState()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Error)
+                            ) {
+                                Text("OK")
+                            }
+                        }
+                    )
+                }
             }
         }
-        is BookingUiState.Error -> {
-            LaunchedEffect(state.message) {
-                bookingConfirmed = false
-            }
-        }
-        else -> {}
-    }
-
-    if (bookingConfirmed) {
-        AlertDialog(
-            onDismissRequest = {
-                bookingConfirmed = false
-                bookingViewModel.resetUiState()
-                onBack()
-            },
-            title = { Text("Sukces!", color = Success) },
-            text = { Text("Rezerwacja została złożona. Korepetytor otrzyma powiadomienie.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        bookingConfirmed = false
-                        bookingViewModel.resetUiState()
-                        onBack()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Success)
-                ) {
-                    Text("OK")
-                }
-            }
-        )
-    }
-
-    if (showSlotTakenDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showSlotTakenDialog = false
-                bookingViewModel.resetUiState()
-            },
-            title = { Text("Termin niedostępny", color = Error) },
-            text = { Text("Ten termin został właśnie zarezerwowany przez kogoś innego. Wybierz inny termin.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showSlotTakenDialog = false
-                        bookingViewModel.resetUiState()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Error)
-                ) {
-                    Text("OK")
-                }
-            }
-        )
     }
 }
