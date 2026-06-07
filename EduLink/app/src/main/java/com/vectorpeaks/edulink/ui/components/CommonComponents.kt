@@ -262,6 +262,7 @@ fun OfferCard(
 fun ReservationCard(
     reservation: Reservation,
     showActions: Boolean = false,
+    isTutorView: Boolean = false,
     onClick: (() -> Unit)? = null,
     onAccept: (() -> Unit)? = null,
     onReject: (() -> Unit)? = null,
@@ -295,12 +296,12 @@ fun ReservationCard(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 UserAvatar(
-                    name = if (showActions) reservation.studentName else reservation.tutorName,
+                    name = if (isTutorView) reservation.studentName else reservation.tutorName,
                     size = 28
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (showActions) reservation.studentName else reservation.tutorName,
+                    text = if (isTutorView) reservation.studentName else reservation.tutorName,
                     style = MaterialTheme.typography.bodyMedium,
                     color = OnSurfaceVariant
                 )

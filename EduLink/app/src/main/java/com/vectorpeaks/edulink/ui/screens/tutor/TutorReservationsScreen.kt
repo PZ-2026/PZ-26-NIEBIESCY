@@ -129,6 +129,7 @@ fun TutorReservationsScreen(
                                 ReservationCard(
                                     reservation = convertToReservation(booking),
                                     showActions = booking.status == "PENDING",
+                                    isTutorView = true,
                                     onAccept = {
                                         viewModel.updateStatus(booking.id, "ACCEPTED", tutorId)
                                     },
@@ -160,7 +161,7 @@ fun TutorReservationsScreen(
                 Text(
                     "Czy na pewno chcesz oznaczyć lekcję " +
                             "${completingBooking!!.subject} ze studentem " +
-                            "${completingBooking!!.tutorName} jako zakończoną?"
+                            "${completingBooking!!.studentName } jako zakończoną?"
                 )
             },
             confirmButton = {
@@ -195,8 +196,8 @@ private fun convertToReservation(booking: BookingResponse): Reservation {
     return Reservation(
         id = booking.id,
         offerId = booking.offerId,
-        studentId = 0,
-        studentName = "",
+        studentId = booking.studentId,
+        studentName = booking.studentName ?: "",
         tutorId = booking.tutorId,
         tutorName = booking.tutorName,
         subject = booking.subject,

@@ -119,6 +119,7 @@ fun TutorDashboardScreen(
                         ReservationCard(
                             reservation = reservation,
                             showActions = true,
+                            isTutorView = true,
                             onAccept = {
                                 viewModel.updateStatus(reservation.id, "ACCEPTED", user.id)
                             },
@@ -137,7 +138,8 @@ fun TutorDashboardScreen(
                     upcomingReservations.forEach { reservation ->
                         ReservationCard(
                             reservation = reservation,
-                            showActions = false
+                            showActions = false,
+                            isTutorView = true,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -174,8 +176,8 @@ private fun convertToReservation(booking: BookingResponse): Reservation {
     return Reservation(
         id = booking.id,
         offerId = booking.offerId,
-        studentId = 0,
-        studentName = "",
+        studentId = booking.studentId,
+        studentName = booking.studentName ?: "",
         tutorId = booking.tutorId,
         tutorName = booking.tutorName,
         subject = booking.subject,

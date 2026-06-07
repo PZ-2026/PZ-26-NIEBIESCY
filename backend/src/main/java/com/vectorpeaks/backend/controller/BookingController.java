@@ -1,8 +1,8 @@
 /*
  * BookingController.java
  *
- * Version: 1.3
- * Date: 2026-05-24
+ * Version: 1.4
+ * Date: 2026-06-08
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  *
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  * Provides endpoints to create bookings and retrieve bookings for a specific student.
  * Includes built-in BOLA (Broken Object Level Authorization) protection and security event logging.
  *
- * @version 1.2
+ * @version 1.4
  * @author EduLink Team
  */
 @RestController
@@ -106,7 +106,6 @@ public class BookingController {
         String tutorName = (tutor != null) ? tutor.getFirstName() + " " + tutor.getLastName() : "";
         String subjectName = (subject != null) ? subject.getName() : "";
 
-        // Fetch student data for the response
         User student = userRepository.findById(booking.getStudentId()).orElse(null);
         String studentName = (student != null) ? student.getFirstName() + " " + student.getLastName() : "";
 
@@ -114,7 +113,7 @@ public class BookingController {
         String date = "";
         String time = "";
         if (slot != null) {
-            date = booking.getBookingDate() != null ? booking.getBookingDate().toLocalDate().toString() : "";
+            date = getDayName(slot.getDayOfWeek());
             time = slot.getStartTime().toString().substring(0, 5);
         }
 
@@ -307,5 +306,25 @@ public class BookingController {
         booking.setStatusId(4);
         bookingRepository.save(booking);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Converts a numeric day-of-week value to its Polish full name.
+     *
+     * @param dayOfWeek day number (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+     * @return Polish name of the day, or empty string if the value is unrecognized
+     */
+
+    private String getDayName(Short dayOfWeek) {
+        switch (dayOfWeek) {
+            case 1: return "Poniedziałek";
+            case 2: return "Wtorek";
+            case 3: return "Środa";
+            case 4: return "Czwartek";
+            case 5: return "Piątek";
+            case 6: return "Sobota";
+            case 0: return "Niedziela";
+            default: return "";
+        }
     }
 }
