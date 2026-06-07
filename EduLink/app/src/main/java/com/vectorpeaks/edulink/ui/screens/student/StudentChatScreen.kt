@@ -1,10 +1,13 @@
 package com.vectorpeaks.edulink.ui.screens.student
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -26,28 +29,25 @@ import com.vectorpeaks.edulink.ui.theme.*
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModel
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModelFactory
 import com.vectorpeaks.edulink.utils.DateUtils
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.CircleShape
 
 /**
  * Student chat screen showing the list of conversations with tutors.
- *
- * Handles:
- * - Displaying all active chats for the logged-in student
- * - Loading state and error handling
- * - Navigation to chat detail view
+ * Also handles opening a specific chat when navigated from history screen.
  *
  * @param user the currently logged-in student user
- * @param modifier layout modifier for the composable
- * @param onChatOpen callback when a chat conversation is opened/closed
+ * @param modifier layout modifier
+ * @param onChatOpen callback when a chat detail is opened/closed (hides bottom bar)
+ * @param pendingChatTutorId if set, automatically opens/creates a chat with this tutor
+ * @param onPendingChatConsumed called after pendingChatTutorId has been handled, to clear it
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentChatScreen(
     user: User,
     modifier: Modifier = Modifier,
-    onChatOpen: (Boolean) -> Unit = {}
+    onChatOpen: (Boolean) -> Unit = {},
+    pendingChatTutorId: Int? = null,
+    onPendingChatConsumed: () -> Unit = {}
 ) {
     val viewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(RetrofitClient.apiService)
@@ -55,11 +55,30 @@ fun StudentChatScreen(
 
     val chatsState by viewModel.chatsState.collectAsState()
     val chats by viewModel.chats.collectAsState()
+    val createChatState by viewModel.createChatState.collectAsState()
+
     var selectedChat by remember { mutableStateOf<ChatResponse?>(null) }
 
     // Load chats when the screen is first composed
     LaunchedEffect(user.id) {
         viewModel.fetchChats(user.id)
+    }
+
+    // When pendingChatTutorId arrives from history screen,
+    // call the API to create or get existing chat with that tutor
+    LaunchedEffect(pendingChatTutorId) {
+        if (pendingChatTutorId != null) {
+            viewModel.createOrGetChat(user.id, pendingChatTutorId)
+        }
+    }
+
+    // Once chat is ready, open it and clear the pending request
+    LaunchedEffect(createChatState) {
+        if (createChatState is ChatViewModel.CreateChatState.Success) {
+            selectedChat = (createChatState as ChatViewModel.CreateChatState.Success).chat
+            viewModel.resetCreateChatState()
+            onPendingChatConsumed()
+        }
     }
 
     if (selectedChat != null) {
@@ -89,18 +108,12 @@ fun StudentChatScreen(
 
             when (chatsState) {
                 is ChatViewModel.ChatListState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
                 }
                 is ChatViewModel.ChatListState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             text = "Błąd: ${(chatsState as ChatViewModel.ChatListState.Error).message}",
                             style = MaterialTheme.typography.bodyLarge,
@@ -110,10 +123,7 @@ fun StudentChatScreen(
                 }
                 is ChatViewModel.ChatListState.Success -> {
                     if (chats.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
                                 "Brak rozmów.\nZarezerwuj lekcję, aby rozpocząć czat.",
                                 style = MaterialTheme.typography.bodyLarge,
@@ -141,17 +151,6 @@ fun StudentChatScreen(
 
 /**
  * Displays a single conversation item in the chat list.
- *
- * Shows:
- * - Avatar of the other participant
- * - Name of the other participant
- * - Preview of the last message
- * - Timestamp of the last message
- * - Unread badge (if applicable)
- *
- * @param chat the ChatResponse containing conversation details
- * @param currentUserId the ID of the logged-in student
- * @param onClick callback when the conversation is tapped
  */
 @Composable
 private fun StudentConversationItem(
@@ -159,28 +158,17 @@ private fun StudentConversationItem(
     currentUserId: Int,
     onClick: () -> Unit
 ) {
-    // Find the other participant (not the current user)
     val otherParticipant = chat.participants.find { it.id != currentUserId }
-
-    // Check if there are unread messages
     val hasUnread = chat.unreadCount > 0
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Surface),
         elevation = CardDefaults.cardElevation(1.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            UserAvatar(
-                name = otherParticipant?.fullName ?: "Unknown",
-                size = 48
-            )
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            UserAvatar(name = otherParticipant?.fullName ?: "Unknown", size = 48)
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -191,7 +179,6 @@ private fun StudentConversationItem(
                         text = otherParticipant?.fullName ?: "Unknown User",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = if (hasUnread) FontWeight.ExtraBold else FontWeight.SemiBold
-
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (hasUnread) {
@@ -202,12 +189,15 @@ private fun StudentConversationItem(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                         }
-                    Text(
-                        text = DateUtils.formatChatTimestamp(chat.lastMessage?.sentAt ?: chat.createdAt),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (hasUnread) MaterialTheme.colorScheme.primary else OnSurfaceVariant
-                    )
-                }}
+                        Text(
+                            text = DateUtils.formatChatTimestamp(
+                                chat.lastMessage?.sentAt ?: chat.createdAt
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (hasUnread) MaterialTheme.colorScheme.primary else OnSurfaceVariant
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = chat.lastMessage?.content ?: "Brak wiadomości",
@@ -223,18 +213,13 @@ private fun StudentConversationItem(
 }
 
 /**
- * Detailed chat view showing the message conversation history.
+ * Detailed chat view showing the full message conversation.
+ * pendingChatTutorId and createChatState logic is handled in the parent [StudentChatScreen],
+ * so this composable only receives the already-resolved chat object.
  *
- * Handles:
- * - Loading message history
- * - Displaying all messages with timestamps
- * - Input field for composing new messages
- * - Sending messages and adding them to the local list
- * - Error states and retry logic
- *
- * @param chat the ChatResponse for this conversation
- * @param currentUserId the ID of the logged-in student
- * @param viewModel the ChatViewModel for managing state
+ * @param chat the resolved ChatResponse to display
+ * @param currentUserId the logged-in student's id
+ * @param viewModel shared ChatViewModel
  * @param onBack callback to close the detail view
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -251,30 +236,27 @@ private fun StudentChatDetailView(
     val sendMessageState by viewModel.sendMessageState.collectAsState()
     var newMessage by remember { mutableStateOf("") }
 
-    // Load message history when entering the detail view
+    // Load message history and mark as read when entering the detail view
     LaunchedEffect(chat.id) {
         viewModel.fetchMessages(chat.id)
         viewModel.markChatAsRead(chat.id, currentUserId)
     }
 
-    BackHandler {
-        onBack()
-    }
+    BackHandler { onBack() }
 
+    // Scroll to bottom when messages load or a new one arrives
     LaunchedEffect(messagesState) {
-        if (messagesState is ChatViewModel.MessageListState.Success
-            && messages.isNotEmpty()) {
+        if (messagesState is ChatViewModel.MessageListState.Success && messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.lastIndex)
         }
     }
-
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.lastIndex)
         }
     }
 
-    // Clear text after successful send
+    // Clear input field after successful send
     LaunchedEffect(sendMessageState) {
         if (sendMessageState is ChatViewModel.SendMessageState.Success) {
             newMessage = ""
@@ -290,10 +272,7 @@ private fun StudentChatDetailView(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        UserAvatar(
-                            name = otherParticipant?.fullName ?: "Unknown",
-                            size = 32
-                        )
+                        UserAvatar(name = otherParticipant?.fullName ?: "Unknown", size = 32)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(otherParticipant?.fullName ?: "Unknown User")
                     }
@@ -341,16 +320,10 @@ private fun StudentChatDetailView(
             }
         }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when (messagesState) {
                 is ChatViewModel.MessageListState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is ChatViewModel.MessageListState.Error -> {
                     Text(
@@ -363,12 +336,9 @@ private fun StudentChatDetailView(
                 is ChatViewModel.MessageListState.Success -> {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                         contentPadding = PaddingValues(vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        reverseLayout = false  // Messages flow from top to bottom
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(messages) { message ->
                             StudentMessageBubble(
@@ -378,15 +348,12 @@ private fun StudentChatDetailView(
                         }
                     }
                 }
-                else -> {} // Idle state
+                else -> {}
             }
 
-            // Show error for send message state
             if (sendMessageState is ChatViewModel.SendMessageState.Error) {
                 Snackbar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
                     containerColor = MaterialTheme.colorScheme.error
                 ) {
                     Text(
@@ -400,15 +367,7 @@ private fun StudentChatDetailView(
 }
 
 /**
- * A single message bubble displayed in the conversation.
- *
- * Styling:
- * - Current user's messages align right with primary color
- * - Other user's messages align left with variant surface color
- * - Includes sender name, message content, and timestamp
- *
- * @param message the MessageResponse to display
- * @param isCurrentUser true if the message was sent by the current user
+ * A single message bubble in the conversation.
  */
 @Composable
 private fun StudentMessageBubble(
@@ -421,8 +380,7 @@ private fun StudentMessageBubble(
     ) {
         Surface(
             shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
+                topStart = 16.dp, topEnd = 16.dp,
                 bottomStart = if (isCurrentUser) 16.dp else 4.dp,
                 bottomEnd = if (isCurrentUser) 4.dp else 16.dp
             ),

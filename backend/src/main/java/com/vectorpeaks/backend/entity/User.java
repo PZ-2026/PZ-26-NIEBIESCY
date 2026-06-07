@@ -13,6 +13,8 @@ package com.vectorpeaks.backend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.LocalDateTime;
 
 /**
@@ -62,6 +64,7 @@ public class User {
     private String phoneNumber;
 
     /** Timestamp when the user account was created. */
+    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

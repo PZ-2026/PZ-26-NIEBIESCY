@@ -504,17 +504,24 @@ fun TutorOffersScreen(
                             )
                         }
                     },
-
                     enabled = selectedSubjectId != null
                             && description.isNotBlank()
                             && descriptionError.isEmpty()
                             && price.toDoubleOrNull() != null
                             && priceError.isEmpty()
+                            && selectedSlotIds.isNotEmpty()
                             && !isCreating,
-                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    if (isCreating) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
-                    else Text("Dodaj ofertę")
+                    if (isCreating) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Dodaj ofertę")
+                    }
                 }
             },
             dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("Anuluj") } }

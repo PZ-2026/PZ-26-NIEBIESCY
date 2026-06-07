@@ -61,6 +61,10 @@ fun StudentMainScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     var isChatDetailOpen by remember { mutableStateOf(false) }
 
+    // When student taps "Napisz" on a booking, we store the tutorId here,
+    // switch to the chat tab, and StudentChatScreen picks it up to open/create the chat.
+    var pendingChatTutorId by remember { mutableStateOf<Int?>(null) }
+
     Scaffold(
         containerColor = Background,
         bottomBar = {
@@ -110,20 +114,27 @@ fun StudentMainScreen(
     ) { innerPadding ->
         when (selectedTab) {
             0 -> StudentSearchScreen(
-                studentId = user.id,
-                modifier = Modifier.padding(innerPadding),
+                studentId           = user.id,
+                modifier            = Modifier.padding(innerPadding),
                 onNavigateToOfferDetail = onNavigateToOfferDetail,
                 onNavigateToReviews = onNavigateToReviews,
-                offersViewModel = offersViewModel
+                offersViewModel     = offersViewModel
             )
             1 -> StudentHistoryScreen(
                 studentId = user.id,
-                modifier  = Modifier.padding(innerPadding)
+                modifier  = Modifier.padding(innerPadding),
+                // Switch to chat tab and pass tutorId to open/create the chat
+                onOpenChat = { tutorId ->
+                    pendingChatTutorId = tutorId
+                    selectedTab = 2  // index of "Rozmowy"
+                }
             )
             2 -> StudentChatScreen(
-                user     = user,
-                modifier = Modifier.padding(innerPadding),
-                onChatOpen = { isOpen -> isChatDetailOpen = isOpen }
+                user               = user,
+                modifier           = Modifier.padding(innerPadding),
+                onChatOpen         = { isOpen -> isChatDetailOpen = isOpen },
+                pendingChatTutorId = pendingChatTutorId,
+                onPendingChatConsumed = { pendingChatTutorId = null }
             )
             3 -> StudentProfileScreen(
                 userId   = user.id,
