@@ -37,7 +37,6 @@ fun StudentMainScreen(
     onNavigateToOfferDetail: (Int) -> Unit,
     onNavigateToReviews: (tutorId: Int, tutorName: String) -> Unit
 ) {
-    // OffersViewModel lives here so it survives tab switches and back navigation
     val offersViewModel: OffersViewModel = viewModel()
 
     val chatViewModel: ChatViewModel = viewModel(
@@ -126,7 +125,7 @@ fun StudentMainScreen(
                 // Switch to chat tab and pass tutorId to open/create the chat
                 onOpenChat = { tutorId ->
                     pendingChatTutorId = tutorId
-                    selectedTab = 2  // index of "Rozmowy"
+                    selectedTab = 2
                 }
             )
             2 -> StudentChatScreen(

@@ -464,7 +464,7 @@ fun TutorOffersScreen(
                         )
                         ExposedDropdownMenu(expanded = dayExpanded, onDismissRequest = { dayExpanded = false }) {
                             days.forEach { (num, name) ->
-                                DropdownMenuItem(text = { Text(name) }, onClick = { selectedDay = num; selectedSlotIds = emptyList(); dayExpanded = false; viewModel.loadSlotsByDay(num, user.id) })
+                                DropdownMenuItem(text = { Text(name) }, onClick = { selectedDay = num; dayExpanded = false; viewModel.loadSlotsByDay(num, user.id) })
                             }
                         }
                     }

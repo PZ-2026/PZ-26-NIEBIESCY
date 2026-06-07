@@ -11,6 +11,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.ui.theme.*
+import androidx.compose.material.icons.outlined.List
+import androidx.compose.material.icons.filled.List
 
 data class AdminTab(
     val title: String,
@@ -26,6 +28,7 @@ fun AdminMainScreen(
     val tabs = listOf(
         AdminTab("Pulpit", Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
         AdminTab("Użytkownicy", Icons.Filled.People, Icons.Outlined.People),
+        AdminTab("Oferty",      Icons.Filled.List,         Icons.Outlined.List),
         AdminTab("Raporty", Icons.Filled.Assessment, Icons.Outlined.Assessment),
         AdminTab("Ustawienia", Icons.Filled.Settings, Icons.Outlined.Settings)
     )
@@ -69,8 +72,9 @@ fun AdminMainScreen(
                 onNavigateToTab = { selectedTab = it }
             )
             1 -> AdminUsersScreen(modifier = Modifier.padding(innerPadding))
-            2 -> AdminReportsScreen(modifier = Modifier.padding(innerPadding))
-            3 -> AdminSettingsScreen(user = user, onLogout = onLogout, modifier = Modifier.padding(innerPadding))
+            2 -> AdminOffersScreen(modifier = Modifier.padding(innerPadding))
+            3 -> AdminReportsScreen(modifier = Modifier.padding(innerPadding))
+            4 -> AdminSettingsScreen(user = user, onLogout = onLogout, modifier = Modifier.padding(innerPadding))
         }
     }
 }

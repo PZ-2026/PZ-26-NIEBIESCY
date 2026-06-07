@@ -107,6 +107,9 @@ interface ApiService {
     @GET("api/admin/reports")
     suspend fun getAdminReports(): AdminReportsResponse
 
+    @GET("api/admin/offers")
+    suspend fun getAllOffersForAdmin(): List<Offer>
+
     @GET("api/admin/stats")
     suspend fun getAdminStats(): AdminStatsResponse
 
@@ -254,11 +257,9 @@ interface ApiService {
     @DELETE("api/admin/subjects/{id}")
     suspend fun deleteSubject(@Path("id") id: Int): Response<Unit>
 
-    // Synchronous version for AuthInterceptor (runs outside coroutines)
     @POST("api/auth/refresh")
     fun refreshTokenSync(@Body body: Map<String, String>): Call<ResponseBody>
 
-    // Suspend version for ViewModel
     @POST("api/auth/refresh")
     suspend fun refreshToken(@Body body: Map<String, String>): Response<ResponseBody>
 

@@ -22,6 +22,12 @@ import com.vectorpeaks.edulink.ui.components.ReservationCard
 import com.vectorpeaks.edulink.ui.components.SectionHeader
 import com.vectorpeaks.edulink.ui.components.StatCard
 import com.vectorpeaks.edulink.ui.theme.*
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.HorizontalDivider
+import com.vectorpeaks.edulink.ui.components.RatingBar
+import com.vectorpeaks.edulink.ui.theme.OnPrimaryContainer
+import com.vectorpeaks.edulink.ui.theme.PrimaryContainer
+import com.vectorpeaks.edulink.ui.theme.Success
 
 @Composable
 fun AdminDashboardScreen(
@@ -39,6 +45,7 @@ fun AdminDashboardScreen(
 
     var showAddSubjectDialog by remember { mutableStateOf(false) }
     var newSubjectName by remember { mutableStateOf("") }
+    var detailOffer by remember { mutableStateOf<Offer?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadDashboard()
@@ -78,7 +85,6 @@ fun AdminDashboardScreen(
             else -> {
                 val s = stats
                 if (s != null) {
-                    // Stats grid
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -142,9 +148,6 @@ fun AdminDashboardScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-
-
-                // Pending offers
                 if (pendingOffers.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     SectionHeader(title = "Oczekujące oferty")
@@ -153,13 +156,13 @@ fun AdminDashboardScreen(
                         PendingOfferCard(
                             offer = offer,
                             onAccept = { viewModel.approveOffer(offer.id) },
-                            onReject = { viewModel.rejectOffer(offer.id) }
+                            onReject = { viewModel.rejectOffer(offer.id) },
+                            onDetail = { detailOffer = offer }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
 
-                // Quick actions
                 Spacer(modifier = Modifier.height(16.dp))
                 SectionHeader(title = "Szybkie akcje")
                 Spacer(modifier = Modifier.height(12.dp))
@@ -209,7 +212,84 @@ fun AdminDashboardScreen(
         Spacer(modifier = Modifier.height(32.dp))
     }
 
-    // Add subject dialog
+    detailOffer?.let { offer ->
+        AlertDialog(
+            onDismissRequest = { detailOffer = null },
+            title = {
+                Text(
+                    text = offer.subject,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Primary
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    val (statusText, statusColor) = when (offer.status.orEmpty()) {
+                        "ACTIVE", "ACCEPTED" -> "Zaakceptowana" to Success
+                        "PENDING"            -> "Oczekuje na akceptację" to androidx.compose.ui.graphics.Color(0xFFF59E0B)
+                        "REJECTED"           -> "Odrzucona" to Error
+                        else                 -> "Nieznany" to OnSurfaceVariant
+                    }
+                    Text(statusText, style = MaterialTheme.typography.labelLarge, color = statusColor, fontWeight = FontWeight.SemiBold)
+                    HorizontalDivider()
+                    Text("Korepetytor", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                    Text(offer.tutorName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    HorizontalDivider()
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text("Cena", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                            Text("${offer.pricePerHour.toInt()} zł/h", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("Typ", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                            Text(if (offer.isOnline) "Online" else "Stacjonarne", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    HorizontalDivider()
+                    Text("Opis", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                    Text(offer.description, style = MaterialTheme.typography.bodyMedium)
+                    HorizontalDivider()
+                    Text("Ocena tutora", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RatingBar(rating = offer.rating)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("${offer.rating} (${offer.reviewCount} opinii)", style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
+                    }
+                    HorizontalDivider()
+                    Text("Terminy", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                    if (offer.availableSlots.isNullOrEmpty()) {
+                        Text("Brak przypisanych terminów", style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+                    } else {
+                        offer.availableSlots.orEmpty().forEach { slot ->
+                            Card(
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(containerColor = PrimaryContainer),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Schedule, contentDescription = null, tint = Primary, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(slot.label, style = MaterialTheme.typography.bodyMedium, color = OnPrimaryContainer)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { detailOffer = null }) { Text("Zamknij") }
+            }
+        )
+    }
+
     if (showAddSubjectDialog) {
         AlertDialog(
             onDismissRequest = { showAddSubjectDialog = false },
@@ -246,13 +326,12 @@ fun AdminDashboardScreen(
     }
 }
 
-// ==================== PENDING OFFER CARD ====================
-
 @Composable
 private fun PendingOfferCard(
     offer: Offer,
     onAccept: () -> Unit,
     onReject: () -> Unit,
+    onDetail: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -315,8 +394,13 @@ private fun PendingOfferCard(
             Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                TextButton(onClick = onDetail) {
+                    Text("Szczegóły", color = Primary)
+                }
+                Spacer(modifier = Modifier.width(4.dp))
                 OutlinedButton(
                     onClick = onReject,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Error),

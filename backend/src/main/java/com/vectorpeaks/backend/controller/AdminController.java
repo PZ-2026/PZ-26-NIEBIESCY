@@ -1,8 +1,8 @@
 /*
  * AdminController.java
  *
- * Version: 1.1
- * Date: 2026-05-10
+ * Version: 1.2
+ * Date: 2026-06-07
  *
  * Copyright (c) 2026 EduLink Team. All rights reserved.
  */
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  * Provides endpoints for dashboard statistics, pending bookings and offers,
  * reports, subject management, and global settings.
  *
- * @version 1.1
+ * @version 1.2
  * @author EduLink Team
  */
 @RestController
@@ -45,20 +45,22 @@ public class AdminController {
     private final SubjectRepository subjectRepository;
     private final ReviewRepository reviewRepository;
     private final GlobalLimitRepository globalLimitRepository;
-    private final AvailabilitySlotRepository slotRepository;
     private final EntityManager entityManager;
+    private final AvailabilitySlotRepository availabilitySlotRepository;
+    private final OfferSlotRepository offerSlotRepository;
 
     /**
      * Constructs a new AdminController with all required repositories.
      *
-     * @param userRepository         repository for users
-     * @param offerRepository        repository for offers
-     * @param bookingRepository      repository for bookings
-     * @param subjectRepository      repository for subjects
-     * @param reviewRepository       repository for reviews
-     * @param globalLimitRepository  repository for global limits
-     * @param slotRepository         repository for availability slots
-     * @param entityManager          JPA entity manager for native queries
+     * @param userRepository                repository for users
+     * @param offerRepository               repository for offers
+     * @param bookingRepository             repository for bookings
+     * @param subjectRepository             repository for subjects
+     * @param reviewRepository              repository for reviews
+     * @param globalLimitRepository         repository for global limits
+     * @param entityManager                 JPA entity manager for native queries
+     * @param availabilitySlotRepository    repository for available slots
+     * @param offerSlotRepository           repository for offers
      */
     public AdminController(UserRepository userRepository,
                            OfferRepository offerRepository,
@@ -66,7 +68,8 @@ public class AdminController {
                            SubjectRepository subjectRepository,
                            ReviewRepository reviewRepository,
                            GlobalLimitRepository globalLimitRepository,
-                           AvailabilitySlotRepository slotRepository,
+                           AvailabilitySlotRepository availabilitySlotRepository,
+                           OfferSlotRepository offerSlotRepository,
                            EntityManager entityManager) {
         this.userRepository = userRepository;
         this.offerRepository = offerRepository;
@@ -74,8 +77,9 @@ public class AdminController {
         this.subjectRepository = subjectRepository;
         this.reviewRepository = reviewRepository;
         this.globalLimitRepository = globalLimitRepository;
-        this.slotRepository = slotRepository;
         this.entityManager = entityManager;
+        this.availabilitySlotRepository = availabilitySlotRepository;
+        this.offerSlotRepository = offerSlotRepository;
     }
 
     // ==================== DASHBOARD ====================
@@ -134,6 +138,17 @@ public class AdminController {
     }
 
     /**
+     * Returns a complete list of all tutoring offers regardless of their status.
+     * @return list of OfferDto objects representing all offers in the system
+     */
+    @GetMapping("/offers")
+    public List<OfferDto> getAllOffers() {
+        return offerRepository.findAll().stream()
+                .map(this::convertToOfferDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Updates the status of an offer (approve or reject).
      *
      * @param id     the offer ID
@@ -150,10 +165,10 @@ public class AdminController {
         Offer offer = offerOpt.get();
         switch (status) {
             case "ACCEPTED":
-                offer.setStatusId(1); // Active
+                offer.setStatusId(1);
                 break;
             case "REJECTED":
-                offer.setStatusId(7); // Rejected
+                offer.setStatusId(7);
                 break;
             default:
                 return ResponseEntity.badRequest().body("Unknown status: " + status);
@@ -178,14 +193,12 @@ public class AdminController {
             return ResponseEntity.badRequest().body("Nazwa przedmiotu jest wymagana");
         }
 
-        // Check for duplicates
         boolean exists = subjectRepository.findAll().stream()
                 .anyMatch(s -> s.getName().equalsIgnoreCase(name.trim()));
         if (exists) {
             return ResponseEntity.badRequest().body("Przedmiot o takiej nazwie już istnieje");
         }
 
-        // Use native SQL INSERT because subjects table has no auto-increment
         Integer maxId = subjectRepository.findAll().stream()
                 .map(Subject::getId)
                 .max(Integer::compareTo)
@@ -214,7 +227,6 @@ public class AdminController {
             return ResponseEntity.notFound().build();
         }
 
-        // Check if subject is used by any offers
         boolean isUsed = offerRepository.findAll().stream()
                 .anyMatch(o -> o.getSubjectId().equals(id));
         if (isUsed) {
@@ -326,7 +338,7 @@ public class AdminController {
         String studentName = (student != null) ? student.getFirstName() + " " + student.getLastName() : "";
         String subjectName = (subject != null) ? subject.getName() : "";
 
-        AvailabilitySlot slot = slotRepository.findById(booking.getAvailabilitySlotId()).orElse(null);
+        AvailabilitySlot slot = availabilitySlotRepository.findById(booking.getAvailabilitySlotId()).orElse(null);
         String date = "";
         String time = "";
         if (slot != null) {
@@ -371,11 +383,33 @@ public class AdminController {
         dto.setCity(city);
         dto.setIsOnline("Online".equalsIgnoreCase(offer.getOfferType()));
         dto.setIsApproved(false);
+        dto.setIsApproved(offer.getStatusId() == 1);
+        dto.setStatus(mapStatusIdOffer(offer.getStatusId()));
 
         Double avgRating = reviewRepository.getAverageRatingByTutorId(offer.getTutorId());
         Integer reviewCount = reviewRepository.countReviewsByTutorId(offer.getTutorId());
         dto.setRating(avgRating != null ? avgRating.floatValue() : 0f);
         dto.setReviewCount(reviewCount != null ? reviewCount : 0);
+
+        List<OfferSlot> offerSlots = offerSlotRepository.findByOfferId(offer.getId());
+        List<SlotDto> slots = new ArrayList<>();
+        for (OfferSlot offerSlot : offerSlots) {
+            AvailabilitySlot slot = availabilitySlotRepository
+                    .findById(offerSlot.getAvailabilitySlotId()).orElse(null);
+            if (slot != null) {
+                String dayName = getDayName(slot.getDayOfWeek());
+                String start = slot.getStartTime().toString().substring(0, 5);
+                String label = dayName + " " + start;
+
+                boolean isBooked = bookingRepository
+                        .findByOfferIdAndAvailabilitySlotId(offer.getId(), slot.getId())
+                        .stream()
+                        .anyMatch(b -> b.getStatusId() == 3 || b.getStatusId() == 6);
+
+                slots.add(new SlotDto(slot.getId(), label, slot.getDayOfWeek().intValue(), isBooked));
+            }
+        }
+        dto.setAvailableSlots(slots);
 
         return dto;
     }
@@ -393,6 +427,33 @@ public class AdminController {
             case 7: return "REJECTED";
             case 4: return "COMPLETED";
             default: return "UNKNOWN";
+        }
+    }
+
+    /**
+     * Maps numeric status IDOffer to a human-readable string.
+     * @param statusId the status code
+     * @return status string
+     */
+    private String mapStatusIdOffer(Integer statusId) {
+        switch (statusId) {
+            case 1: return "ACTIVE";
+            case 3: return "PENDING";
+            case 7: return "REJECTED";
+            default: return "UNKNOWN";
+        }
+    }
+
+    private String getDayName(Short dayOfWeek) {
+        switch (dayOfWeek) {
+            case 1: return "Pon";
+            case 2: return "Wt";
+            case 3: return "Śr";
+            case 4: return "Czw";
+            case 5: return "Pt";
+            case 6: return "Sob";
+            case 0: return "Nd";
+            default: return "";
         }
     }
 }

@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.foundation.layout.RowScope
 
 // ==================== SEARCH BAR ====================
 
@@ -523,7 +524,8 @@ fun OfferCard(
     modifier: Modifier = Modifier,
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
-    onDetail: (() -> Unit)? = null
+    onDetail: (() -> Unit)? = null,
+    customActions: (@Composable RowScope.() -> Unit)? = null
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -539,17 +541,37 @@ fun OfferCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = offer.subject, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Primary)
-                Text(text = "${offer.pricePerHour.toInt()} zł/h", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = OnBackground)
+                Text(
+                    text = offer.subject,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Primary
+                )
+                Text(
+                    text = "${offer.pricePerHour.toInt()} zł/h",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = OnBackground
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 UserAvatar(name = offer.tutorName, size = 28)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = offer.tutorName, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
+                Text(
+                    text = offer.tutorName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceVariant
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = offer.description, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                text = offer.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = OnSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -559,18 +581,30 @@ fun OfferCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RatingBar(rating = offer.rating)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "(${offer.reviewCount})", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                    Text(
+                        text = "(${offer.reviewCount})",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = OnSurfaceVariant
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (offer.isOnline) {
-                        SuggestionChip(onClick = {}, label = { Text("Online", style = MaterialTheme.typography.labelSmall) }, shape = RoundedCornerShape(8.dp))
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("Online", style = MaterialTheme.typography.labelSmall) },
+                            shape = RoundedCornerShape(8.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
                     }
-                    Text(text = offer.city, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                    Text(
+                        text = offer.city,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = OnSurfaceVariant
+                    )
                 }
             }
 
-            if (onEdit != null || onDelete != null || onDetail != null) {
+            if (onEdit != null || onDelete != null || onDetail != null || customActions != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
@@ -584,7 +618,11 @@ fun OfferCard(
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.Info, contentDescription = "Szczegóły", modifier = Modifier.size(14.dp))
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = "Szczegóły",
+                                modifier = Modifier.size(14.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Szczegóły", style = MaterialTheme.typography.labelMedium)
                         }
@@ -596,7 +634,11 @@ fun OfferCard(
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edytuj", modifier = Modifier.size(14.dp))
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edytuj",
+                                modifier = Modifier.size(14.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Edytuj", style = MaterialTheme.typography.labelMedium)
                         }
@@ -609,11 +651,16 @@ fun OfferCard(
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Error),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Usuń", modifier = Modifier.size(14.dp))
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Usuń",
+                                modifier = Modifier.size(14.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Usuń", style = MaterialTheme.typography.labelMedium)
                         }
                     }
+                    customActions?.invoke(this)
                 }
             }
         }
@@ -633,3 +680,4 @@ fun OfferCard(
         )
     }
 }
+

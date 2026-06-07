@@ -22,7 +22,7 @@ import com.vectorpeaks.edulink.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OfferDetailScreen(
-    offerId: Int, // Teraz przyjmuje tylko ID
+    offerId: Int,
     studentId: Int,
     onBack: () -> Unit,
     onTutorClick: (tutorId: Int, tutorName: String) -> Unit,
@@ -34,18 +34,15 @@ fun OfferDetailScreen(
     var bookingConfirmed by remember { mutableStateOf(false) }
     var showSlotTakenDialog by remember { mutableStateOf(false) }
 
-    // Obserwacja stanu z ViewModels
     val offer by detailViewModel.offer.collectAsState()
     val isLoading by detailViewModel.isLoading.collectAsState()
     val error by detailViewModel.error.collectAsState()
     val bookingUiState by bookingViewModel.uiState.collectAsState()
 
-    // Ładowanie danych po wejściu na ekran
     LaunchedEffect(offerId) {
         detailViewModel.loadOffer(offerId)
     }
 
-    // Resetowanie stanu okienek rezerwacji, gdy oferta się ładuje/zmienia
     LaunchedEffect(offer?.id, studentId) {
         showBookingDialog = false
         selectedSlot = null
@@ -66,7 +63,6 @@ fun OfferDetailScreen(
                 )
             }
             offer != null -> {
-                // Skrót do pobranej oferty
                 val displayOffer = offer!!
 
                 Scaffold(
@@ -90,7 +86,6 @@ fun OfferDetailScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp)
                     ) {
-                        // Karta: Przedmiot i Cena
                         Card(
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Surface),
@@ -136,7 +131,6 @@ fun OfferDetailScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Karta: Korepetytor
                         Card(
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Surface),
@@ -207,7 +201,6 @@ fun OfferDetailScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Karta: Opis
                         Card(
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Surface),
@@ -230,7 +223,6 @@ fun OfferDetailScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Karta: Dostępne terminy
                         Card(
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Surface),
@@ -290,9 +282,6 @@ fun OfferDetailScreen(
                     }
                 }
 
-                // --- Sekcja Dialogów ---
-
-                // Okno potwierdzenia rezerwacji
                 if (showBookingDialog) {
                     AlertDialog(
                         onDismissRequest = { showBookingDialog = false },
@@ -338,7 +327,6 @@ fun OfferDetailScreen(
                     )
                 }
 
-                // Obsługa zmiany stanu z viewModelu rezerwacji
                 when (val state = bookingUiState) {
                     is BookingUiState.Success -> {
                         LaunchedEffect(Unit) {
@@ -353,7 +341,6 @@ fun OfferDetailScreen(
                     else -> {}
                 }
 
-                // Dialog sukcesu
                 if (bookingConfirmed) {
                     AlertDialog(
                         onDismissRequest = {
@@ -378,7 +365,6 @@ fun OfferDetailScreen(
                     )
                 }
 
-                // Dialog zajętego terminu
                 if (showSlotTakenDialog) {
                     AlertDialog(
                         onDismissRequest = {
