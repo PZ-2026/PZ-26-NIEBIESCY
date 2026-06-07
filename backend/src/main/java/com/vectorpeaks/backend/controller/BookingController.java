@@ -106,6 +106,10 @@ public class BookingController {
         String tutorName = (tutor != null) ? tutor.getFirstName() + " " + tutor.getLastName() : "";
         String subjectName = (subject != null) ? subject.getName() : "";
 
+        // Fetch student data for the response
+        User student = userRepository.findById(booking.getStudentId()).orElse(null);
+        String studentName = (student != null) ? student.getFirstName() + " " + student.getLastName() : "";
+
         AvailabilitySlot slot = slotRepository.findById(booking.getAvailabilitySlotId()).orElse(null);
         String date = "";
         String time = "";
@@ -136,6 +140,8 @@ public class BookingController {
         dto.setRating(rating);
         dto.setTutorId(offer.getTutorId());
         dto.setReviewComment(reviewComment);
+        dto.setStudentId(booking.getStudentId());
+        dto.setStudentName(studentName);
         return dto;
     }
 

@@ -30,6 +30,9 @@ fun TutorMainScreen(
     onNavigateToReviews: (tutorId: Int, tutorName: String) -> Unit,
     startTab: Int = 0
 ) {
+    // Stores the studentId when tutor taps "Napisz" on a reservation.
+    // Cleared after TutorChatScreen consumes it.
+    var pendingChatStudentId by remember { mutableStateOf<Int?>(null) }
 
     val chatViewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(RetrofitClient.apiService)
@@ -111,13 +114,26 @@ fun TutorMainScreen(
                 modifier = Modifier.padding(innerPadding),
                 onNavigateToReviews = onNavigateToReviews
             )
-            2 -> TutorReservationsScreen(tutorId = user.id, modifier = Modifier.padding(innerPadding))
-            3 -> TutorChatScreen(
-                user = user,
+            2 -> TutorReservationsScreen(
+                tutorId  = user.id,
                 modifier = Modifier.padding(innerPadding),
-                onChatOpen = { isOpen -> isChatDetailOpen = isOpen }
+                onOpenChat = { studentId ->
+                    pendingChatStudentId = studentId
+                    selectedTab = 3
+                }
             )
-            4 -> TutorProfileScreen(userId = user.id, onLogout = onLogout, modifier = Modifier.padding(innerPadding))
+            3 -> TutorChatScreen(
+                user                  = user,
+                modifier              = Modifier.padding(innerPadding),
+                onChatOpen            = { isOpen -> isChatDetailOpen = isOpen },
+                pendingChatStudentId  = pendingChatStudentId,
+                onPendingChatConsumed = { pendingChatStudentId = null }
+            )
+            4 -> TutorProfileScreen(
+                userId   = user.id,
+                onLogout = onLogout,
+                modifier = Modifier.padding(innerPadding)
+            )
         }
     }
 }

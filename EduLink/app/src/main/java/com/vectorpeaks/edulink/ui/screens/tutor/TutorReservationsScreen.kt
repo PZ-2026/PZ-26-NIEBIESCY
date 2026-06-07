@@ -25,7 +25,8 @@ import kotlinx.coroutines.launch
 fun TutorReservationsScreen(
     tutorId: Int,
     modifier: Modifier = Modifier,
-    viewModel: TutorReservationsViewModel = viewModel()
+    viewModel: TutorReservationsViewModel = viewModel(),
+    onOpenChat: (studentId: Int) -> Unit = {},
 ) {
     val bookings by viewModel.bookings.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -141,9 +142,7 @@ fun TutorReservationsScreen(
                                         }
                                     } else null,
                                     onChat = if (booking.status == "ACCEPTED") {
-                                        {
-                                            // TODO: nawigacja do chatu ze studentem
-                                        }
+                                        { onOpenChat(booking.studentId) }
                                     } else null
                                 )
                             }
