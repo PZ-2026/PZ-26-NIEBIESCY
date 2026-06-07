@@ -36,6 +36,13 @@ import com.vectorpeaks.edulink.ui.theme.*
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModel
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModelFactory
 import com.vectorpeaks.edulink.utils.DateUtils
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,33 +132,25 @@ fun StudentChatScreen(
         )
     } else {
         Box(modifier = modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Rozmowy",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = OnBackground
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+            Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Rozmowy",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = OnBackground
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                // Search bar with clear button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
                     OutlinedTextField(
                         value = chatSearchQuery,
                         onValueChange = { chatSearchQuery = it },
                         placeholder = { Text("Szukaj rozmowy...") },
                         leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null
-                            )
+                            Icon(Icons.Default.Search, contentDescription = null)
                         },
                         trailingIcon = {
-                            // X button — only visible when something is typed
                             if (chatSearchQuery.isNotBlank()) {
                                 IconButton(onClick = { chatSearchQuery = "" }) {
                                     Icon(
@@ -166,8 +165,41 @@ fun StudentChatScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+
+                val chatFilters = listOf("Odblokowane", "Zablokowane", "Wszystkie")
+                val pagerState = rememberPagerState(pageCount = { chatFilters.size })
+                val coroutineScope = rememberCoroutineScope()
+
+                ScrollableTabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    containerColor = Background,
+                    contentColor = Primary,
+                    edgePadding = 0.dp
+                ) {
+                    chatFilters.forEachIndexed { index, label ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
+                            text = {
+                                Text(
+                                    text = label,
+                                    fontWeight = if (pagerState.currentPage == index)
+                                        FontWeight.SemiBold else FontWeight.Normal
+                                )
+                            },
+                            selectedContentColor = Primary,
+                            unselectedContentColor = OnSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 when (chatsState) {
                     is ChatViewModel.ChatListState.Loading -> {
@@ -185,26 +217,49 @@ fun StudentChatScreen(
                         }
                     }
                     is ChatViewModel.ChatListState.Success -> {
-                        if (filteredChats.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = if (chatSearchQuery.isNotBlank())
-                                        "Brak rozmów pasujących do wyszukiwania."
-                                    else
-                                        "Brak rozmów.\nZarezerwuj lekcję, aby rozpocząć czat.",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = OnSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { page ->
+                            val pageChats = when (page) {
+                                0 -> filteredChats.filter { !it.isBlocked }
+                                1 -> filteredChats.filter { it.isBlocked }
+                                else -> filteredChats
                             }
-                        } else {
-                            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(filteredChats) { chat ->
-                                    StudentConversationItem(
-                                        chat = chat,
-                                        currentUserId = user.id,
-                                        onClick = { selectedChat = chat }
+
+                            if (pageChats.isEmpty()) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = when {
+                                            chatSearchQuery.isNotBlank() ->
+                                                "Brak rozmów pasujących do wyszukiwania."
+                                            page == 0 -> "Brak aktywnych rozmów.\nZarezerwuj lekcję, aby rozpocząć czat."
+                                            page == 1 -> "Brak zablokowanych rozmów."
+                                            else -> "Brak rozmów."
+                                        },
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = OnSurfaceVariant,
+                                        textAlign = TextAlign.Center
                                     )
+                                }
+                            } else {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    contentPadding = PaddingValues(
+                                        start = 16.dp,
+                                        end = 16.dp,
+                                        bottom = 88.dp,
+                                        top = 4.dp
+                                    ),
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    items(pageChats) { chat ->
+                                        StudentConversationItem(
+                                            chat = chat,
+                                            currentUserId = user.id,
+                                            onClick = { selectedChat = chat }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -458,9 +513,48 @@ private fun StudentChatDetailView(
     val messagesState by viewModel.messagesState.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val sendMessageState by viewModel.sendMessageState.collectAsState()
+    val chats by viewModel.chats.collectAsState()
     var newMessage by remember { mutableStateOf("") }
 
-    // Load message history and mark as read when entering the detail view
+    val currentChat = chats.find { it.id == chat.id } ?: chat
+
+    var showBlockDialog by remember { mutableStateOf(false) }
+
+    val canToggleBlock = !currentChat.isBlocked || currentChat.blockedBy == currentUserId
+
+    if (showBlockDialog && canToggleBlock) {
+        AlertDialog(
+            onDismissRequest = { showBlockDialog = false },
+            title = {
+                Text(if (currentChat.isBlocked) "Odblokuj czat" else "Zablokuj czat")
+            },
+            text = {
+                Text(
+                    if (currentChat.isBlocked)
+                        "Czy na pewno chcesz odblokować tę rozmowę?"
+                    else
+                        "Czy na pewno chcesz zablokować tę rozmowę? Żadna ze stron nie będzie mogła wysyłać wiadomości."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.toggleBlock(currentChat.id, !currentChat.isBlocked)
+                        showBlockDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (currentChat.isBlocked) Primary else Error
+                    )
+                ) {
+                    Text(if (currentChat.isBlocked) "Odblokuj" else "Zablokuj")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBlockDialog = false }) { Text("Anuluj") }
+            }
+        )
+    }
+
     LaunchedEffect(chat.id) {
         viewModel.fetchMessages(chat.id)
         viewModel.markChatAsRead(chat.id, currentUserId)
@@ -468,7 +562,6 @@ private fun StudentChatDetailView(
 
     BackHandler { onBack() }
 
-    // Scroll to bottom when messages load or a new one arrives
     LaunchedEffect(messagesState) {
         if (messagesState is ChatViewModel.MessageListState.Success && messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.lastIndex)
@@ -480,7 +573,6 @@ private fun StudentChatDetailView(
         }
     }
 
-    // Clear input field after successful send
     LaunchedEffect(sendMessageState) {
         if (sendMessageState is ChatViewModel.SendMessageState.Success) {
             newMessage = ""
@@ -488,7 +580,7 @@ private fun StudentChatDetailView(
         }
     }
 
-    val otherParticipant = chat.participants.find { it.id != currentUserId }
+    val otherParticipant = currentChat.participants.find { it.id != currentUserId }
 
     Scaffold(
         containerColor = Background,
@@ -506,39 +598,68 @@ private fun StudentChatDetailView(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
                     }
                 },
+                actions = {
+                    if (canToggleBlock) {
+                        IconButton(onClick = { showBlockDialog = true }) {
+                            Icon(
+                                imageVector = if (currentChat.isBlocked) Icons.Default.LockOpen else Icons.Default.Lock,
+                                contentDescription = if (currentChat.isBlocked) "Odblokuj czat" else "Zablokuj czat",
+                                tint = if (currentChat.isBlocked) Error else OnSurfaceVariant
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Surface)
             )
         },
         bottomBar = {
             Surface(color = Surface, shadowElevation = 4.dp) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = newMessage,
-                        onValueChange = { newMessage = it },
-                        placeholder = { Text("Napisz wiadomość...") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(24.dp),
-                        modifier = Modifier.weight(1f),
-                        enabled = sendMessageState !is ChatViewModel.SendMessageState.Loading
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    FilledIconButton(
-                        onClick = {
-                            if (newMessage.isNotBlank()) {
-                                viewModel.sendMessage(chat.id, currentUserId, newMessage)
-                            }
-                        },
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Primary),
-                        enabled = newMessage.isNotBlank()
-                                && sendMessageState !is ChatViewModel.SendMessageState.Loading
+                    if (currentChat.isBlocked) {
+                        Surface(color = ErrorContainer) {
+                            Text(
+                                text = "Ten czat jest zablokowany.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Error,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "Wyślij")
+                        OutlinedTextField(
+                            value = newMessage,
+                            onValueChange = { newMessage = it },
+                            placeholder = { Text("Napisz wiadomość...") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier.weight(1f),
+                            enabled = sendMessageState !is ChatViewModel.SendMessageState.Loading
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        FilledIconButton(
+                            onClick = {
+                                if (newMessage.isNotBlank()) {
+                                    viewModel.sendMessage(currentChat.id, currentUserId, newMessage)
+                                }
+                            },
+                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = Primary),
+                            enabled = newMessage.isNotBlank()
+                                    && sendMessageState !is ChatViewModel.SendMessageState.Loading
+                                    && !currentChat.isBlocked
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = "Wyślij")
+                        }
                     }
                 }
             }
@@ -559,7 +680,6 @@ private fun StudentChatDetailView(
                 }
                 is ChatViewModel.MessageListState.Success -> {
                     if (messages.isEmpty()) {
-                        // Empty state — shown before any message is sent
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -588,8 +708,7 @@ private fun StudentChatDetailView(
                     }
                 }
                 else -> {}
-
-            }  // koniec when(messagesState)
+            }
 
             if (sendMessageState is ChatViewModel.SendMessageState.Error) {
                 Snackbar(
@@ -602,7 +721,6 @@ private fun StudentChatDetailView(
                     )
                 }
             }
-
         }
     }
 }

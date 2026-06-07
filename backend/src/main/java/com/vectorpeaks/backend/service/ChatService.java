@@ -252,6 +252,8 @@ public class ChatService {
         ChatResponse dto = new ChatResponse();
         dto.setId(chat.getId());
         dto.setCreatedAt(chat.getCreatedAt());
+        dto.setIsBlocked(chat.isBlocked());
+        dto.setBlockedBy(chat.getBlockedBy());
 
         List<ParticipantInfo> participants = chat.getParticipants()
                 .stream()
@@ -294,5 +296,33 @@ public class ChatService {
                 + " " + message.getSender().getLastName());
         dto.setIsRead(message.isRead());
         return dto;
+    }
+
+    /**
+     * Toggles the blocked state of a chat thread.
+     * Only a participant of the chat can block/unblock it.
+     *
+     * @param chatId         the ID of the chat to block/unblock
+     * @param loggedInUserId the ID of the user performing the action
+     * @param block          true to block, false to unblock
+     * @throws IllegalArgumentException if chat not found or user is not a participant
+     */
+    @Transactional
+    public ChatResponse toggleBlock(Integer chatId, Integer loggedInUserId, boolean block) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new IllegalArgumentException("Chat not found: " + chatId));
+
+        boolean isParticipant = chat.getParticipants().stream()
+                .anyMatch(p -> p.getId().equals(loggedInUserId));
+
+        if (!isParticipant) {
+            throw new SecurityException("Access denied: You are not a participant in this conversation.");
+        }
+
+        chat.setBlocked(block);
+        chat.setBlockedBy(block ? loggedInUserId : null);
+        chatRepository.save(chat);
+
+        return toResponse(chat, loggedInUserId);
     }
 }

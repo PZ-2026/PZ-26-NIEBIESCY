@@ -136,6 +136,18 @@ public class ChatDtos {
         /** The number of unread messages in this chat thread for the current user. */
         private Integer unreadCount = 0;
 
+        /** Whether this chat has been blocked by one of the participants. */
+        private Boolean isBlocked = false;
+
+        /** ID of the user who blocked the chat (null if not blocked). */
+        private Integer blockedBy;
+
+        public Boolean getIsBlocked() { return isBlocked; }
+        public void setIsBlocked(Boolean isBlocked) { this.isBlocked = isBlocked; }
+
+        public Integer getBlockedBy() { return blockedBy; }
+        public void setBlockedBy(Integer blockedBy) { this.blockedBy = blockedBy; }
+
         public Integer getId() { return id; }
         public void setId(Integer id) { this.id = id; }
 

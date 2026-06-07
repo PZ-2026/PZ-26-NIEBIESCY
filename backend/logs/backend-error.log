@@ -1,0 +1,1 @@
+2026-06-07 23:51:20.624 [http-nio-8080-exec-10] ERROR c.v.b.controller.UserController - Registration failed – email already in use: adam@edulink.com

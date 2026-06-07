@@ -1,0 +1,14 @@
+2026-06-08 00:09:25.404 [main] INFO  c.v.backend.BackendApplication - Starting BackendApplication using Java 22.0.1 with PID 24668 (C:\Users\Kamil\Desktop\Semestr_6\Programowanie_Zespolowe\Projekt\Projekt\backend\target\classes started by Kamil in C:\Users\Kamil\Desktop\Semestr_6\Programowanie_Zespolowe\Projekt\Projekt\backend)
+2026-06-08 00:09:25.412 [main] INFO  c.v.backend.BackendApplication - No active profile set, falling back to 1 default profile: "default"
+2026-06-08 00:09:30.966 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-08 00:09:31.874 [main] INFO  c.v.backend.BackendApplication - Started BackendApplication in 7.134 seconds (process running for 7.605)
+2026-06-08 00:39:19.805 [http-nio-8080-exec-5] WARN  c.i.layout.renderer.TableWidths - Sum of table columns is greater than 100%.
+2026-06-08 00:42:12.756 [http-nio-8080-exec-7] WARN  c.i.layout.renderer.TableWidths - Sum of table columns is greater than 100%.
+2026-06-08 00:45:48.619 [http-nio-8080-exec-6] INFO  c.v.b.controller.UserController - Registration attempt for email: dawid@edulink.com
+2026-06-08 00:45:48.703 [http-nio-8080-exec-6] INFO  c.v.b.controller.UserController - Registration successful for email: dawid@edulink.com, roleId: 2
+2026-06-08 00:47:10.449 [http-nio-8080-exec-2] INFO  c.v.b.controller.UserController - Registration attempt for email: adrian@edulink.com
+2026-06-08 00:47:10.517 [http-nio-8080-exec-2] INFO  c.v.b.controller.UserController - Registration successful for email: adrian@edulink.com, roleId: 2
+2026-06-08 01:37:43.644 [main] INFO  c.v.backend.BackendApplication - Starting BackendApplication using Java 22.0.1 with PID 23960 (C:\Users\Kamil\Desktop\Semestr_6\Programowanie_Zespolowe\Projekt\Projekt\backend\target\classes started by Kamil in C:\Users\Kamil\Desktop\Semestr_6\Programowanie_Zespolowe\Projekt\Projekt\backend)
+2026-06-08 01:37:43.647 [main] INFO  c.v.backend.BackendApplication - No active profile set, falling back to 1 default profile: "default"
+2026-06-08 01:37:52.077 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-08 01:37:53.126 [main] INFO  c.v.backend.BackendApplication - Started BackendApplication in 10.219 seconds (process running for 10.846)
