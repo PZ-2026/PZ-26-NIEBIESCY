@@ -11,5 +11,7 @@ data class BookingResponse(
     val status: String,
     val rating: Int? = null,
     val tutorId: Int,
+    val studentId: Int,
+    val studentName: String? = null,
     val reviewComment: String? = null
 )

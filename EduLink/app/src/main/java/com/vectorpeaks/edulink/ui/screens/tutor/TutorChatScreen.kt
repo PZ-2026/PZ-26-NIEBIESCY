@@ -48,7 +48,9 @@ import com.vectorpeaks.edulink.utils.DateUtils
 fun TutorChatScreen(
     user: User,
     modifier: Modifier = Modifier,
-    onChatOpen: (Boolean) -> Unit = {}
+    onChatOpen: (Boolean) -> Unit = {},
+    pendingChatStudentId: Int? = null,
+    onPendingChatConsumed: () -> Unit = {}
 ) {
     val viewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(RetrofitClient.apiService)
@@ -56,10 +58,28 @@ fun TutorChatScreen(
 
     val chatsState by viewModel.chatsState.collectAsState()
     val chats by viewModel.chats.collectAsState()
+    val createChatState by viewModel.createChatState.collectAsState()
+
     var selectedChat by remember { mutableStateOf<ChatResponse?>(null) }
 
     LaunchedEffect(user.id) {
         viewModel.fetchChats(user.id)
+    }
+
+    // When arriving from reservations screen, create or get chat with that student
+    LaunchedEffect(pendingChatStudentId) {
+        if (pendingChatStudentId != null) {
+            viewModel.createOrGetChat(user.id, pendingChatStudentId)
+        }
+    }
+
+    // Once chat is ready, open it and clear the pending request
+    LaunchedEffect(createChatState) {
+        if (createChatState is ChatViewModel.CreateChatState.Success) {
+            selectedChat = (createChatState as ChatViewModel.CreateChatState.Success).chat
+            viewModel.resetCreateChatState()
+            onPendingChatConsumed()
+        }
     }
 
     if (selectedChat != null) {

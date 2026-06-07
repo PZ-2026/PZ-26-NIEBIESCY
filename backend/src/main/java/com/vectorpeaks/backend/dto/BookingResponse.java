@@ -49,6 +49,12 @@ public class BookingResponse {
     /** Identifier of the tutor (used for submitting a review). */
     private Integer tutorId;
 
+    /** Identifier of the student who made the booking. */
+    private Integer studentId;
+
+    /** Full name of the student. */
+    private String studentName;
+
     /** Optional comment left by the student in the review. */
     private String reviewComment;
 
@@ -82,6 +88,12 @@ public class BookingResponse {
 
     public Integer getTutorId() { return tutorId; }
     public void setTutorId(Integer tutorId) { this.tutorId = tutorId; }
+
+    public Integer getStudentId() { return studentId; }
+    public void setStudentId(Integer studentId) { this.studentId = studentId; }
+
+    public String getStudentName() { return studentName; }
+    public void setStudentName(String studentName) { this.studentName = studentName; }
 
     public String getReviewComment() { return reviewComment; }
     public void setReviewComment(String reviewComment) { this.reviewComment = reviewComment; }

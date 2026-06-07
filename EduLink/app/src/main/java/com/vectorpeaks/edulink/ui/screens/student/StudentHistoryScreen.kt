@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun StudentHistoryScreen(
     studentId: Int,
+    onOpenChat: (tutorId: Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HistoryViewModel = viewModel()
 ) {
@@ -156,7 +157,7 @@ fun StudentHistoryScreen(
                                     } else null,
                                     onChat = if (booking.status == "ACCEPTED") {
                                         {
-                                            // TODO: nawigacja do chatu z tutorem booking.tutorId
+                                            onOpenChat(booking.tutorId)
                                         }
                                     } else null
                                 )
