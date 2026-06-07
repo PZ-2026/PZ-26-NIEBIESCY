@@ -1,6 +1,7 @@
 package com.vectorpeaks.edulink.ui.screens.student
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,36 +11,32 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vectorpeaks.edulink.data.model.chat.ChatResponse
 import com.vectorpeaks.edulink.data.model.chat.MessageResponse
+import com.vectorpeaks.edulink.data.model.user.BookingResponse
 import com.vectorpeaks.edulink.data.model.user.User
 import com.vectorpeaks.edulink.network.RetrofitClient
+import com.vectorpeaks.edulink.ui.components.EduSearchBar
 import com.vectorpeaks.edulink.ui.components.UserAvatar
 import com.vectorpeaks.edulink.ui.theme.*
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModel
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModelFactory
 import com.vectorpeaks.edulink.utils.DateUtils
 
-/**
- * Student chat screen showing the list of conversations with tutors.
- * Also handles opening a specific chat when navigated from history screen.
- *
- * @param user the currently logged-in student user
- * @param modifier layout modifier
- * @param onChatOpen callback when a chat detail is opened/closed (hides bottom bar)
- * @param pendingChatTutorId if set, automatically opens/creates a chat with this tutor
- * @param onPendingChatConsumed called after pendingChatTutorId has been handled, to clear it
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentChatScreen(
@@ -52,16 +49,23 @@ fun StudentChatScreen(
     val viewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(RetrofitClient.apiService)
     )
+    // HistoryViewModel to load accepted bookings for new chat selection
+    val historyViewModel: HistoryViewModel = viewModel()
 
     val chatsState by viewModel.chatsState.collectAsState()
     val chats by viewModel.chats.collectAsState()
     val createChatState by viewModel.createChatState.collectAsState()
+    val bookings by historyViewModel.bookings.collectAsState()
 
     var selectedChat by remember { mutableStateOf<ChatResponse?>(null) }
+    var showNewChatSheet by remember { mutableStateOf(false) }
 
-    // Load chats when the screen is first composed
+    // Search query for filtering the chat list
+    var chatSearchQuery by remember { mutableStateOf("") }
+
     LaunchedEffect(user.id) {
         viewModel.fetchChats(user.id)
+        historyViewModel.loadBookings(user.id)
     }
 
     // When pendingChatTutorId arrives from history screen,
@@ -78,13 +82,37 @@ fun StudentChatScreen(
             selectedChat = (createChatState as ChatViewModel.CreateChatState.Success).chat
             viewModel.resetCreateChatState()
             onPendingChatConsumed()
+            showNewChatSheet = false
+        }
+    }
+
+    // Accepted bookings that don't yet have a chat — shown in new chat sheet
+    val acceptedBookingsForChat = remember(bookings, chats) {
+        bookings.filter { booking ->
+            booking.status == "ACCEPTED" &&
+                    // Only show if there's no existing chat with this tutor
+                    chats.none { chat ->
+                        chat.participants.any { it.id == booking.tutorId }
+                    }
+        }
+            // Deduplicate by tutorId — one entry per tutor
+            .distinctBy { it.tutorId }
+    }
+
+    // Filter chats by search query (tutor name or last message content)
+    val filteredChats = remember(chats, chatSearchQuery) {
+        if (chatSearchQuery.isBlank()) chats
+        else chats.filter { chat ->
+            val otherName = chat.participants
+                .find { it.id != user.id }?.fullName ?: ""
+            val lastMsg = chat.lastMessage?.content ?: ""
+            otherName.contains(chatSearchQuery, ignoreCase = true) ||
+                    lastMsg.contains(chatSearchQuery, ignoreCase = true)
         }
     }
 
     if (selectedChat != null) {
-        LaunchedEffect(selectedChat) {
-            onChatOpen(true)
-        }
+        LaunchedEffect(selectedChat) { onChatOpen(true) }
         StudentChatDetailView(
             chat = selectedChat!!,
             currentUserId = user.id,
@@ -96,54 +124,250 @@ fun StudentChatScreen(
             }
         )
     } else {
-        Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Rozmowy",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = OnBackground
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+        Box(modifier = modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Rozmowy",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = OnBackground
+                )
+                Spacer(modifier = Modifier.height(12.dp))
 
-            when (chatsState) {
-                is ChatViewModel.ChatListState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                // Search bar with clear button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = chatSearchQuery,
+                        onValueChange = { chatSearchQuery = it },
+                        placeholder = { Text("Szukaj rozmowy...") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null
+                            )
+                        },
+                        trailingIcon = {
+                            // X button — only visible when something is typed
+                            if (chatSearchQuery.isNotBlank()) {
+                                IconButton(onClick = { chatSearchQuery = "" }) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Wyczyść",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
-                is ChatViewModel.ChatListState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "Błąd: ${(chatsState as ChatViewModel.ChatListState.Error).message}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                when (chatsState) {
+                    is ChatViewModel.ChatListState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
-                is ChatViewModel.ChatListState.Success -> {
-                    if (chats.isEmpty()) {
+                    is ChatViewModel.ChatListState.Error -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
-                                "Brak rozmów.\nZarezerwuj lekcję, aby rozpocząć czat.",
+                                text = "Błąd: ${(chatsState as ChatViewModel.ChatListState.Error).message}",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = OnSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
-                    } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(chats) { chat ->
-                                StudentConversationItem(
-                                    chat = chat,
-                                    currentUserId = user.id,
-                                    onClick = { selectedChat = chat }
+                    }
+                    is ChatViewModel.ChatListState.Success -> {
+                        if (filteredChats.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = if (chatSearchQuery.isNotBlank())
+                                        "Brak rozmów pasujących do wyszukiwania."
+                                    else
+                                        "Brak rozmów.\nZarezerwuj lekcję, aby rozpocząć czat.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = OnSurfaceVariant,
+                                    textAlign = TextAlign.Center
                                 )
+                            }
+                        } else {
+                            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(filteredChats) { chat ->
+                                    StudentConversationItem(
+                                        chat = chat,
+                                        currentUserId = user.id,
+                                        onClick = { selectedChat = chat }
+                                    )
+                                }
                             }
                         }
                     }
+                    else -> {}
                 }
-                else -> {} // Idle state
+            }
+
+            // FAB — opens new chat sheet
+            FloatingActionButton(
+                onClick = { showNewChatSheet = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(24.dp),
+                containerColor = Primary,
+                contentColor = Surface
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Nowa rozmowa")
+            }
+        }
+
+        // New chat bottom sheet — shows accepted bookings without a chat
+        if (showNewChatSheet) {
+            NewChatSheet(
+                currentUserId = user.id,
+                acceptedBookings = acceptedBookingsForChat,
+                onDismiss = { showNewChatSheet = false },
+                onSelectTutor = { tutorId ->
+                    viewModel.createOrGetChat(user.id, tutorId)
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Bottom sheet for starting a new chat.
+ * Shows a searchable list of accepted bookings (one per tutor) that don't yet have a chat.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NewChatSheet(
+    currentUserId: Int,
+    acceptedBookings: List<BookingResponse>,
+    onDismiss: () -> Unit,
+    onSelectTutor: (tutorId: Int) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filtered = remember(acceptedBookings, searchQuery) {
+        if (searchQuery.isBlank()) acceptedBookings
+        else acceptedBookings.filter { booking ->
+            booking.tutorName.contains(searchQuery, ignoreCase = true) ||
+                    booking.subject.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Nowa rozmowa",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = OnBackground
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Search field with X button
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Szukaj korepetytora lub przedmiotu...") },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Wyczyść",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (filtered.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (searchQuery.isNotBlank())
+                            "Brak wyników dla \"$searchQuery\"."
+                        else
+                            "Brak zaakceptowanych rezerwacji bez aktywnego czatu.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(filtered, key = { it.tutorId }) { booking ->
+                        NewChatBookingItem(
+                            booking = booking,
+                            onClick = { onSelectTutor(booking.tutorId) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Single item in the new chat sheet — shows tutor name and subject.
+ */
+@Composable
+private fun NewChatBookingItem(
+    booking: BookingResponse,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            UserAvatar(name = booking.tutorName, size = 44)
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = booking.tutorName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = OnBackground
+                )
+                Text(
+                    text = booking.subject,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Primary
+                )
             }
         }
     }
@@ -334,22 +558,38 @@ private fun StudentChatDetailView(
                     )
                 }
                 is ChatViewModel.MessageListState.Success -> {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(messages) { message ->
-                            StudentMessageBubble(
-                                message = message,
-                                isCurrentUser = message.senderId == currentUserId
+                    if (messages.isEmpty()) {
+                        // Empty state — shown before any message is sent
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Nie masz z tym użytkownikiem\njeszcze żadnej korespondencji.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = OnSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
+                        }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                            contentPadding = PaddingValues(vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(messages) { message ->
+                                StudentMessageBubble(
+                                    message = message,
+                                    isCurrentUser = message.senderId == currentUserId
+                                )
+                            }
                         }
                     }
                 }
                 else -> {}
-            }
+
+            }  // koniec when(messagesState)
 
             if (sendMessageState is ChatViewModel.SendMessageState.Error) {
                 Snackbar(
@@ -362,9 +602,11 @@ private fun StudentChatDetailView(
                     )
                 }
             }
+
         }
     }
 }
+
 
 /**
  * A single message bubble in the conversation.
