@@ -17,7 +17,14 @@ import com.vectorpeaks.edulink.data.model.user.RoleID
 import com.vectorpeaks.edulink.ui.components.EduSearchBar
 import com.vectorpeaks.edulink.ui.components.UserCard
 import com.vectorpeaks.edulink.ui.theme.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import kotlinx.coroutines.launch
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AdminUsersScreen(
     modifier: Modifier = Modifier,
@@ -28,26 +35,15 @@ fun AdminUsersScreen(
     val error by viewModel.error.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
-    var selectedRoleFilter by remember { mutableIntStateOf(0) }
+
     val roleFilters = listOf("Wszyscy", "Uczniowie", "Korepetytorzy", "Administratorzy")
+    val pagerState = rememberPagerState(pageCount = { roleFilters.size })
+    val coroutineScope = rememberCoroutineScope()
 
     var showAddUserDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.loadUsers()
-    }
-
-    val filteredUsers = users.filter { user ->
-        val matchesSearch = searchQuery.isBlank() ||
-                user.fullName.contains(searchQuery, ignoreCase = true) ||
-                user.email.contains(searchQuery, ignoreCase = true)
-        val matchesRole = when (selectedRoleFilter) {
-            1 -> user.getRole() == RoleID.STUDENT
-            2 -> user.getRole() == RoleID.TUTOR
-            3 -> user.getRole() == RoleID.ADMIN
-            else -> true
-        }
-        matchesSearch && matchesRole
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -69,19 +65,23 @@ fun AdminUsersScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             ScrollableTabRow(
-                selectedTabIndex = selectedRoleFilter,
+                selectedTabIndex = pagerState.currentPage,
                 containerColor = Background,
                 edgePadding = 0.dp,
                 divider = {}
             ) {
                 roleFilters.forEachIndexed { index, label ->
                     Tab(
-                        selected = selectedRoleFilter == index,
-                        onClick = { selectedRoleFilter = index },
+                        selected = pagerState.currentPage == index,
+                        onClick = {
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        },
                         text = {
                             Text(
                                 text = label,
-                                fontWeight = if (selectedRoleFilter == index) FontWeight.SemiBold else FontWeight.Normal
+                                fontWeight = if (pagerState.currentPage == index) FontWeight.SemiBold else FontWeight.Normal
                             )
                         },
                         selectedContentColor = Primary,
@@ -103,22 +103,57 @@ fun AdminUsersScreen(
                     }
                 }
                 else -> {
-                    Text(
-                        text = "Znaleziono: ${filteredUsers.size}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = OnSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize()
+                    ) { pageIndex ->
 
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 80.dp)
-                    ) {
-                        items(filteredUsers) { user ->
-                            UserCard(
-                                user = user,
-                                onToggleBlock = { viewModel.toggleUserBlock(user.id, user.accountStatusId) }
+                        val pageFilteredUsers = users.filter { user ->
+                            val matchesSearch = searchQuery.isBlank() ||
+                                    user.fullName.contains(searchQuery, ignoreCase = true) ||
+                                    user.email.contains(searchQuery, ignoreCase = true)
+                            val matchesRole = when (pageIndex) {
+                                1 -> user.getRole() == RoleID.STUDENT
+                                2 -> user.getRole() == RoleID.TUTOR
+                                3 -> user.getRole() == RoleID.ADMIN
+                                else -> true
+                            }
+                            matchesSearch && matchesRole
+                        }
+
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            Text(
+                                text = "Znaleziono: ${pageFilteredUsers.size}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = OnSurfaceVariant
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            if (pageFilteredUsers.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.TopCenter
+                                ) {
+                                    Text(
+                                        text = "Brak użytkowników",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = OnSurfaceVariant,
+                                        modifier = Modifier.padding(top = 16.dp)
+                                    )
+                                }
+                            } else {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    contentPadding = PaddingValues(bottom = 80.dp)
+                                ) {
+                                    items(pageFilteredUsers) { user ->
+                                        UserCard(
+                                            user = user,
+                                            onToggleBlock = { viewModel.toggleUserBlock(user.id, user.accountStatusId) }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -230,7 +265,12 @@ private fun AddUserDialog(
                             onClick = { selectedRoleIndex = index },
                             shape = SegmentedButtonDefaults.itemShape(index = index, count = roles.size)
                         ) {
-                            Text(label, style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
