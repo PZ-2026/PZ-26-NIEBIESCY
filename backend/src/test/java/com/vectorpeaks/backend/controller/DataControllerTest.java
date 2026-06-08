@@ -11,6 +11,7 @@
 
 package com.vectorpeaks.backend.controller;
 
+import com.vectorpeaks.backend.entity.GlobalLimit;
 import com.vectorpeaks.backend.repository.GlobalLimitRepository;
 import com.vectorpeaks.backend.repository.SubjectRepository;
 import com.vectorpeaks.backend.repository.UserRepository;
@@ -23,6 +24,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -137,5 +139,42 @@ class DataControllerTest extends BaseControllerTest {
         mockMvc.perform(get("/api/data/cities"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    // -----------------------------------------------------------------------
+    // GET /api/data/global-message
+    // -----------------------------------------------------------------------
+
+    @Test
+    void getGlobalMessage_enabledWithText_returns200AndMessage() throws Exception {
+        GlobalLimit limit = new GlobalLimit();
+        limit.setMessage("Ważna informacja dla użytkowników");
+        limit.setMessageEnabled(true);
+        when(globalLimitRepository.findById(1)).thenReturn(Optional.of(limit));
+
+        mockMvc.perform(get("/api/data/global-message"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Ważna informacja dla użytkowników"));
+    }
+
+    @Test
+    void getGlobalMessage_disabledWithText_returns200AndEmptyString() throws Exception {
+        GlobalLimit limit = new GlobalLimit();
+        limit.setMessage("Szkic komunikatu");
+        limit.setMessageEnabled(false);
+        when(globalLimitRepository.findById(1)).thenReturn(Optional.of(limit));
+
+        mockMvc.perform(get("/api/data/global-message"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(""));
+    }
+
+    @Test
+    void getGlobalMessage_noLimitConfigured_returns200AndEmptyString() throws Exception {
+        when(globalLimitRepository.findById(1)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/data/global-message"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(""));
     }
 }

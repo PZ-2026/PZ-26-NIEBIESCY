@@ -30,8 +30,12 @@ public class GlobalLimit {
     @Column(name = "hourly_price_limit")
     private BigDecimal hourlyPriceLimit;
 
-    /** Global message displayed to all users. */
+    /** Global message text (can be saved as draft before publishing). */
     private String message;
+
+    /** Whether the global message is visible to users. */
+    @Column(name = "message_enabled", nullable = false)
+    private Boolean messageEnabled = false;
 
     // Getters and setters
     public Integer getId() {
@@ -56,5 +60,13 @@ public class GlobalLimit {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public Boolean getMessageEnabled() {
+        return messageEnabled;
+    }
+
+    public void setMessageEnabled(Boolean messageEnabled) {
+        this.messageEnabled = messageEnabled;
     }
 }

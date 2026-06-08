@@ -2,5 +2,6 @@ package com.vectorpeaks.edulink.data.model.user
 
 data class GlobalLimitDto(
     val maxPricePerHour: Double,
-    val globalMessage: String
+    val globalMessage: String,
+    val globalMessageEnabled: Boolean = false
 )

@@ -11,6 +11,7 @@
 
 package com.vectorpeaks.backend.controller;
 
+import com.vectorpeaks.backend.dto.GlobalMessageDto;
 import com.vectorpeaks.backend.dto.SubjectDto;
 import com.vectorpeaks.backend.repository.SubjectRepository;
 import com.vectorpeaks.backend.repository.UserRepository;
@@ -101,5 +102,21 @@ public class DataController {
         return globalLimitRepository.findById(1)
                 .map(l -> ResponseEntity.ok(l.getHourlyPriceLimit().doubleValue()))
                 .orElse(ResponseEntity.ok(200.0));
+    }
+
+    /**
+     * Retrieves the global message set by the administrator.
+     * Displayed as a banner to all authenticated users.
+     *
+     * @return the message text, or an empty string if none is configured
+     */
+    @GetMapping("/global-message")
+    public GlobalMessageDto getGlobalMessage() {
+        GlobalMessageDto dto = new GlobalMessageDto();
+        dto.setMessage(globalLimitRepository.findById(1)
+                .filter(l -> Boolean.TRUE.equals(l.getMessageEnabled()))
+                .map(l -> l.getMessage() != null ? l.getMessage() : "")
+                .orElse(""));
+        return dto;
     }
 }

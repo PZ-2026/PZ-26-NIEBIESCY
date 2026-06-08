@@ -34,6 +34,7 @@ fun AdminSettingsScreen(
     val maintenanceStatus by viewModel.maintenanceStatus.collectAsState()
     var maxPricePerHour by remember { mutableStateOf("200") }
     var globalMessage by remember { mutableStateOf("") }
+    var isMessageEnabled by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showAddSubjectDialog by remember { mutableStateOf(false) }
     var newSubjectName by remember { mutableStateOf("") }
@@ -46,11 +47,11 @@ fun AdminSettingsScreen(
         viewModel.loadMaintenanceStatus()
     }
 
-    // When settings arrive, populate edit fields
     LaunchedEffect(settings) {
         settings?.let {
             maxPricePerHour = it.maxPricePerHour.toInt().toString()
             globalMessage = it.globalMessage
+            isMessageEnabled = it.globalMessageEnabled
         }
     }
 
@@ -187,16 +188,48 @@ fun AdminSettingsScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                val price = maxPricePerHour.toDoubleOrNull() ?: 200.0
+                                viewModel.savePriceLimit(price)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Zapisz limit cenowy")
+                        }
+
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                         // Global message
-                        Text("Globalny komunikat", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                        Text(
-                            "Wyświetlany wszystkim użytkownikom",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = OnSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Globalny komunikat", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                                Text(
+                                    "Włącz, aby wyświetlić zapisany komunikat użytkownikom",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = OnSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = isMessageEnabled,
+                                onCheckedChange = { enabled ->
+                                    isMessageEnabled = enabled
+                                    viewModel.setGlobalMessageEnabled(enabled, globalMessage.trim())
+                                },
+                                colors = SwitchDefaults.colors(checkedTrackColor = Primary)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = globalMessage,
                             onValueChange = { globalMessage = it },
@@ -205,11 +238,11 @@ fun AdminSettingsScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
+
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = {
-                                val price = maxPricePerHour.toDoubleOrNull() ?: 200.0
-                                viewModel.saveSettings(price, globalMessage)
+                                viewModel.saveGlobalMessage(globalMessage.trim(), isMessageEnabled)
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -217,7 +250,7 @@ fun AdminSettingsScreen(
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Zapisz ustawienia")
+                            Text("Zapisz komunikat")
                         }
                     }
                 }

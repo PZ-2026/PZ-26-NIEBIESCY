@@ -61,11 +61,42 @@ class AdminSettingsViewModel : ViewModel() {
         }
     }
 
-    fun saveSettings(maxPrice: Double, message: String) {
+    fun savePriceLimit(maxPrice: Double) {
+        val settings = _settings.value
+        saveSettings(
+            maxPrice = maxPrice,
+            message = settings?.globalMessage ?: "",
+            enabled = settings?.globalMessageEnabled ?: false
+        )
+    }
+
+    fun saveGlobalMessage(message: String, enabled: Boolean) {
+        val settings = _settings.value
+        saveSettings(
+            maxPrice = settings?.maxPricePerHour ?: 200.0,
+            message = message,
+            enabled = enabled
+        )
+    }
+
+    fun setGlobalMessageEnabled(enabled: Boolean, currentMessage: String) {
+        val settings = _settings.value
+        saveSettings(
+            maxPrice = settings?.maxPricePerHour ?: 200.0,
+            message = currentMessage,
+            enabled = enabled
+        )
+    }
+
+    private fun saveSettings(maxPrice: Double, message: String, enabled: Boolean) {
         viewModelScope.launch {
             _saveSuccess.value = false
             try {
-                val dto = GlobalLimitDto(maxPricePerHour = maxPrice, globalMessage = message)
+                val dto = GlobalLimitDto(
+                    maxPricePerHour = maxPrice,
+                    globalMessage = message,
+                    globalMessageEnabled = enabled
+                )
                 val response = RetrofitClient.apiService.updateAdminSettings(dto)
                 if (response.isSuccessful) {
                     _saveSuccess.value = true

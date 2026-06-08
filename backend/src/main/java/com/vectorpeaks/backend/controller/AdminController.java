@@ -293,9 +293,11 @@ public class AdminController {
             dto.setMaxPricePerHour(limit.getHourlyPriceLimit() != null
                     ? limit.getHourlyPriceLimit().doubleValue() : 200.0);
             dto.setGlobalMessage(limit.getMessage() != null ? limit.getMessage() : "");
+            dto.setGlobalMessageEnabled(Boolean.TRUE.equals(limit.getMessageEnabled()));
         } else {
             dto.setMaxPricePerHour(200.0);
             dto.setGlobalMessage("");
+            dto.setGlobalMessageEnabled(false);
         }
         return dto;
     }
@@ -314,6 +316,9 @@ public class AdminController {
             limit.setHourlyPriceLimit(BigDecimal.valueOf(dto.getMaxPricePerHour()));
         }
         limit.setMessage(dto.getGlobalMessage());
+        if (dto.getGlobalMessageEnabled() != null) {
+            limit.setMessageEnabled(dto.getGlobalMessageEnabled());
+        }
         globalLimitRepository.save(limit);
         return ResponseEntity.ok().build();
     }
