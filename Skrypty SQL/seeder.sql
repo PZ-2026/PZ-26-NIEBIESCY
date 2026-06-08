@@ -8,8 +8,8 @@ INSERT INTO statuses (id, status) VALUES
 (5, 'Cancelled'), (6, 'Accepted'), (7, 'Rejected'), (8, 'Suspended'), (9, 'Deleted');
 
 -- 3. GlobalLimits
-INSERT INTO global_limits (id, hourly_price_limit, message) VALUES 
-(1, 200.00, 'Tutor hour price limit');
+INSERT INTO global_limits (id, hourly_price_limit, message, message_enabled) VALUES 
+(1, 200.00, '', FALSE);
 
 -- 4. AvailabilitySlots
 DO $$

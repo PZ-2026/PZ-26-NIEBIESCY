@@ -1,4 +1,5 @@
 package com.vectorpeaks.edulink.network
+import com.vectorpeaks.edulink.data.model.GlobalMessageDto
 import com.vectorpeaks.edulink.data.model.MaintenanceStatus
 
 import com.vectorpeaks.edulink.data.model.BookingRequest
@@ -156,6 +157,9 @@ interface ApiService {
 
     @GET("api/data/price-limit")
     suspend fun getPriceLimit(): Double
+
+    @GET("api/data/global-message")
+    suspend fun getGlobalMessage(): GlobalMessageDto
     @GET("api/slots/available/{tutorId}/excluding/{offerId}")
     suspend fun getAvailableSlotsExcludingOffer(
         @Path("tutorId") tutorId: Int,

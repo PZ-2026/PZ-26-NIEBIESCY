@@ -22,4 +22,5 @@ import lombok.Data;
 public class GlobalLimitDto {
     private Double maxPricePerHour;
     private String globalMessage;
+    private Boolean globalMessageEnabled;
 }

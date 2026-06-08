@@ -6,6 +6,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,23 +24,29 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * A banner that polls the backend for maintenance status
- * and shows a countdown timer to non-admin users.
+ * Wraps screen content with top banners for maintenance mode and global admin messages.
+ * Polls the backend every 30 seconds for status updates.
  *
- * @param content The screen content to wrap below the banner.
+ * @param content The screen content to wrap below the banners.
  */
 @Composable
 fun MaintenanceBannerWrapper(
     content: @Composable () -> Unit
 ) {
     var maintenanceStatus by remember { mutableStateOf(MaintenanceStatus()) }
+    var globalMessage by remember { mutableStateOf("") }
     var remainingSeconds by remember { mutableLongStateOf(0L) }
 
-    // Poll maintenance status every 30 seconds
+    // Poll maintenance status and global message every 30 seconds
     LaunchedEffect(Unit) {
         while (true) {
             try {
                 maintenanceStatus = RetrofitClient.apiService.getMaintenanceStatus()
+            } catch (_: Exception) {
+                // Ignore network errors – banner just stays hidden
+            }
+            try {
+                globalMessage = RetrofitClient.apiService.getGlobalMessage().message
             } catch (_: Exception) {
                 // Ignore network errors – banner just stays hidden
             }
@@ -66,11 +73,40 @@ fun MaintenanceBannerWrapper(
         }
     }
 
-    val showBanner = maintenanceStatus.active
+    val showMaintenanceBanner = maintenanceStatus.active
+    val showGlobalMessageBanner = globalMessage.isNotBlank()
 
     Column(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
-            visible = showBanner,
+            visible = showGlobalMessageBanner,
+            enter = slideInVertically { -it },
+            exit = slideOutVertically { -it }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Primary)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = globalMessage,
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = showMaintenanceBanner,
             enter = slideInVertically { -it },
             exit = slideOutVertically { -it }
         ) {
