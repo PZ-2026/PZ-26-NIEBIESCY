@@ -59,6 +59,12 @@ public class Chat {
         }
     }
 
+    @Column(name = "is_blocked", nullable = false)
+    private boolean blocked = false;
+
+    @Column(name = "blocked_by")
+    private Integer blockedBy;
+
     // Getters and setters
 
     public Integer getId() { return id; }
@@ -72,4 +78,10 @@ public class Chat {
 
     public Set<Message> getMessages() { return messages; }
     public void setMessages(Set<Message> messages) { this.messages = messages; }
+
+    public boolean isBlocked() { return blocked; }
+    public void setBlocked(boolean blocked) { this.blocked = blocked; }
+
+    public Integer getBlockedBy() { return blockedBy; }
+    public void setBlockedBy(Integer blockedBy) { this.blockedBy = blockedBy; }
 }

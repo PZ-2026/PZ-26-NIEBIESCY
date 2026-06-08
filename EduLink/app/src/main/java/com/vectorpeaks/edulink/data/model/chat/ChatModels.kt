@@ -46,7 +46,9 @@ data class ChatResponse(
     val createdAt: String,
     val participants: List<ParticipantInfo>,
     val lastMessage: MessageResponse?,
-    val unreadCount: Int = 0
+    val unreadCount: Int = 0,
+    val isBlocked: Boolean = false,
+    val blockedBy: Int? = null,
 )
 
 /**

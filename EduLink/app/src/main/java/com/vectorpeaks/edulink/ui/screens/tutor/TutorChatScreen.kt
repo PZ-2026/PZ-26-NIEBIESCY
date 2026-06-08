@@ -29,6 +29,17 @@ import com.vectorpeaks.edulink.ui.theme.*
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModel
 import com.vectorpeaks.edulink.ui.viewmodel.ChatViewModelFactory
 import com.vectorpeaks.edulink.utils.DateUtils
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 
 
 /**
@@ -59,6 +70,8 @@ fun TutorChatScreen(
     val chatsState by viewModel.chatsState.collectAsState()
     val chats by viewModel.chats.collectAsState()
     val createChatState by viewModel.createChatState.collectAsState()
+    var showNewChatSheet by remember { mutableStateOf(false) }
+    var chatSearchQuery by remember { mutableStateOf("") }
 
     var selectedChat by remember { mutableStateOf<ChatResponse?>(null) }
 
@@ -79,6 +92,18 @@ fun TutorChatScreen(
             selectedChat = (createChatState as ChatViewModel.CreateChatState.Success).chat
             viewModel.resetCreateChatState()
             onPendingChatConsumed()
+            showNewChatSheet = false
+        }
+    }
+
+    val filteredChats = remember(chats, chatSearchQuery) {
+        if (chatSearchQuery.isBlank()) chats
+        else chats.filter { chat ->
+            val otherName = chat.participants
+                .find { it.id != user.id }?.fullName ?: ""
+            val lastMsg = chat.lastMessage?.content ?: ""
+            otherName.contains(chatSearchQuery, ignoreCase = true) ||
+                    lastMsg.contains(chatSearchQuery, ignoreCase = true)
         }
     }
 
@@ -97,64 +122,164 @@ fun TutorChatScreen(
             }
         )
     } else {
-        Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Rozmowy",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = OnBackground
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+        Box(modifier = modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Rozmowy",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = OnBackground
+                )
+                Spacer(modifier = Modifier.height(12.dp))
 
-            when (chatsState) {
-                is ChatViewModel.ChatListState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is ChatViewModel.ChatListState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Błąd: ${(chatsState as ChatViewModel.ChatListState.Error).message}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
+                OutlinedTextField(
+                    value = chatSearchQuery,
+                    onValueChange = { chatSearchQuery = it },
+                    placeholder = { Text("Szukaj rozmowy...") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null)
+                    },
+                    trailingIcon = {
+                        if (chatSearchQuery.isNotBlank()) {
+                            IconButton(onClick = { chatSearchQuery = "" }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Wyczyść",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val chatFilters = listOf("Odblokowane", "Zablokowane", "Wszystkie")
+                val pagerState = rememberPagerState(pageCount = { chatFilters.size })
+                val coroutineScope = rememberCoroutineScope()
+
+                ScrollableTabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    containerColor = Background,
+                    contentColor = Primary,
+                    edgePadding = 0.dp
+                ) {
+                    chatFilters.forEachIndexed { index, label ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
+                            text = {
+                                Text(
+                                    text = label,
+                                    fontWeight = if (pagerState.currentPage == index)
+                                        FontWeight.SemiBold else FontWeight.Normal
+                                )
+                            },
+                            selectedContentColor = Primary,
+                            unselectedContentColor = OnSurfaceVariant
                         )
                     }
                 }
-                is ChatViewModel.ChatListState.Success -> {
-                    if (chats.isEmpty()) {
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                when (chatsState) {
+                    is ChatViewModel.ChatListState.Loading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) { CircularProgressIndicator() }
+                    }
+                    is ChatViewModel.ChatListState.Error -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                "Brak rozmów.\nOczekuj na pierwszą wiadomość od ucznia.",
+                                text = "Błąd: ${(chatsState as ChatViewModel.ChatListState.Error).message}",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = OnSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
-                    } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(chats) { chat ->
-                                TutorConversationItem(
-                                    chat = chat,
-                                    currentUserId = user.id,
-                                    onClick = { selectedChat = chat }
-                                )
+                    }
+                    is ChatViewModel.ChatListState.Success -> {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { page ->
+                            val pageChats = when (page) {
+                                0 -> filteredChats.filter { !it.isBlocked }
+                                1 -> filteredChats.filter { it.isBlocked }
+                                else -> filteredChats
+                            }
+
+                            if (pageChats.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = when {
+                                            chatSearchQuery.isNotBlank() ->
+                                                "Brak rozmów pasujących do wyszukiwania."
+                                            page == 0 -> "Brak aktywnych rozmów.\nOczekuj na pierwszą wiadomość od ucznia."
+                                            page == 1 -> "Brak zablokowanych rozmów."
+                                            else -> "Brak rozmów."
+                                        },
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = OnSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            } else {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    contentPadding = PaddingValues(bottom = 88.dp, top = 4.dp),
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    items(pageChats) { chat ->
+                                        TutorConversationItem(
+                                            chat = chat,
+                                            currentUserId = user.id,
+                                            onClick = { selectedChat = chat }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
+                    else -> {}
                 }
-                else -> {}
             }
+
+            FloatingActionButton(
+                onClick = { showNewChatSheet = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(24.dp),
+                containerColor = Primary,
+                contentColor = Surface
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Nowa rozmowa")
+            }
+        }
+
+        if (showNewChatSheet) {
+            TutorNewChatSheet(
+                currentUserId = user.id,
+                onDismiss = { showNewChatSheet = false },
+                onSelectStudent = { studentId ->
+                    viewModel.createOrGetChat(user.id, studentId)
+                },
+                viewModel = viewModel
+            )
         }
     }
 }
@@ -266,30 +391,65 @@ private fun TutorChatDetailView(
     val messagesState by viewModel.messagesState.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val sendMessageState by viewModel.sendMessageState.collectAsState()
+    val chats by viewModel.chats.collectAsState()
     var newMessage by remember { mutableStateOf("") }
+
+    val currentChat = chats.find { it.id == chat.id } ?: chat
+
+    var showBlockDialog by remember { mutableStateOf(false) }
+
+    val canToggleBlock = !currentChat.isBlocked || currentChat.blockedBy == currentUserId
+
+    if (showBlockDialog && canToggleBlock) {
+        AlertDialog(
+            onDismissRequest = { showBlockDialog = false },
+            title = {
+                Text(if (currentChat.isBlocked) "Odblokuj czat" else "Zablokuj czat")
+            },
+            text = {
+                Text(
+                    if (currentChat.isBlocked)
+                        "Czy na pewno chcesz odblokować tę rozmowę?"
+                    else
+                        "Czy na pewno chcesz zablokować tę rozmowę? Żadna ze stron nie będzie mogła wysyłać wiadomości."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.toggleBlock(currentChat.id, !currentChat.isBlocked)
+                        showBlockDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (currentChat.isBlocked) Primary else Error
+                    )
+                ) {
+                    Text(if (currentChat.isBlocked) "Odblokuj" else "Zablokuj")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBlockDialog = false }) { Text("Anuluj") }
+            }
+        )
+    }
 
     LaunchedEffect(chat.id) {
         viewModel.fetchMessages(chat.id)
         viewModel.markChatAsRead(chat.id, currentUserId)
     }
 
-    BackHandler {
-        onBack()
-    }
+    BackHandler { onBack() }
 
     LaunchedEffect(messagesState) {
-        if (messagesState is ChatViewModel.MessageListState.Success
-            && messages.isNotEmpty()) {
+        if (messagesState is ChatViewModel.MessageListState.Success && messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.lastIndex)
         }
     }
-
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.lastIndex)
         }
     }
-
     LaunchedEffect(sendMessageState) {
         if (sendMessageState is ChatViewModel.SendMessageState.Success) {
             newMessage = ""
@@ -297,7 +457,7 @@ private fun TutorChatDetailView(
         }
     }
 
-    val studentParticipant = chat.participants.find { it.id != currentUserId }
+    val studentParticipant = currentChat.participants.find { it.id != currentUserId }
 
     Scaffold(
         containerColor = Background,
@@ -305,10 +465,7 @@ private fun TutorChatDetailView(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        UserAvatar(
-                            name = studentParticipant?.fullName ?: "Unknown",
-                            size = 32
-                        )
+                        UserAvatar(name = studentParticipant?.fullName ?: "Unknown", size = 32)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(studentParticipant?.fullName ?: "Unknown Student")
                     }
@@ -318,54 +475,77 @@ private fun TutorChatDetailView(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Wstecz")
                     }
                 },
+                actions = {
+                    if (canToggleBlock) {
+                        IconButton(onClick = { showBlockDialog = true }) {
+                            Icon(
+                                imageVector = if (currentChat.isBlocked) Icons.Default.LockOpen else Icons.Default.Lock,
+                                contentDescription = if (currentChat.isBlocked) "Odblokuj czat" else "Zablokuj czat",
+                                tint = if (currentChat.isBlocked) Error else OnSurfaceVariant
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Surface)
             )
         },
         bottomBar = {
             Surface(color = Surface, shadowElevation = 4.dp) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = newMessage,
-                        onValueChange = { newMessage = it },
-                        placeholder = { Text("Napisz wiadomość...") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(24.dp),
-                        modifier = Modifier.weight(1f),
-                        enabled = sendMessageState !is ChatViewModel.SendMessageState.Loading
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    FilledIconButton(
-                        onClick = {
-                            if (newMessage.isNotBlank()) {
-                                viewModel.sendMessage(chat.id, currentUserId, newMessage)
-                            }
-                        },
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Primary),
-                        enabled = newMessage.isNotBlank()
-                                && sendMessageState !is ChatViewModel.SendMessageState.Loading
+                    if (currentChat.isBlocked) {
+                        Surface(color = ErrorContainer) {
+                            Text(
+                                text = "Ten czat jest zablokowany.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Error,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "Wyślij")
+                        OutlinedTextField(
+                            value = newMessage,
+                            onValueChange = { newMessage = it },
+                            placeholder = { Text("Napisz wiadomość...") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier.weight(1f),
+                            enabled = sendMessageState !is ChatViewModel.SendMessageState.Loading
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        FilledIconButton(
+                            onClick = {
+                                if (newMessage.isNotBlank()) {
+                                    viewModel.sendMessage(currentChat.id, currentUserId, newMessage)
+                                }
+                            },
+                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = Primary),
+                            enabled = newMessage.isNotBlank()
+                                    && sendMessageState !is ChatViewModel.SendMessageState.Loading
+                                    && !currentChat.isBlocked
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = "Wyślij")
+                        }
                     }
                 }
             }
         }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when (messagesState) {
                 is ChatViewModel.MessageListState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is ChatViewModel.MessageListState.Error -> {
                     Text(
@@ -376,20 +556,33 @@ private fun TutorChatDetailView(
                     )
                 }
                 is ChatViewModel.MessageListState.Success -> {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        reverseLayout = false
-                    ) {
-                        items(messages) { message ->
-                            TutorMessageBubble(
-                                message = message,
-                                isCurrentUser = message.senderId == currentUserId
+                    if (messages.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Nie masz z tym użytkownikiem\njeszcze żadnej korespondencji.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = OnSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
+                        }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            contentPadding = PaddingValues(vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(messages) { message ->
+                                TutorMessageBubble(
+                                    message = message,
+                                    isCurrentUser = message.senderId == currentUserId
+                                )
+                            }
                         }
                     }
                 }
@@ -398,9 +591,7 @@ private fun TutorChatDetailView(
 
             if (sendMessageState is ChatViewModel.SendMessageState.Error) {
                 Snackbar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
                     containerColor = MaterialTheme.colorScheme.error
                 ) {
                     Text(
@@ -464,6 +655,72 @@ private fun TutorMessageBubble(
                     style = MaterialTheme.typography.labelSmall,
                     color = OnSurfaceVariant,
                     modifier = Modifier.align(Alignment.End)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TutorNewChatSheet(
+    currentUserId: Int,
+    onDismiss: () -> Unit,
+    onSelectStudent: (studentId: Int) -> Unit,
+    viewModel: ChatViewModel
+) {
+    var searchQuery by remember { mutableStateOf("") }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Nowa rozmowa",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = OnBackground
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Szukaj studenta...") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Wyczyść",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Aby rozpocząć rozmowę, użyj przycisku\n\"Napisz\" na karcie zaakceptowanej rezerwacji.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
         }

@@ -259,4 +259,17 @@ class ChatViewModel(private val apiService: ApiService) : ViewModel() {
         data class Success(val chat: ChatResponse) : CreateChatState()
         data class Error(val message: String) : CreateChatState()
     }
+
+    fun toggleBlock(chatId: Int, block: Boolean) {
+        viewModelScope.launch {
+            try {
+                val updated = apiService.toggleChatBlock(chatId, mapOf("blocked" to block))
+                _chats.value = _chats.value.map {
+                    if (it.id == chatId) updated else it
+                }
+            } catch (e: Exception) {
+
+            }
+        }
+    }
 }

@@ -23,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * REST controller handling chat-related HTTP requests in the EduLink system.
@@ -179,6 +180,40 @@ public class ChatController {
         try {
             chatService.markChatAsRead(chatId, loggedInUserId);
             return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * Blocks or unblocks a chat thread.
+     * Only participants can perform this action.
+     *
+     * @param chatId         the ID of the chat to block/unblock
+     * @param body           map containing "blocked" boolean
+     * @param authentication the security context
+     * @return updated ChatResponse or error
+     */
+    @PutMapping("/{chatId}/block")
+    public ResponseEntity<?> toggleBlock(
+            @PathVariable Integer chatId,
+            @RequestBody Map<String, Boolean> body,
+            Authentication authentication) {
+
+        Boolean blocked = body.get("blocked");
+        if (blocked == null) {
+            return ResponseEntity.badRequest().body("Field 'blocked' is required.");
+        }
+
+        Integer loggedInUserId = (Integer) authentication.getPrincipal();
+
+        try {
+            ChatResponse response = chatService.toggleBlock(chatId, loggedInUserId, blocked);
+            return ResponseEntity.ok(response);
+        } catch (SecurityException e) {
+            logger.warn("SECURITY ALERT (BOLA): User ID {} attempted to block/unblock Chat ID {} without access",
+                    loggedInUserId, chatId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

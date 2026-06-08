@@ -237,6 +237,12 @@ interface ApiService {
     suspend fun markChatAsRead(
         @Path("chatId") chatId: Int
     ): retrofit2.Response<Unit>
+
+    @PUT("api/chats/{chatId}/block")
+    suspend fun toggleChatBlock(
+        @Path("chatId") chatId: Int,
+        @Body body: Map<String, Boolean>
+    ): ChatResponse
   
     // ==================== Admin: Offers ====================
 
