@@ -40,6 +40,7 @@ import androidx.compose.material3.Tab
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import com.vectorpeaks.edulink.data.model.user.BookingResponse
 
 
 /**
@@ -67,6 +68,7 @@ fun TutorChatScreen(
         factory = ChatViewModelFactory(RetrofitClient.apiService)
     )
 
+    val reservationsViewModel: TutorReservationsViewModel = viewModel()
     val chatsState by viewModel.chatsState.collectAsState()
     val chats by viewModel.chats.collectAsState()
     val createChatState by viewModel.createChatState.collectAsState()
@@ -74,9 +76,12 @@ fun TutorChatScreen(
     var chatSearchQuery by remember { mutableStateOf("") }
 
     var selectedChat by remember { mutableStateOf<ChatResponse?>(null) }
+    val bookings by reservationsViewModel.bookings.collectAsState()
 
     LaunchedEffect(user.id) {
         viewModel.fetchChats(user.id)
+
+        reservationsViewModel.loadBookings(user.id)
     }
 
     // When arriving from reservations screen, create or get chat with that student
@@ -94,6 +99,16 @@ fun TutorChatScreen(
             onPendingChatConsumed()
             showNewChatSheet = false
         }
+    }
+
+    val acceptedBookingsForChat = remember(bookings, chats) {
+        bookings.filter { booking ->
+            booking.status == "ACCEPTED" &&
+                    chats.none { chat ->
+                        chat.participants.any { it.id == booking.studentId }
+                    }
+        }
+            .distinctBy { it.studentId }
     }
 
     val filteredChats = remember(chats, chatSearchQuery) {
@@ -274,11 +289,11 @@ fun TutorChatScreen(
         if (showNewChatSheet) {
             TutorNewChatSheet(
                 currentUserId = user.id,
+                acceptedBookings = acceptedBookingsForChat,
                 onDismiss = { showNewChatSheet = false },
                 onSelectStudent = { studentId ->
                     viewModel.createOrGetChat(user.id, studentId)
-                },
-                viewModel = viewModel
+                }
             )
         }
     }
@@ -660,16 +675,24 @@ private fun TutorMessageBubble(
         }
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TutorNewChatSheet(
     currentUserId: Int,
+    acceptedBookings: List<BookingResponse>,
     onDismiss: () -> Unit,
-    onSelectStudent: (studentId: Int) -> Unit,
-    viewModel: ChatViewModel
+    onSelectStudent: (studentId: Int) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+
+    val filtered = remember(acceptedBookings, searchQuery) {
+        if (searchQuery.isBlank()) acceptedBookings
+        else acceptedBookings.filter { booking ->
+            val name = booking.studentName ?: ""
+            name.contains(searchQuery, ignoreCase = true) ||
+                    booking.subject.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -689,7 +712,7 @@ private fun TutorNewChatSheet(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Szukaj studenta...") },
+                placeholder = { Text("Szukaj studenta lub przedmiotu...") },
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = null)
                 },
@@ -710,17 +733,69 @@ private fun TutorNewChatSheet(
             )
             Spacer(modifier = Modifier.height(12.dp))
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                contentAlignment = Alignment.Center
-            ) {
+            if (filtered.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (searchQuery.isNotBlank())
+                            "Brak wyników dla \"$searchQuery\"."
+                        else
+                            "Brak zaakceptowanych rezerwacji bez aktywnego czatu.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OnSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(filtered, key = { it.studentId }) { booking ->
+                        TutorNewChatBookingItem(
+                            booking = booking,
+                            onClick = { onSelectStudent(booking.studentId) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TutorNewChatBookingItem(
+    booking: BookingResponse,
+    onClick: () -> Unit
+) {
+    val studentName = booking.studentName ?: "Nieznany student"
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            UserAvatar(name = studentName, size = 44)
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
                 Text(
-                    text = "Aby rozpocząć rozmowę, użyj przycisku\n\"Napisz\" na karcie zaakceptowanej rezerwacji.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = OnSurfaceVariant,
-                    textAlign = TextAlign.Center
+                    text = studentName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = OnBackground
+                )
+                Text(
+                    text = booking.subject,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Primary
                 )
             }
         }
