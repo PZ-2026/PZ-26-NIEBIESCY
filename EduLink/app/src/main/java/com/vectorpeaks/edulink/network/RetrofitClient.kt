@@ -18,7 +18,7 @@ import android.content.Context
  */
 
 object RetrofitClient {
-    private const val BASE_URL = "http://10.0.2.2:8080/"
+    private const val BASE_URL = "http://10.252.166.189:8080/"
     private lateinit var authPrefs: AuthPreferencesManager
 
     /**

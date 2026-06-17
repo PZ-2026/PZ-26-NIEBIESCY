@@ -1,0 +1,9 @@
+com.vectorpeaks.backend
+com.vectorpeaks.backend.config
+com.vectorpeaks.backend.controller
+com.vectorpeaks.backend.dto
+com.vectorpeaks.backend.entity
+com.vectorpeaks.backend.repository
+com.vectorpeaks.backend.security
+com.vectorpeaks.backend.service
+com.vectorpeaks.backend.util
